@@ -1,12 +1,39 @@
-# React + Vite
+# PortfolioWebsite (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This site is built with Vite + React and configured for deployment to GitHub Pages.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```zsh
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+## Build
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```zsh
+npm run build
+```
+
+Outputs to `dist/`.
+
+## GitHub Pages deployment
+
+This repo contains a GitHub Actions workflow at `.github/workflows/deploy.yml` that builds the site and deploys `dist/` to Pages on pushes to `main`.
+
+Vite is configured with `base: '/PortfolioWebsite/'` in `vite.config.js`, which is required for correct asset paths when hosting at `https://<user>.github.io/PortfolioWebsite/`.
+
+For a custom domain (`fredrichegland.no`), `vite.config.js` uses `base: '/'` and a `public/CNAME` file is included so GitHub Pages serves at your domain.
+
+### First-time setup
+
+1. In GitHub → repo Settings → Pages:
+   - Source: GitHub Actions.
+   - Custom domain: set to `fredrichegland.no` (and `www.fredrichegland.no`), then save and enforce HTTPS.
+2. DNS: In your DNS provider, create CNAME for `www` to `<user>.github.io` and A records for apex pointing to GitHub Pages IPs, or use an ALIAS/ANAME if supported. See GitHub Pages docs for the current IPs.
+3. Push to `main` to trigger the workflow.
+
+### Common pitfalls
+
+- 404s for `/src/main.jsx` or assets: ensure `vite.config.js` has `base: '/PortfolioWebsite/'` and that you access the site via `https://<user>.github.io/PortfolioWebsite/` (not the root).
+- Favicon path: referenced from `src/assets/favicon.ico` and rewritten by Vite during build.
