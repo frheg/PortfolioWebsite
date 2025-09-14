@@ -2,7 +2,8 @@
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Lock scrolling until intro ends; released by Intro.jsx */
+  /* Allow normal scrolling from the start */
+  overflow: auto;
   background-color: black;
   color: azure; /* Cyan-ish text is handled via Tailwind; this is a safe default */
 }
@@ -11,7 +12,7 @@ body {
    Intro Animation
    ========================= */
 .intro {
-  position: fixed;
+  position: absolute;
   top: 30%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -35,8 +36,8 @@ body {
    Instructions
    ========================= */
 .instruction {
-  position: fixed;
-  top: 30%;
+  position: absolute;
+  top: 45%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 10;

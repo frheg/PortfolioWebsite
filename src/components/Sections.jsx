@@ -4,7 +4,7 @@ import profile from '../data/profile.json'
 
 export default function Sections() {
   return (
-    <div id="board" className="relative w-11/12 md:w-4/5 mx-auto font-sans text-left px-3 sm:px-0 mt-[100vh]">
+  <div id="board" className="relative w-11/12 md:w-4/5 mx-auto font-sans text-left px-3 sm:px-0 mt-10 md:mt-12">
       <div id="content">
         <img
           id="selfportrait"
