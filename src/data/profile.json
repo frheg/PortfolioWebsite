@@ -1,0 +1,125 @@
+{
+  "about": "Completed a Bachelors in Computer Technology (Informatics) at the University of Bergen and now pursuing a joint Master's program in Software Engineering (UiB/HVL) with courses in machine learning. I enjoy computer programming and low-level topics, and I thrive in small teams where I can wear many hats.",
+  "experience": [
+    {
+      "title": "Student Software Engineer",
+      "company": "Amitec AS",
+      "period": "November 2024 - d.d.",
+      "details": "Building an enterprise chatbot and intranet features using .NET and Angular, leveraging vLLM, Qdrant, and Neo4j via Docker; API programming and Python automation; IT/OT work with AVEVA PI systems (PI AF, PI Vision, PI SMT) related to time-series data for energy sector clients.",
+      "link": "https://docs.aveva.com/category/pi-system",
+      "linkLabel": "AVEVA PI systems (PI AF, PI Vision, PI SMT)"
+    },
+    {
+      "title": "Sales Co-worker",
+      "company": "IKEA Leangen/Åsane, Trondheim/Bergen",
+      "period": "May 2022 - d.d.",
+      "details": "Warehouse and sales department: customer service, stock management and sales."
+    },
+    {
+      "title": "Co-worker",
+      "company": "McDonalds Nidarvoll, Trondheim",
+      "period": "January 2022 - April 2022",
+      "details": "Prepping food as a line-cook."
+    },
+    {
+      "title": "Driver and storage-worker",
+      "company": "Rosenborg Bakeri, Trondheim",
+      "period": "September 2021 - January 2022",
+      "details": "Delivered bread and pastries to private customers and bakeries."
+    }
+  ],
+  "education": [
+    {
+      "school": "UiB/HVL, Bergen",
+      "program": "Joint Master's Program in Software Development (with ML courses)",
+      "period": "August 2025 - June 2027"
+    },
+    {
+      "school": "University of Bergen, Bergen",
+      "program": "Bachelors in Computer Technology",
+      "period": "August 2022 - June 2025",
+      "link": "https://www4.uib.no/program/informatikk-datateknologi-bachelor/plan"
+    },
+    {
+      "school": "NTNU Handelshøyskolen, Trondheim",
+      "program": "Economics and Administration",
+      "period": "August 2021 - June 2022",
+      "link": "https://www.ntnu.no/studier/boat"
+    },
+    {
+      "school": "Sandsli Videregående Skole, Bergen",
+      "program": "Study specialization with science subjects",
+      "period": "August 2018 - June 2021",
+      "link": "https://www.sandsli.vgs.no/utdanningsprogram/vare-utdanningsprogram/studiespesialisering/"
+    }
+  ],
+  "highlights": [
+    "Bachelor in Informatics: Computer Technology completed; started joint Master in Software Development (UiB/HVL).",
+    "Experience working in small teams handling multiple responsibilities.",
+    "Broad exposure to technologies: Java, C#/.NET, TypeScript/JavaScript, Angular, Python, SQL, C, Haskell, PHP, Kotlin, Linux, Git, HTML/CSS.",
+    "Implementing an enterprise chatbot on .NET + Angular using vLLM, Qdrant and Neo4j orchestrated with Docker.",
+    "Organizational development and administration as leader at ITxBergen."
+  ],
+  "projects": [
+    {
+      "name": "Portfolio Website",
+      "description": "This site. Built with React + Vite and custom Three.js starfield/galaxy background.",
+      "tech": ["React", "Vite", "Tailwind", "Three.js"]
+    },
+    {
+      "name": "Data Pipeline Sandbox",
+      "description": "Personal exploration of time-series ingestion and visualization.",
+      "tech": ["Python", "Pandas", "FastAPI", "Postgres"]
+    }
+  ],
+  "skills": [
+    "JavaScript/TypeScript",
+    "React",
+    "Angular",
+    "Three.js",
+    "Python",
+    "C#/.NET",
+    "Java",
+    "SQL",
+    "Git & CI/CD",
+    "Docker"
+  ],
+  "languages": [
+    { "name": "Norwegian", "level": "Fluent" },
+    { "name": "English", "level": "Fluent" },
+    { "name": "Spanish", "level": "Basic (learning)" },
+    { "name": "German", "level": "Basic" }
+  ],
+  "boardPositions": [
+    {
+      "title": "ITxBergen Leader",
+      "period": "January 2024 - d.d.",
+      "details": "Overall responsibility for organizing the annual career day for all IT students in Bergen and other events; administrative decisions and organizational development."
+    },
+    {
+      "title": "ITxBergen Board Member",
+      "period": "September 2022 - d.d.",
+      "details": "Organizing and planning the annual career day and other minor events for IT students in Bergen."
+    },
+    {
+      "title": "Vektorprogrammet - Assistant",
+      "period": "September 2023 - October 2023",
+      "details": "Tutor in Mathematics 1P-Y at Danielsen Videregående Skole, Bergen."
+    }
+  ],
+  "courses": [
+    { "name": "NSM grunnprinsipper for IKT-sikkerhet", "date": "October 2022", "id": "E320-Sikkerhetsmåned2022" },
+    { "name": "PI System Basics", "date": "November 2024", "id": "AV092191wmbm" },
+    { "name": "Asset Framework: Basics", "date": "November 2024", "id": "AVuxtcnkzynu" },
+    { "name": "Troubleshooting Basics for Administrators", "date": "December 2024", "id": "AV40acuigpxh" },
+    { "name": "PI Vision Basics", "date": "December 2024", "id": "AVaali88a7ox" },
+    { "name": "PI System Administration: Basics", "date": "December 2024", "id": "AVnmbjtyj47n" }
+  ],
+  "contact": {
+    "email": "fredric.hegland@gmail.com",
+    "phone": "+47 456 67 372",
+    "linkedin": "https://www.linkedin.com/in/fredric-hegland-8a8972206/",
+    "github": "https://github.com/frheg",
+    "website": "https://fredrichegland.no/"
+  }
+}

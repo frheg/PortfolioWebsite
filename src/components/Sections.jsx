@@ -1,160 +1,163 @@
 import selfPortrait from '../assets/Pictures/SelfPortrait.png'
+import SectionCard from './ui/SectionCard'
+import profile from '../data/profile.json'
 
 export default function Sections() {
   return (
-    <div id="board" className="w-4/5 mx-auto">
+    <div id="board" className="relative w-11/12 md:w-4/5 mx-auto font-sans text-left px-3 sm:px-0 mt-[100vh]">
       <div id="content">
         <img
           id="selfportrait"
           src={selfPortrait}
           alt="Self Portrait"
-          className="mx-auto rounded-full w-1/3"
+          loading="lazy"
+          decoding="async"
+          className="mx-auto rounded-full w-2/3 sm:w-1/2 md:w-1/3 shadow-lg"
         />
 
-        <h1 id="title" className="toptitle text-center font-bold">I am Fredric Hegland!</h1>
+        <h1 id="title" className="text-center font-bold text-3xl md:text-4xl tracking-wide mt-6">I am Fredric Hegland!</h1>
 
-        <div className="textBox" id="welcome">
-          <h2>Welcome to my portfolio-website!</h2>
+        <SectionCard id="welcome" title="Welcome to my portfolio-website!">
           <p>Here you can find information about me, my projects and my contact information.</p>
-        </div>
+        </SectionCard>
 
-        <div className="textBox" id="about">
-          <h2>About me:</h2>
-          <p>
-            I am currently pursuing a bachelors degree in Computer Technology at the University of Bergen, where I
-            delve into different topics in informatics and computer technology. Some of the my favorite topics are
-            computer programming and low-level stuff!
-          </p>
-        </div>
+        <SectionCard id="about" title="About me">
+          <p>{profile.about}</p>
+          {profile.highlights?.length ? (
+            <ul className="mt-4 list-disc list-inside space-y-1 text-sm opacity-90">
+              {profile.highlights.map((h, i) => (
+                <li key={i}>{h}</li>
+              ))}
+            </ul>
+          ) : null}
+        </SectionCard>
 
-        <div className="textBox" id="experience">
-          <h2>Experience:</h2>
-          <h4>I have had multiple part time jobs since I startet to study:</h4>
+        <SectionCard id="experience" title="Experience">
+          <h4 className="mb-2">I have had multiple part time jobs since I startet to study:</h4>
+          {profile.experience.map((job, idx) => (
+            <div key={idx} className="mb-3">
+              <p>
+                {job.company} - {job.title} ({job.period})
+              </p>
+              <p className="italic text-sm">
+                {job.details}
+                {job.link && (
+                  <>
+                    {' '}
+                    <a
+                      href={job.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline transition-colors"
+                    >
+                      {job.linkLabel || job.link}
+                    </a>
+                  </>
+                )}
+              </p>
+            </div>
+          ))}
+        </SectionCard>
 
-          <p>Amitec AS - Student Software Engineer (November 2024 - d.d.)</p>
-          <p className="sub">
-            Working with time-series-data, optimalization and IT/OT through{' '}
-            <a href="https://docs.aveva.com/category/pi-system" target="_blank" rel="noopener noreferrer">
-              AVEVA PI systems
-            </a>
-            , such as PI AF, PI Vision, PI SMT for customers in the energy sector.
-          </p>
+        <SectionCard id="education" title="Education">
+          {profile.education.map((ed, idx) => (
+            <p key={idx}>
+              {ed.school} -{' '}
+              {ed.link ? (
+                <a
+                  href={ed.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline transition-colors"
+                >
+                  {ed.program}
+                </a>
+              ) : (
+                ed.program
+              )}{' '}
+              ({ed.period})
+            </p>
+          ))}
+        </SectionCard>
 
-          <p>IKEA Leangen/Åsane, Trondheim/Bergen - Sales Co-worker (May 2022 - February 2025)</p>
-          <p className="sub">
-            Worked in the warehouse and sales department, where I was responsible for customer service, stock management
-            and sales.
-          </p>
+        <SectionCard id="projects" title="Projects">
+          <ul className="list-disc list-inside space-y-1">
+            {profile.projects.map((p, idx) => (
+              <li key={idx}>
+                {p.name} – {p.description}
+                {p.tech?.length ? (
+                  <span className="block text-sm italic opacity-80">Tech: {p.tech.join(', ')}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
 
-          <p>McDonalds Nidarvoll, Trondheim - Co-worker (January 2022 - April 2022)</p>
-          <p className="sub">Prepping food as a line-cook</p>
+        <SectionCard id="boardpositions" title="Board positions and volunteer work">
+          {profile.boardPositions.map((b, idx) => (
+            <div key={idx} className="mb-3">
+              <p>{b.title} ({b.period})</p>
+              <p className="italic text-sm">{b.details}</p>
+            </div>
+          ))}
+        </SectionCard>
 
-          <p>Roseborg Bakeri, Trondheim - Driver and storage-worker (September 2021 - January 2022)</p>
-          <p className="sub">
-            Worked as a driver and storage-worker, where I was responsible for delivering bread and pastries to
-            private-customers and bakeries.
-          </p>
-        </div>
+        <SectionCard id="courses" title="Courses and certificates">
+          {profile.courses.map((c, idx) => (
+            <div key={idx} className="mb-2">
+              <p>
+                {c.name} ({c.date})
+              </p>
+              {c.id && <p className="italic text-sm">ID: {c.id}</p>}
+            </div>
+          ))}
+        </SectionCard>
 
-        <div className="textBox" id="education">
-          <h2>Education:</h2>
-          <p>
-            University of Bergen, Bergen -{' '}
-            <a
-              href="https://www4.uib.no/program/informatikk-datateknologi-bachelor/plan"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Bachelors in Computer Technology
-            </a>{' '}
-            (August 2022 - June 2025)
-          </p>
-          <p>
-            NTNU Handleshøyskolen, Trondheim -{' '}
-            <a href="https://www.ntnu.no/studier/boat" target="_blank" rel="noopener noreferrer">
-              Economics and Administration
-            </a>{' '}
-            (August 2021 - June 2022)
-          </p>
-          <p>
-            Sandsli Videregående Skole Bergen -{' '}
-            <a
-              href="https://www.sandsli.vgs.no/utdanningsprogram/vare-utdanningsprogram/studiespesialisering/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Study specialization with science subjects
-            </a>{' '}
-            (August 2018 - June 2021)
-          </p>
-        </div>
+        <SectionCard id="skills" title="Skills">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+            {profile.skills.map((s, idx) => (
+              <div key={idx} className="opacity-90">{s}</div>
+            ))}
+          </div>
+        </SectionCard>
 
-        <div className="textBox" id="boardpositions">
-          <h2>Board positions and volunteer work:</h2>
-          <p>ITxBergen Leader (January 2024 - d.d.)</p>
-          <p className="sub">
-            Leader of the organization, with overall responsibility for organizing the annual career day for all IT
-            students in Bergen, as well as other smaller events. Responsible for important administrative decisions and
-            organizational development. Started as a board member, became leader in January 2024.
-          </p>
-          <p>ITxBergen Board Member (September 2022 - d.d.)</p>
-          <p className="sub">
-            Worked with organizing and planning the annual career day and other minor events for all IT students in
-            Bergen.
-          </p>
-          <p>Vektorprogrammet - Assistant (September 2023 - Oktober 2023)</p>
-          <p className="sub">
-            Assisted as a tutor in Mathematics 1P-Y during classes at Danielsen Videregående Skole, Bergen.
-          </p>
-        </div>
+        {profile.languages?.length ? (
+          <SectionCard id="languages" title="Languages">
+            <ul className="list-disc list-inside space-y-1">
+              {profile.languages.map((l, idx) => (
+                <li key={idx} className="opacity-90">
+                  {l.name} – <span className="italic text-sm">{l.level}</span>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+        ) : null}
 
-        <div className="textBox" id="courses">
-          <h2>Courses and certificates:</h2>
-          <p>NSM grunnprinsipper for IKT-sikkerhet (Oktober 2022)</p>
-          <p className="sub">ID: E320-Sikkerhetsmåned2022</p>
-
-          <p>PI System Basics (November 2024)</p>
-          <p className="sub">ID: AV092191wmbm</p>
-
-          <p>Asset Framework: Basics (November 2024)</p>
-          <p className="sub">ID: AVuxtcnkzynu</p>
-
-          <p>Troubleshooting Basics for Administrators (Desember 2024)</p>
-          <p className="sub">ID: AV40acuigpxh</p>
-
-          <p>PI Vision Basics (Desember 2024)</p>
-          <p className="sub">ID: AVaali88a7ox</p>
-
-          <p>PI System Administration: Basics (Desember 2024)</p>
-          <p className="sub">ID: AVnmbjtyj47n</p>
-        </div>
-
-        <div className="textBox" id="contact">
-          <h2>Contact:</h2>
+        <SectionCard id="contact" title="Contact">
           <h4>Feel free to contact me on any of these platforms:</h4>
           <p>
-            <a
-              href="https://www.linkedin.com/in/fredric-hegland-8a8972206/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href={profile.contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline transition-colors">
               LinkedIn
             </a>
           </p>
           <p>
-            <a href="https://github.com/frheg" target="_blank" rel="noopener noreferrer">
+            <a href={profile.contact.github} target="_blank" rel="noopener noreferrer" className="text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline transition-colors">
               GitHub
             </a>
           </p>
-          <p>Email: fredric.hegland@gmail.com</p>
-          <p>Phone: +47 45 66 73 72</p>
-        </div>
+          <p>
+            Email: <a href={`mailto:${profile.contact.email}`} className="text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline transition-colors">{profile.contact.email}</a>
+          </p>
+          <p>
+            Phone: <a href="tel:+4745667372" className="text-cyan-300 hover:text-cyan-200 underline-offset-4 hover:underline transition-colors">{profile.contact.phone}</a>
+          </p>
+        </SectionCard>
 
-        <div className="textBox" id="footer">
+        <SectionCard id="footer">
           <footer>
             <p>© 2025 Fredric Hegland</p>
           </footer>
-        </div>
+        </SectionCard>
       </div>
     </div>
   )

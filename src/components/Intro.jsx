@@ -13,8 +13,8 @@ export default function Intro() {
 
   return (
     <>
-      <section className="intro text-cyan-300">Welcome to my portfolio website!</section>
-      <section className="instruction">
+      <section className="intro text-cyan-300 text-center">Welcome to my portfolio website!</section>
+      <section className="instruction text-center">
         <p>Scroll down to learn more about me!</p>
       </section>
     </>
