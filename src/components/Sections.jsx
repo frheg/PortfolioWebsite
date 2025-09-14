@@ -15,7 +15,7 @@ export default function Sections() {
           className="mx-auto rounded-full w-2/3 sm:w-1/2 md:w-1/3 shadow-lg"
         />
 
-        <h1 id="title" className="text-center font-bold text-3xl md:text-4xl tracking-wide mt-6">I am Fredric Hegland!</h1>
+        <h1 id="title" className="text-center font-bold text-3xl md:text-4xl tracking-wide mt-7">I am Fredric Hegland!</h1>
 
         <SectionCard id="welcome" title="Welcome to my portfolio-website!">
           <p>Here you can find information about me, my projects and my contact information.</p>
