@@ -51,54 +51,54 @@ export function useComets(sceneRef, { max = 6, fieldRadius = 700 } = {}) {
     return new THREE.Mesh(trailGeometry, trailMaterial)
   }
 
+  function spawnComet(scene, comets) {
+    if (!scene || comets.length === undefined || comets.length >= max) return
+    const group = new THREE.Group()
+
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }))
+    group.add(core)
+
+    const glow = new THREE.Mesh(
+      new THREE.SphereGeometry(0.9, 16, 16),
+      new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.3, depthWrite: false })
+    )
+    group.add(glow)
+
+    const halo = new THREE.Mesh(
+      new THREE.RingGeometry(0.6, 1.1, 32),
+      new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false })
+    )
+    halo.rotation.x = Math.PI / 2
+    group.add(halo)
+
+    const trailGroup = new THREE.Group()
+    const baseColor = new THREE.Color(0x66ccff)
+    trailGroup.add(createTrailMesh(20, 0.8, baseColor, 0.4))
+    trailGroup.add(createTrailMesh(22, 1.2, baseColor, 0.2))
+    trailGroup.add(createTrailMesh(24, 1.6, baseColor, 0.08))
+    group.add(trailGroup)
+
+    const SPAWN_DISTANCE = 1000
+    const edgeAxis = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
+    const spawnPosition = edgeAxis.clone().multiplyScalar(SPAWN_DISTANCE)
+    group.position.copy(spawnPosition)
+
+    const toCenter = spawnPosition.clone().negate().normalize()
+    const offset = new THREE.Vector3(rand(-0.3, 0.3), rand(-0.3, 0.3), rand(-0.3, 0.3))
+    const velocity = toCenter.add(offset).normalize().multiplyScalar(rand(0.5, 2.0))
+
+    scene.add(group)
+    comets.push({ group, velocity, trailGroup })
+  }
+
   useEffect(() => {
     const scene = sceneRef.current
     if (!scene) return
 
     const comets = []
 
-    const spawnComet = () => {
-      if (comets.length >= max) return
-      const group = new THREE.Group()
-
-      const core = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }))
-      group.add(core)
-
-      const glow = new THREE.Mesh(
-        new THREE.SphereGeometry(0.9, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.3, depthWrite: false })
-      )
-      group.add(glow)
-
-      const halo = new THREE.Mesh(
-        new THREE.RingGeometry(0.6, 1.1, 32),
-        new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false })
-      )
-      halo.rotation.x = Math.PI / 2
-      group.add(halo)
-
-      const trailGroup = new THREE.Group()
-      const baseColor = new THREE.Color(0x66ccff)
-      trailGroup.add(createTrailMesh(20, 0.8, baseColor, 0.4))
-      trailGroup.add(createTrailMesh(22, 1.2, baseColor, 0.2))
-      trailGroup.add(createTrailMesh(24, 1.6, baseColor, 0.08))
-      group.add(trailGroup)
-
-      const SPAWN_DISTANCE = 1000
-      const edgeAxis = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
-      const spawnPosition = edgeAxis.clone().multiplyScalar(SPAWN_DISTANCE)
-      group.position.copy(spawnPosition)
-
-      const toCenter = spawnPosition.clone().negate().normalize()
-      const offset = new THREE.Vector3(rand(-0.3, 0.3), rand(-0.3, 0.3), rand(-0.3, 0.3))
-      const velocity = toCenter.add(offset).normalize().multiplyScalar(rand(0.5, 2.0))
-
-      scene.add(group)
-      comets.push({ group, velocity, trailGroup })
-    }
-
     // pre-warm a few
-    for (let i = 0; i < 5; i++) spawnComet()
+    for (let i = 0; i < 5; i++) spawnComet(scene, comets)
 
     cometsRef.current = comets
 
@@ -130,43 +130,8 @@ export function useComets(sceneRef, { max = 6, fieldRadius = 700 } = {}) {
 
     const now = performance.now()
     if (now >= nextSpawnRef.current && comets.length < max) {
-      // trigger effect to spawn another comet next render by reusing same logic:
-      // We simply push a request by spawning inline here using sceneRef
       const scene = sceneRef.current
-      if (scene) {
-        // replicate spawnComet logic
-        const group = new THREE.Group()
-        const core = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }))
-        group.add(core)
-        const glow = new THREE.Mesh(
-          new THREE.SphereGeometry(0.9, 16, 16),
-          new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.3, depthWrite: false })
-        )
-        group.add(glow)
-        const halo = new THREE.Mesh(
-          new THREE.RingGeometry(0.6, 1.1, 32),
-          new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false })
-        )
-        halo.rotation.x = Math.PI / 2
-        group.add(halo)
-        const trailGroup = new THREE.Group()
-        const baseColor = new THREE.Color(0x66ccff)
-        trailGroup.add(createTrailMesh(20, 0.8, baseColor, 0.4))
-        trailGroup.add(createTrailMesh(22, 1.2, baseColor, 0.2))
-        trailGroup.add(createTrailMesh(24, 1.6, baseColor, 0.08))
-        group.add(trailGroup)
-
-        const SPAWN_DISTANCE = 1000
-        const edgeAxis = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
-        const spawnPosition = edgeAxis.clone().multiplyScalar(SPAWN_DISTANCE)
-        group.position.copy(spawnPosition)
-        const toCenter = spawnPosition.clone().negate().normalize()
-        const offset = new THREE.Vector3(rand(-0.3, 0.3), rand(-0.3, 0.3), rand(-0.3, 0.3))
-        const velocity = toCenter.add(offset).normalize().multiplyScalar(rand(0.5, 2.0))
-
-        scene.add(group)
-        comets.push({ group, velocity, trailGroup })
-      }
+      spawnComet(scene, comets)
       nextSpawnRef.current = now + rand(4000, 9000)
     }
   }

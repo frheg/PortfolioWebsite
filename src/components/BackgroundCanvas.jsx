@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+// Orchestrator for the 3D background: wires together modular hooks and runs the render loop
 import { useThree } from '../three/useThree'
 import { useSkybox } from '../three/useSkybox'
 import { useLights } from '../three/useLights'
@@ -11,9 +12,11 @@ import { useScrollCamera } from '../three/useScrollCamera'
 export default function BackgroundCanvas() {
   const canvasRef = useRef(null)
 
+  // Core Three.js objects bound to this canvas
   const { sceneRef, cameraRef, rendererRef } = useThree(canvasRef)
   useSkybox(sceneRef)
   useLights(sceneRef)
+  // Independent background systems
   const stars = useStarField(sceneRef, { count: 9000, fieldRadius: 700, rotationSpeed: 0.005 })
   const planet = usePlanet(sceneRef)
   const galaxies = useGalaxies(sceneRef, { max: 24, spawnRadius: 1000, lifetimeMs: 60000 })
@@ -39,6 +42,7 @@ export default function BackgroundCanvas() {
       }
     }
     animate()
+    // Cancel RAF on unmount; hooks handle object/event cleanup
     return () => cancelAnimationFrame(animationId)
   }, [sceneRef, cameraRef, rendererRef, stars, planet, galaxies, comets, scrollCam])
 

@@ -7,7 +7,7 @@ export function useSkybox(sceneRef) {
     const scene = sceneRef.current
     if (!scene) return
 
-    let disposed = false
+    let texture = null
     try {
       const loader = new THREE.CubeTextureLoader()
       const skyPaths = [
@@ -18,16 +18,17 @@ export function useSkybox(sceneRef) {
         new URL('../assets/Pictures/SkyBox/kurt/space_rt.png', import.meta.url).href,
         new URL('../assets/Pictures/SkyBox/kurt/space_up.png', import.meta.url).href,
       ]
-      const tex = loader.load(skyPaths)
-      scene.background = tex
+      texture = loader.load(skyPaths)
+      scene.background = texture
     } catch (_) {
       // keep default background
     }
 
     return () => {
-      if (disposed) return
-      // Three manages cube texture disposal when scene disposed; no-op
-      disposed = true
+      if (scene.background === texture) {
+        scene.background = null
+      }
+      texture?.dispose?.()
     }
   }, [sceneRef])
 }

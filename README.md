@@ -21,9 +21,9 @@ Outputs to `dist/`.
 
 This repo contains a GitHub Actions workflow at `.github/workflows/deploy.yml` that builds the site and deploys `dist/` to Pages on pushes to `main`.
 
-Vite is configured with `base: '/PortfolioWebsite/'` in `vite.config.js`, which is required for correct asset paths when hosting at `https://<user>.github.io/PortfolioWebsite/`.
-
-For a custom domain (`fredrichegland.no`), `vite.config.js` uses `base: '/'` and a `public/CNAME` file is included so GitHub Pages serves at your domain.
+Vite's `base` must match where the site is hosted:
+- If hosting at `https://<user>.github.io/PortfolioWebsite/`, set `base: '/PortfolioWebsite/'` in `vite.config.js`.
+- For a custom domain (`fredrichegland.no`), set `base: '/'` (this repo is currently configured this way) and include `public/CNAME`.
 
 ### First-time setup
 
