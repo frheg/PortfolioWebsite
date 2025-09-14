@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { createGalaxy, animateGalaxies } from './galaxyModule'
+import { spaceConfig } from './spaceConfig'
 
 const GALAXY_COLORS = [
   { h: 0.05, s: 0.8, l: 0.6 },
@@ -20,13 +21,17 @@ function spawnGalaxy(scene, galaxies, spawnRadius) {
   )
   const theme = GALAXY_COLORS[Math.floor(Math.random() * GALAXY_COLORS.length)]
   const g = createGalaxy({ position: pos, colorBase: theme, scene })
-  g.userData.birth = performance.now()
   galaxies.push(g)
 }
 
-export function useGalaxies(sceneRef, { max = 24, spawnRadius = 1000, lifetimeMs = 60000 } = {}) {
+export function useGalaxies(
+  sceneRef,
+  {
+    max = spaceConfig.counts.galaxies,
+    spawnRadius = Math.min(spaceConfig.half.x, spaceConfig.half.y, spaceConfig.half.z) * 0.9,
+  } = {}
+) {
   const galaxiesRef = useRef([])
-  const nextSpawnRef = useRef(performance.now() + rand(1200, 3000))
 
   useEffect(() => {
     const scene = sceneRef.current
@@ -34,8 +39,8 @@ export function useGalaxies(sceneRef, { max = 24, spawnRadius = 1000, lifetimeMs
 
     const galaxies = []
 
-    // pre-warm a few
-    for (let i = 0; i < 6; i++) spawnGalaxy(scene, galaxies, spawnRadius)
+    // Spawn all galaxies once during initialization
+    for (let i = 0; i < max; i++) spawnGalaxy(scene, galaxies, spawnRadius)
 
     galaxiesRef.current = galaxies
 
@@ -43,20 +48,12 @@ export function useGalaxies(sceneRef, { max = 24, spawnRadius = 1000, lifetimeMs
       galaxies.forEach((g) => scene.remove(g))
       galaxiesRef.current = []
     }
-  }, [sceneRef, max, spawnRadius, lifetimeMs])
+  }, [sceneRef, max, spawnRadius])
 
   const update = () => {
     const scene = sceneRef.current
     const galaxies = galaxiesRef.current
     if (!scene || !galaxies) return
-
-    const now = performance.now()
-
-    // spawn new over time
-    if (now >= nextSpawnRef.current && galaxies.length < max) {
-      spawnGalaxy(scene, galaxies, spawnRadius)
-      nextSpawnRef.current = now + rand(1500, 4000)
-    }
 
     galaxies.forEach((g) => {
       if (!g.userData.drift) {
@@ -65,16 +62,6 @@ export function useGalaxies(sceneRef, { max = 24, spawnRadius = 1000, lifetimeMs
       g.position.add(g.userData.drift)
     })
     animateGalaxies(galaxies)
-
-    // prune old
-    for (let i = galaxies.length - 1; i >= 0; i--) {
-      const g = galaxies[i]
-      const age = now - (g.userData.birth || now)
-      if (age > lifetimeMs) {
-        scene.remove(g)
-        galaxies.splice(i, 1)
-      }
-    }
   }
 
   return { update }

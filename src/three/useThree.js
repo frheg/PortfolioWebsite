@@ -1,8 +1,9 @@
 // Three.js core setup hook: creates scene, camera, renderer on a given canvas
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { spaceConfig } from './spaceConfig'
 
-export function useThree(canvasRef, { fov = 75, near = 0.1, far = 2000, clearColor = 0x000000 } = {}) {
+export function useThree(canvasRef, { fov = 75, near = 0.1, far = Math.max(spaceConfig.bounds.width, spaceConfig.bounds.height, spaceConfig.bounds.depth) * 2, clearColor = 0x000000 } = {}) {
   const sceneRef = useRef(null)
   const cameraRef = useRef(null)
   const rendererRef = useRef(null)

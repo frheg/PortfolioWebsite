@@ -8,6 +8,7 @@ import { usePlanet } from '../three/usePlanet'
 import { useGalaxies } from '../three/useGalaxies'
 import { useComets } from '../three/useComets'
 import { useScrollCamera } from '../three/useScrollCamera'
+import { spaceConfig } from '../three/spaceConfig'
 
 export default function BackgroundCanvas() {
   const canvasRef = useRef(null)
@@ -17,10 +18,11 @@ export default function BackgroundCanvas() {
   useSkybox(sceneRef)
   useLights(sceneRef)
   // Independent background systems
-  const stars = useStarField(sceneRef, { count: 9000, fieldRadius: 700, rotationSpeed: 0.005 })
+  // Use global defaults; you can still override by passing props here
+  const stars = useStarField(sceneRef)
   const planet = usePlanet(sceneRef)
-  const galaxies = useGalaxies(sceneRef, { max: 24, spawnRadius: 1000, lifetimeMs: 60000 })
-  const comets = useComets(sceneRef, { max: 6, fieldRadius: 700 })
+  const galaxies = useGalaxies(sceneRef)
+  const comets = useComets(sceneRef)
   const scrollCam = useScrollCamera(cameraRef, { baseZ: 150, zPerPx: 0.05, maxYaw: Math.PI / 12, posLerp: 0.06, rotLerp: 0.12 })
 
   useEffect(() => {

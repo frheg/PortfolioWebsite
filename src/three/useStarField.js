@@ -1,8 +1,16 @@
 // Creates a rotating/twinkling star field; returns update() and cleanup
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { spaceConfig } from './spaceConfig'
 
-export function useStarField(sceneRef, { count = 9000, fieldRadius = 700, rotationSpeed = 0.005 } = {}) {
+export function useStarField(
+  sceneRef,
+  {
+    count = spaceConfig.counts.stars,
+    fieldRadius = Math.min(spaceConfig.half.x, spaceConfig.half.z),
+    rotationSpeed = spaceConfig.rotationSpeed,
+  } = {}
+) {
   const starsRef = useRef([])
   const timeRef = useRef(0)
 
@@ -27,7 +35,7 @@ export function useStarField(sceneRef, { count = 9000, fieldRadius = 700, rotati
       starMaterial.userData = { baseColor: starColor.clone() }
       const star = new THREE.Mesh(starGeometry, starMaterial)
 
-      const radius = Math.random() * fieldRadius - fieldRadius / 2
+  const radius = Math.random() * fieldRadius - fieldRadius / 2
       const theta = Math.random() * Math.PI * 2
       const x = radius * Math.cos(theta)
       const z = radius * Math.sin(theta)
