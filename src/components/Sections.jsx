@@ -161,7 +161,7 @@ export default function Sections() {
                 day: "2-digit",
                 month: "long",
                 year: "numeric",
-              }).replace(/^(\d{2})/, "$1.")}
+              })}
             </p>
           </footer>
         </SectionCard>
