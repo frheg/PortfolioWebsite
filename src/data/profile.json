@@ -1,5 +1,5 @@
 {
-  "about": "Completed a Bachelors in Computer Technology (Informatics) at the University of Bergen and now pursuing a joint Master's program in Software Engineering (UiB/HVL) with courses in machine learning. I enjoy computer programming and low-level topics, and I thrive in small teams where I can wear many hats.",
+  "about": "Completed a Bachelors in Computer Technology (Computer Science) at the University of Bergen and now pursuing a joint Master's program in Software Engineering (UiB/HVL) with courses in machine learning. I enjoy computer programming and low-level topics, and I thrive in teams where I can wear many hats.",
   "experience": [
     {
       "title": "Student Software Engineer",
@@ -31,7 +31,7 @@
   "education": [
     {
       "school": "UiB/HVL, Bergen",
-      "program": "Joint Master's Program in Software Development (with ML courses)",
+      "program": "Joint Master's Program in Software Engineering (with ML courses)",
       "period": "August 2025 - June 2027"
     },
     {
@@ -54,7 +54,7 @@
     }
   ],
   "highlights": [
-    "Bachelor in Informatics: Computer Technology completed; started joint Master in Software Development (UiB/HVL).",
+    "Bachelor in Computer Science: Computer Technology completed; started joint Master in Software Engineering (UiB/HVL).",
     "Experience working in small teams handling multiple responsibilities.",
     "Broad exposure to technologies: Java, C#/.NET, TypeScript/JavaScript, Angular, Python, SQL, C, Haskell, PHP, Kotlin, Linux, Git, HTML/CSS.",
     "Implementing an enterprise chatbot on .NET + Angular using vLLM, Qdrant and Neo4j orchestrated with Docker.",
@@ -67,9 +67,19 @@
       "tech": ["React", "Vite", "Tailwind", "Three.js"]
     },
     {
-      "name": "Data Pipeline Sandbox",
-      "description": "Personal exploration of time-series ingestion and visualization.",
-      "tech": ["Python", "Pandas", "FastAPI", "Postgres"]
+      "name": "Enterprise Chatbot",
+      "description": "Implementing an enterprise chatbot and intranet features using .NET and Angular, leveraging vLLM, Qdrant, and Neo4j via Docker.",
+      "tech": ["C#/.NET", "Angular", "Python", "vLLM", "Qdrant", "Neo4j", "Docker", "More to come..."]
+    },
+    {
+      "name": "Machine Learning Experimentation",
+      "description": "I am experimenting with various machine learning models and techniques, will be implementing my own embedding model and vector database for semantic search.",
+      "tech": ["Python", "Qdrant", "Different ML libraries"]
+    },
+    {
+      "name": "Group Project - System Development",
+      "description": "A group project where we developed a 2D game using LibGDX in Java for a university course, INF112 at UiB.",
+      "tech": ["Java", "LibGDX"]
     }
   ],
   "skills": [

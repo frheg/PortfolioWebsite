@@ -155,7 +155,8 @@ export default function Sections() {
 
         <SectionCard id="footer">
           <footer>
-            <p>© 2025 Fredric Hegland</p>
+            <p>© {new Date().getFullYear()} Fredric Hegland — Last updated:{" "}
+      {new Date(document.lastModified).toLocaleDateString()}</p>
           </footer>
         </SectionCard>
       </div>
