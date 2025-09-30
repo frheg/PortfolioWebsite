@@ -156,7 +156,7 @@ export default function Sections() {
         <SectionCard id="footer">
           <footer>
             <p>
-              © {new Date().getFullYear()} Fredric Hegland — Last updated:{" "}
+              © {new Date().getFullYear()} Fredric Hegland - Last updated:{" "}
               {new Date(document.lastModified).toLocaleDateString("en-GB", {
                 day: "2-digit",
                 month: "long",
