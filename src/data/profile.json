@@ -1,5 +1,5 @@
 {
-  "about": "Completed a Bachelors in Computer Technology (Computer Science) at the University of Bergen and now pursuing a joint Master's program in Software Engineering (UiB/HVL) with courses in machine learning. I enjoy computer programming and low-level topics, and I thrive in teams where I can wear many hats.",
+  "about": "Completed a Bachelors in Computer Technology (Computer Science) at the University of Bergen and now pursuing a joint Master's program in Software Engineering (UiB/HVL) with courses in machine learning. I am especially interested in AI/ML, low-level computer stuff aswell as Quantum Computing.",
   "experience": [
     {
       "title": "Student Software Engineer",
@@ -32,7 +32,8 @@
     {
       "school": "UiB/HVL, Bergen",
       "program": "Joint Master's Program in Software Engineering (with ML courses)",
-      "period": "August 2025 - June 2027"
+      "period": "August 2025 - June 2027",
+      "link": "https://www4.uib.no/en/studies/programmes/joint-masters-in-software-engineering-masters"
     },
     {
       "school": "University of Bergen, Bergen",
@@ -73,8 +74,13 @@
     },
     {
       "name": "Machine Learning Experimentation",
-      "description": "I am experimenting with various machine learning models and techniques, will be implementing my own embedding model and vector database for semantic search.",
-      "tech": ["Python", "Qdrant", "Different ML libraries"]
+      "description": "I am experimenting with various machine learning models and techniques, will be implementing my own embedding model and vector database for semantic search. I have also started exploring QiSkit Quantum Computing framework for Python aswell.",
+      "tech": ["Python", "Qdrant", "Different ML libraries", "Qiskit"]
+    },
+    {
+      "name": "Group Project - Advanced Software Technologies",
+      "description": "Create a pollapp using different several advanced software technologies from the course, aswell as some extra ones.",
+      "tech": ["Kotlin", "Angluar", "Spring Boot", "Docker", "Qdrant", "Redis", "Apache Kafka", "More to come..."]
     },
     {
       "name": "Group Project - System Development",
@@ -97,7 +103,7 @@
   "languages": [
     { "name": "Norwegian", "level": "Fluent" },
     { "name": "English", "level": "Fluent" },
-    { "name": "Spanish", "level": "Basic (learning)" },
+    { "name": "Spanish", "level": "Basic (ongoing learning)" },
     { "name": "German", "level": "Basic" }
   ],
   "boardPositions": [
