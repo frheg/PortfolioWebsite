@@ -1,11 +1,11 @@
 {
-  "about": "Completed a Bachelors in Computer Technology (Computer Science) at the University of Bergen and now pursuing a joint Master's program in Software Engineering (UiB/HVL) with courses in machine learning. I am especially interested in AI/ML, low-level computer stuff aswell as Quantum Computing.",
+  "about": "Completed a Bachelors in Computer Technology (Computer Science) at the University of Bergen and now pursuing a joint Master's program in Software Engineering (UiB/HVL) with courses in machine learning. I have a very broad range of interests which I like to spend time on. Some of these worth mentioning: all of sports, sailing, cars and engines, mechanical engineering, quantum computing, machine learning and AI, low-level computing and assembly code, new and old technologies in all aspects but with a heavier emphasis on cars, boats and airplanes as well as computers of course.",
   "experience": [
     {
       "title": "Student Software Engineer",
       "company": "Amitec AS",
       "period": "November 2024 - d.d.",
-      "details": "Building an enterprise chatbot and intranet features using .NET and Angular, leveraging vLLM, Qdrant, and Neo4j via Docker; API programming and Python automation; IT/OT work with AVEVA PI systems (PI AF, PI Vision, PI SMT) related to time-series data for energy sector clients.",
+      "details": "Building an enterprise chatbot using various tools and technologies, working along the whole tech stack, including architecture, backend, frontend, networking, security, databases.; IT/OT work with AVEVA PI systems (PI AF, PI Vision, PI SMT) related to time-series data for energy sector clients.",
       "link": "https://docs.aveva.com/category/pi-system",
       "linkLabel": "AVEVA PI systems (PI AF, PI Vision, PI SMT)"
     },
@@ -57,9 +57,10 @@
   "highlights": [
     "Bachelor in Computer Science: Computer Technology completed; started joint Master in Software Engineering (UiB/HVL).",
     "Experience working in small teams handling multiple responsibilities.",
-    "Broad exposure to technologies: Java, C#/.NET, TypeScript/JavaScript, Angular, Python, SQL, C, Haskell, PHP, Kotlin, Linux, Git, HTML/CSS.",
-    "Implementing an enterprise chatbot on .NET + Angular using vLLM, Qdrant and Neo4j orchestrated with Docker.",
-    "Organizational development and administration as leader at ITxBergen."
+    "Broad exposure to technologies: Python, AI/ML-libraries, several NoSQL databases, Java, C#/.NET, TypeScript/JavaScript, Angular, SQL, C, Haskell, Kotlin, Linux, Git, HTML/CSS.",
+    "Implemented various different projects in both spare-time and through university, to further develop my skills and interests.",
+    "Fond of optimalizing workflow with experience using vim, tmux, ssh, terminal work and Linux systems daily",
+    "Organizational development and administration as leader of ITxBergen."
   ],
   "projects": [
     {
@@ -69,13 +70,23 @@
     },
     {
       "name": "Enterprise Chatbot",
-      "description": "Implementing an enterprise chatbot and intranet features using .NET and Angular, leveraging vLLM, Qdrant, and Neo4j via Docker.",
-      "tech": ["C#/.NET", "Angular", "Python", "vLLM", "Qdrant", "Neo4j", "Docker", "More to come..."]
+      "description": "Implementing an enterprise chatbot where I work in the whole tech stack. Handling backend business logic, architectural choices, networking, databases, machine learning techniques, RAG apporaches",
+      "tech": ["Kotlin", "Python", "Qdrant", "Neo4j", "Docker", "Azure Open AI", "Azure Resources", "More to come..."]
+    },
+    {
+      "name": "Personal AI Homelab",
+      "description": "I implemented my very own completely custom agent, running locally. I used open-source LLMs from huggingface, running locally on my own desktop through vLLM. I use RAG techniques to enrich the LLM with context from Qdrant where I have embedded the whole of english Wikipedia. The chatbot-agent is also toolcapable where I have implemented several tools the chatbot can call if needed, whereas a selfhosted SearXNG instance, calculator, weather API, current time, create and read files, with more to come.",
+      "tech": ["Python", "Qdrant", "vLLM", "PyTorch", "Numpy", "Embedding models", "More to come..."]
     },
     {
       "name": "Machine Learning Experimentation",
-      "description": "I am experimenting with various machine learning models and techniques, will be implementing my own embedding model and vector database for semantic search. I have also started exploring QiSkit Quantum Computing framework for Python aswell.",
+      "description": "I am experimenting with various machine learning models and techniques, where as I experiment with quantum computing, raw machine learning algorithms in Numpy only, and embedding models.",
       "tech": ["Python", "Qdrant", "Different ML libraries", "Qiskit"]
+    },
+    {
+      "name": "Group Project - Modern Software Development Methods (Kollekt)",
+      "description": "Full-stack application for shared-housing households with aim to imrove common household issues in shared-housing.",
+      "tech": ["Kotlin", "React", "Spring Boot", "Docker", "Apache Kafka", "Postgres", "Redis", "NginX", "Supabase"]
     },
     {
       "name": "Group Project - Advanced Software Technologies",
@@ -89,15 +100,21 @@
     }
   ],
   "skills": [
+    "Python",
+    "AI/ML work and applications of AI/ML for both personal use and enterprise",
+    "Networking and architecture",
     "JavaScript/TypeScript",
+    "Linux and terminal work",
+    "Server hosting and administration",
     "React",
     "Angular",
     "Three.js",
-    "Python",
     "C#/.NET",
     "Java",
-    "SQL",
+    "Message brokers",
+    "SQL and NoSQL databases",
     "Git & CI/CD",
+    "Azure DevOps $ CI/CD",
     "Docker"
   ],
   "languages": [
@@ -109,12 +126,12 @@
   "boardPositions": [
     {
       "title": "ITxBergen Leader",
-      "period": "January 2024 - d.d.",
+      "period": "January 2024 - February 2026",
       "details": "Overall responsibility for organizing the annual career day for all IT students in Bergen and other events; administrative decisions and organizational development."
     },
     {
       "title": "ITxBergen Board Member",
-      "period": "September 2022 - d.d.",
+      "period": "September 2022 - February 2026",
       "details": "Organizing and planning the annual career day and other minor events for IT students in Bergen."
     },
     {
@@ -133,7 +150,6 @@
   ],
   "contact": {
     "email": "fredric.hegland@gmail.com",
-    "phone": "+47 456 67 372",
     "linkedin": "https://www.linkedin.com/in/fredric-hegland-8a8972206/",
     "github": "https://github.com/frheg",
     "website": "https://fredrichegland.no/"
