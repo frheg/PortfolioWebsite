@@ -58,7 +58,6 @@ export default function ContactPage() {
           eyebrow="Open Channel"
           title="If you want to build something thoughtful and technically solid, I’m happy to talk."
           description="The easiest way to reach me is by email or LinkedIn. GitHub is where the side projects, experiments, and slightly nerdy detours keep growing."
-          className="mt-20 sm:mt-24 md:mt-28"
         >
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_0.9fr]">
             <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">

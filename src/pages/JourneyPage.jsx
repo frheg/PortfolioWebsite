@@ -114,7 +114,6 @@ export default function JourneyPage() {
           eyebrow="Signals"
           title="Leadership, languages, and continued learning."
           description="The technical side matters a lot to me, but so does communication, organizing people, and learning beyond the minimum."
-          className="mt-20 sm:mt-24 md:mt-28"
         >
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_0.8fr]">
             <div className="space-y-3 sm:space-y-4">

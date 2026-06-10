@@ -46,7 +46,6 @@ export default function ProjectsPage() {
           eyebrow="Archive"
           title="More builds and experiments."
           description="These may be smaller or more course-driven, but they still show how I like to explore tools, ideas, and implementations."
-          className="mt-20 sm:mt-24 md:mt-28"
         >
           <OrbitDisclosure title="Open project archive" hint="University work, side explorations, and smaller builds" defaultOpen>
             <div className="grid gap-3 sm:gap-4 md:grid-cols-2">

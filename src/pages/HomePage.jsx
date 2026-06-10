@@ -100,7 +100,6 @@ export default function HomePage() {
           eyebrow="Featured Orbit"
           title="A few builds that represent me best."
           description="Rather than placing everything on the front page, these are the projects I would start with. The rest live on their own page."
-          className="mt-20 sm:mt-24 md:mt-28"
         >
           <div className="grid gap-4 sm:gap-5 xl:grid-cols-3">
             {featuredProjects.map((project, index) => (

@@ -10,7 +10,7 @@ export default function SectionCard({
   return (
     <section
       id={id}
-      className={`relative z-10 my-8 scroll-mt-24 overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4 shadow-[0_30px_80px_rgba(8,15,35,0.45)] backdrop-blur-xl sm:my-10 sm:rounded-[2rem] sm:p-6 md:my-14 md:p-8 ${className}`}
+      className={`relative z-10 my-16 scroll-mt-24 overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4 shadow-[0_30px_80px_rgba(8,15,35,0.45)] backdrop-blur-xl sm:my-20 sm:rounded-[2rem] sm:p-6 md:my-28 md:p-8 ${className}`}
       aria-labelledby={title ? `${id}-title` : undefined}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
