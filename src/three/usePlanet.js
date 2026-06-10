@@ -1,6 +1,7 @@
 // Creates an Earth planet; returns update() to rotate
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { spaceConfig } from './spaceConfig'
 
 export function usePlanet(sceneRef) {
   const planetRef = useRef(null)
@@ -9,24 +10,28 @@ export function usePlanet(sceneRef) {
     const scene = sceneRef.current
     if (!scene) return
 
-    const planetRadius = 10
-    const planetVector = new THREE.Vector3(-50, 10, -50)
-    const planetSize = 1
-    const planetGeometry = new THREE.SphereGeometry(planetRadius, 32, 32)
+    const planetGeometry = new THREE.SphereGeometry(
+      spaceConfig.planet.radius,
+      spaceConfig.planet.segments.width,
+      spaceConfig.planet.segments.height
+    )
     const planetMaterial = new THREE.MeshBasicMaterial()
     const planet = new THREE.Mesh(planetGeometry, planetMaterial)
-    planet.position.copy(planetVector)
-    planet.scale.set(planetSize, planetSize, planetSize)
+    planet.position.set(spaceConfig.planet.position.x, spaceConfig.planet.position.y, spaceConfig.planet.position.z)
+    planet.scale.set(spaceConfig.planet.scale, spaceConfig.planet.scale, spaceConfig.planet.scale)
     scene.add(planet)
 
     try {
-      const earthTexUrl = new URL('../assets/Models/Earth 3D Model/textures/1_earth_8k.jpg', import.meta.url).href
+      const earthTexUrl = new URL(spaceConfig.planet.texture.path, import.meta.url).href
       const textureLoader = new THREE.TextureLoader()
       textureLoader.load(earthTexUrl, (tex) => {
+        tex.anisotropy = spaceConfig.planet.texture.anisotropy
         planetMaterial.map = tex
         planetMaterial.needsUpdate = true
       })
-    } catch (_) {}
+    } catch {
+      // Keep the planet visible even if the texture cannot be loaded.
+    }
 
     planetRef.current = planet
 
@@ -40,7 +45,7 @@ export function usePlanet(sceneRef) {
 
   const update = () => {
     if (planetRef.current) {
-      planetRef.current.rotation.y += 0.001
+      planetRef.current.rotation.y += spaceConfig.planet.rotationSpeed
     }
   }
 

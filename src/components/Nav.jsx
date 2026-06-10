@@ -1,57 +1,57 @@
 import { useEffect, useState } from 'react'
-
-const sections = [
-  { id: 'welcome', label: 'Welcome' },
-  { id: 'about', label: 'About' },
-  { id: 'experience', label: 'Experience' },
-  { id: 'education', label: 'Education' },
-  { id: 'projects', label: 'Projects' },
-  { id: 'boardpositions', label: 'Board' },
-  { id: 'courses', label: 'Courses' },
-  { id: 'skills', label: 'Skills' },
-  { id: 'contact', label: 'Contact' },
-]
+import { Link, NavLink, useLocation } from 'react-router-dom'
+import { navLinks } from '../content/navLinks'
 
 export default function Nav() {
-  const [active, setActive] = useState(null)
   const [open, setOpen] = useState(false)
+  const location = useLocation()
 
   useEffect(() => {
-    const observers = []
-    sections.forEach(({ id }) => {
-      const el = document.getElementById(id)
-      if (!el) return
-      const obs = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) setActive(id)
-        },
-        { root: null, rootMargin: '0px 0px -60% 0px', threshold: 0.1 }
-      )
-      obs.observe(el)
-      observers.push(obs)
-    })
-    return () => observers.forEach((o) => o.disconnect())
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [open])
+
+  useEffect(() => {
+    const onResize = () => setOpen(false)
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    window.addEventListener('resize', onResize)
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('keydown', onKeyDown)
+    }
   }, [])
 
+  useEffect(() => {
+    setOpen(false)
+  }, [location.pathname])
+
   const linkClass = (isActive) =>
-    `whitespace-nowrap px-3 py-2 rounded-md text-sm transition-colors ${
-      isActive ? 'bg-cyan-500/20 text-cyan-200' : 'text-cyan-300 hover:text-cyan-200'
+    `whitespace-nowrap rounded-full border px-3 py-2 text-sm font-medium tracking-[0.18em] uppercase transition duration-300 ${
+      isActive
+        ? 'border-cyan-300/50 bg-cyan-300/15 text-cyan-100 shadow-[0_0_18px_rgba(103,232,249,0.18)]'
+        : 'border-white/10 bg-black/10 text-cyan-300 hover:border-cyan-300/30 hover:text-cyan-100 hover:bg-cyan-300/10'
     }`
 
   const Links = ({ vertical = false }) => (
-    <div className={`${vertical ? 'flex flex-col py-2' : 'flex items-center gap-2'} overflow-x-auto`}>
-      {sections.map(({ id, label }) => {
-        const isActive = active === id
+    <div className={`${vertical ? 'flex flex-col gap-2 py-2' : 'flex items-center gap-2'} overflow-x-auto`}>
+      {navLinks.map(({ to, label }) => {
         return (
-          <a
-            key={id}
-            href={`#${id}`}
-            aria-current={isActive ? 'page' : undefined}
+          <NavLink
+            key={to}
+            to={to}
             onClick={() => setOpen(false)}
-            className={linkClass(isActive)}
+            className={({ isActive }) => `${linkClass(isActive)} ${vertical ? 'w-full justify-center py-3 text-center' : ''}`}
+            end={to === '/'}
           >
             {label}
-          </a>
+          </NavLink>
         )
       })}
     </div>
@@ -59,15 +59,21 @@ export default function Nav() {
 
   return (
     <nav
-      className="fixed top-0 left-0 right-0 z-30 bg-black/50 backdrop-blur-sm border-b border-white/10"
+      className="fixed top-0 left-0 right-0 z-40 border-b border-white/10 bg-slate-950/40 backdrop-blur-xl"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
-      <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between gap-4">
-        <a href="#welcome" className="font-semibold text-cyan-200 hover:text-cyan-100">
-          FH
-        </a>
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+        <Link to="/" className="group flex items-center gap-3 text-cyan-100">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 font-display text-sm font-semibold shadow-[0_0_22px_rgba(103,232,249,0.18)] transition group-hover:scale-105 group-hover:border-cyan-200/70">
+            FH
+          </span>
+          <span className="hidden sm:block leading-none">
+            <span className="block font-display text-sm font-semibold tracking-[0.26em] text-cyan-100">FREDRIC HEGLAND</span>
+            <span className="mt-1 block text-xs uppercase tracking-[0.28em] text-cyan-300/80">Software engineering in orbit</span>
+          </span>
+        </Link>
         <button
-          className="md:hidden inline-flex items-center justify-center rounded-md px-3 py-2 text-cyan-200 hover:text-cyan-100 hover:bg-white/10 transition"
+          className="inline-flex items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-2 text-cyan-200 transition hover:border-cyan-300/40 hover:text-cyan-100 hover:bg-white/10 md:hidden"
           aria-label="Toggle menu"
           aria-expanded={open}
           aria-controls="mobile-menu"
@@ -93,8 +99,18 @@ export default function Nav() {
           <Links />
         </div>
       </div>
-      <div id="mobile-menu" className={`${open ? 'block' : 'hidden'} md:hidden border-t border-white/10 px-4 pb-2`}>
-        <Links vertical />
+      <div className={`${open ? 'block' : 'hidden'} md:hidden`}>
+        <button
+          type="button"
+          aria-label="Close menu overlay"
+          className="fixed inset-0 top-[72px] bg-slate-950/55 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        />
+        <div id="mobile-menu" className="relative border-t border-white/10 px-4 pb-4 pt-3">
+          <div className="mx-auto max-w-6xl rounded-[1.75rem] border border-white/10 bg-slate-950/90 p-3 shadow-[0_20px_60px_rgba(8,15,35,0.55)]">
+            <Links vertical />
+          </div>
+        </div>
       </div>
     </nav>
   )

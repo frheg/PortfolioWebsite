@@ -4,12 +4,6 @@ import * as THREE from 'three'
 import { createGalaxy, animateGalaxies } from './galaxyModule'
 import { spaceConfig } from './spaceConfig'
 
-const GALAXY_COLORS = [
-  { h: 0.05, s: 0.8, l: 0.6 },
-  { h: 0.6, s: 0.9, l: 0.7 },
-  { h: 0.15, s: 0.7, l: 0.8 },
-]
-
 function rand(min, max) { return Math.random() * (max - min) + min }
 
 function spawnGalaxy(scene, galaxies, spawnRadius) {
@@ -19,17 +13,17 @@ function spawnGalaxy(scene, galaxies, spawnRadius) {
     rand(-spawnRadius, spawnRadius),
     rand(-spawnRadius, spawnRadius)
   )
-  const theme = GALAXY_COLORS[Math.floor(Math.random() * GALAXY_COLORS.length)]
+  const theme = spaceConfig.galaxies.colorThemes[Math.floor(Math.random() * spaceConfig.galaxies.colorThemes.length)]
   const g = createGalaxy({ position: pos, colorBase: theme, scene })
   galaxies.push(g)
 }
 
 export function useGalaxies(
   sceneRef,
-  {
-    max = spaceConfig.counts.galaxies,
-    spawnRadius = Math.min(spaceConfig.half.x, spaceConfig.half.y, spaceConfig.half.z) * 0.9,
-  } = {}
+    {
+      max = spaceConfig.counts.galaxies,
+      spawnRadius = Math.min(spaceConfig.half.x, spaceConfig.half.y, spaceConfig.half.z) * spaceConfig.galaxies.spawnRadiusFactor,
+    } = {}
 ) {
   const galaxiesRef = useRef([])
 
@@ -57,7 +51,11 @@ export function useGalaxies(
 
     galaxies.forEach((g) => {
       if (!g.userData.drift) {
-        g.userData.drift = new THREE.Vector3(rand(-0.02, 0.02), rand(-0.02, 0.02), rand(-0.02, 0.02))
+        g.userData.drift = new THREE.Vector3(
+          rand(spaceConfig.galaxies.drift.min, spaceConfig.galaxies.drift.max),
+          rand(spaceConfig.galaxies.drift.min, spaceConfig.galaxies.drift.max),
+          rand(spaceConfig.galaxies.drift.min, spaceConfig.galaxies.drift.max)
+        )
       }
       g.position.add(g.userData.drift)
     })

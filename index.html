@@ -2,15 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Favicon via Vite asset pipeline -->
     <link rel="icon" href="/src/assets/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fredric Hegland</title>
+    <script type="text/javascript">
+      (function (l) {
+        if (l.search[1] === '/') {
+          const decoded = l.search
+            .slice(1)
+            .split('&')
+            .map((s) => s.replace(/~and~/g, '&'))
+            .join('?')
+          window.history.replaceState(null, '', l.pathname.slice(0, -1) + decoded + l.hash)
+        }
+      }(window.location))
+    </script>
+    <meta
+      name="description"
+      content="Playful and polished portfolio for Fredric Hegland, featuring software engineering projects, experience, and a custom Three.js space interface."
+    />
+    <title>Fredric Hegland | Portfolio</title>
   </head>
   <body
     class="bg-black text-cyan-100 font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-50">
     <div id="root"></div>
-    <!-- Use a root-relative module path; Vite will rewrite based on base during build -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

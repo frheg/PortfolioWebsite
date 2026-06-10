@@ -3,7 +3,15 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 
-export function useThree(canvasRef, { fov = 75, near = 0.1, far = Math.max(spaceConfig.bounds.width, spaceConfig.bounds.height, spaceConfig.bounds.depth) * 2, clearColor = 0x000000 } = {}) {
+export function useThree(
+  canvasRef,
+  {
+    fov = spaceConfig.renderer.fov,
+    near = spaceConfig.renderer.near,
+    far = Math.max(spaceConfig.bounds.width, spaceConfig.bounds.height, spaceConfig.bounds.depth) * 2,
+    clearColor = spaceConfig.renderer.clearColor,
+  } = {}
+) {
   const sceneRef = useRef(null)
   const cameraRef = useRef(null)
   const rendererRef = useRef(null)
@@ -19,10 +27,10 @@ export function useThree(canvasRef, { fov = 75, near = 0.1, far = Math.max(space
       near,
       far
     )
-    camera.position.z = 150
+    camera.position.z = spaceConfig.camera.initialZ
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: spaceConfig.renderer.powerPreference })
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, spaceConfig.renderer.maxPixelRatio))
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setClearColor(clearColor, 1)
 

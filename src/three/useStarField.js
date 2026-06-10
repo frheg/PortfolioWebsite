@@ -7,77 +7,155 @@ export function useStarField(
   sceneRef,
   {
     count = spaceConfig.counts.stars,
-    fieldRadius = Math.min(spaceConfig.half.x, spaceConfig.half.z),
-    rotationSpeed = spaceConfig.rotationSpeed,
+    fieldRadius = Math.min(spaceConfig.half.x, spaceConfig.half.z) * spaceConfig.starfield.fieldRadiusFactor,
+    rotationSpeed = spaceConfig.starfield.rotationSpeed,
   } = {}
 ) {
-  const starsRef = useRef([])
+  const starsRef = useRef(null)
   const timeRef = useRef(0)
 
   useEffect(() => {
     const scene = sceneRef.current
     if (!scene) return
 
-    const stars = []
-    const starGeometry = new THREE.SphereGeometry(0.1, 16, 16)
+    const positions = new Float32Array(count * 3)
+    const colors = new Float32Array(count * 3)
+    const baseColors = new Float32Array(count * 3)
+    const radii = new Float32Array(count)
+    const heights = new Float32Array(count)
+    const speeds = new Float32Array(count)
 
-    function createStar() {
-      const h = Math.random()
-      const s = 0.6 + Math.random() * 0.4
-      const l = 0.6 + Math.random() * 0.3
-      const starColor = new THREE.Color().setHSL(h, s, l)
-      const starMaterial = new THREE.MeshBasicMaterial({
-        color: starColor,
-        transparent: true,
-        opacity: 0.7,
-        depthWrite: false,
-      })
-      starMaterial.userData = { baseColor: starColor.clone() }
-      const star = new THREE.Mesh(starGeometry, starMaterial)
+    const geometry = new THREE.BufferGeometry()
+    const color = new THREE.Color()
+    const spriteCanvas = document.createElement('canvas')
+    spriteCanvas.width = spaceConfig.starfield.sprite.size
+    spriteCanvas.height = spaceConfig.starfield.sprite.size
 
-  const radius = Math.random() * fieldRadius - fieldRadius / 2
+    const context = spriteCanvas.getContext('2d')
+    if (!context) return
+
+    const center = spaceConfig.starfield.sprite.size / 2
+    const gradient = context.createRadialGradient(center, center, 0, center, center, center)
+    spaceConfig.starfield.sprite.gradientStops.forEach(({ offset, color: stopColor }) => {
+      gradient.addColorStop(offset, stopColor)
+    })
+    context.fillStyle = gradient
+    context.fillRect(0, 0, spaceConfig.starfield.sprite.size, spaceConfig.starfield.sprite.size)
+
+    const spriteTexture = new THREE.CanvasTexture(spriteCanvas)
+    spriteTexture.needsUpdate = true
+
+    for (let i = 0; i < count; i++) {
+      const h = spaceConfig.starfield.hRange.min + Math.random() * (spaceConfig.starfield.hRange.max - spaceConfig.starfield.hRange.min)
+      const s = spaceConfig.starfield.sRange.min + Math.random() * (spaceConfig.starfield.sRange.max - spaceConfig.starfield.sRange.min)
+      const l = spaceConfig.starfield.lRange.min + Math.random() * (spaceConfig.starfield.lRange.max - spaceConfig.starfield.lRange.min)
+      color.setHSL(h, s, l)
+
+      const radius = Math.random() * fieldRadius - fieldRadius / 2
       const theta = Math.random() * Math.PI * 2
       const x = radius * Math.cos(theta)
       const z = radius * Math.sin(theta)
       const y = Math.random() * fieldRadius - fieldRadius / 2
+      const speed = Math.random() * rotationSpeed
 
-      star.position.set(x, y, z)
-      scene.add(star)
-      stars.push({ star, radius, y, speed: Math.random() * rotationSpeed })
+      const index = i * 3
+      positions[index] = x
+      positions[index + 1] = y
+      positions[index + 2] = z
+
+      baseColors[index] = color.r
+      baseColors[index + 1] = color.g
+      baseColors[index + 2] = color.b
+      colors[index] = color.r
+      colors[index + 1] = color.g
+      colors[index + 2] = color.b
+
+      radii[i] = radius
+      heights[i] = y
+      speeds[i] = speed
     }
 
-    for (let i = 0; i < count; i++) createStar()
+    const positionAttribute = new THREE.BufferAttribute(positions, 3)
+    positionAttribute.setUsage(THREE.DynamicDrawUsage)
+    const colorAttribute = new THREE.BufferAttribute(colors, 3)
+    colorAttribute.setUsage(THREE.DynamicDrawUsage)
 
-    starsRef.current = stars
+    geometry.setAttribute('position', positionAttribute)
+    geometry.setAttribute('color', colorAttribute)
+
+    const material = new THREE.PointsMaterial({
+      size: spaceConfig.starfield.pointSize,
+      map: spriteTexture,
+      vertexColors: true,
+      transparent: true,
+      opacity: spaceConfig.starfield.opacity,
+      depthWrite: false,
+      sizeAttenuation: true,
+      alphaTest: spaceConfig.starfield.alphaTest,
+    })
+
+    const starField = new THREE.Points(geometry, material)
+    scene.add(starField)
+
+    starsRef.current = {
+      starField,
+      geometry,
+      positionAttribute,
+      colorAttribute,
+      positions,
+      colors,
+      baseColors,
+      radii,
+      heights,
+      speeds,
+      count,
+    }
 
     return () => {
-      stars.forEach(({ star }) => {
-        scene.remove(star)
-        star.geometry?.dispose?.()
-        star.material?.dispose?.()
-      })
-      starsRef.current = []
+      scene.remove(starField)
+      geometry.dispose()
+      material.dispose()
+      spriteTexture.dispose()
+      starsRef.current = null
     }
   }, [sceneRef, count, fieldRadius, rotationSpeed])
 
   const update = () => {
     const stars = starsRef.current
-    if (!stars.length) return
+    if (!stars) return
 
-    timeRef.current += 0.1
+    timeRef.current += spaceConfig.starfield.twinkle.timeStep
     const time = timeRef.current
+    const {
+      count: starCount,
+      positions,
+      colors,
+      baseColors,
+      radii,
+      heights,
+      speeds,
+      positionAttribute,
+      colorAttribute,
+    } = stars
 
-    for (let i = 0; i < stars.length; i++) {
-      const s = stars[i]
-      const theta = time * s.speed + i * 0.05
-      const x = s.radius * Math.cos(theta)
-      const z = s.radius * Math.sin(theta)
-      s.star.position.set(x, s.y, z)
+    for (let i = 0; i < starCount; i++) {
+      const theta = time * speeds[i] + i * spaceConfig.starfield.twinkle.orbitPhaseStep
+      const x = radii[i] * Math.cos(theta)
+      const z = radii[i] * Math.sin(theta)
+      const index = i * 3
 
-      const intensity = Math.abs(Math.sin(time + i * 0.1)) * 1.2 + 0.3
-      const baseColor = s.star.material.userData.baseColor.clone()
-      s.star.material.color.copy(baseColor).multiplyScalar(intensity)
+      positions[index] = x
+      positions[index + 1] = heights[i]
+      positions[index + 2] = z
+
+      const intensity = Math.abs(Math.sin(time + i * spaceConfig.starfield.twinkle.colorPhaseStep)) * spaceConfig.starfield.twinkle.amplitude + spaceConfig.starfield.twinkle.base
+      colors[index] = baseColors[index] * intensity
+      colors[index + 1] = baseColors[index + 1] * intensity
+      colors[index + 2] = baseColors[index + 2] * intensity
     }
+
+    positionAttribute.needsUpdate = true
+    colorAttribute.needsUpdate = true
   }
 
   return { update }

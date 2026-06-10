@@ -1,11 +1,41 @@
 {
-  "about": "Completed a Bachelors in Computer Technology (Computer Science) at the University of Bergen and now pursuing a joint Master's program in Software Engineering (UiB/HVL) with courses in machine learning. I have a very broad range of interests which I like to spend time on. Some of these worth mentioning: all of sports, sailing, cars and engines, mechanical engineering, quantum computing, machine learning and AI, low-level computing and assembly code, new and old technologies in all aspects but with a heavier emphasis on cars, boats and airplanes as well as computers of course.",
+  "name": "Fredric Hegland",
+  "location": "Bergen, Norway",
+  "hero": {
+    "eyebrow": "Software engineering, systems curiosity, and a bit of orbit",
+    "headline": "I like building digital systems that are practical, polished, and quietly ambitious.",
+    "description": "I am a software engineering master's student who enjoys working across architecture, backend, frontend, AI, infrastructure, and the small details that make a system feel good to use.",
+    "primaryCtaLabel": "Explore projects",
+    "primaryCtaHref": "/projects",
+    "secondaryCtaLabel": "Send a signal",
+    "secondaryCtaHref": "/contact",
+    "panelLabel": "Builder profile",
+    "status": "Open to good conversations"
+  },
+  "quickFacts": [
+    "Master's student in Software Engineering",
+    "Works across backend, frontend, AI, and infrastructure",
+    "Enjoys systems that feel practical, polished, and a little playful"
+  ],
+  "currently": [
+    "Pursuing a joint Master's in Software Engineering (UiB/HVL)",
+    "Building enterprise AI systems and chatbot workflows at Amitec AS",
+    "Experimenting with self-hosted AI, local inference, and RAG pipelines"
+  ],
+  "interests": [
+    "Cars, engines, and mechanical systems",
+    "Sailing, boats, and aviation",
+    "AI, machine learning, and quantum computing",
+    "Low-level computing, terminals, and efficient tooling",
+    "New and old technology with real-world utility"
+  ],
+  "about": "I completed a Bachelor's in Computer Technology at the University of Bergen and am now continuing with a joint Master's in Software Engineering. What keeps software interesting for me is the mix of big-picture thinking and small details: architecture, networking, backend logic, UX polish, developer workflow, and how a system feels for the person actually using it.",
   "experience": [
     {
       "title": "Student Software Engineer",
       "company": "Amitec AS",
-      "period": "November 2024 - d.d.",
-      "details": "Building an enterprise chatbot using various tools and technologies, working along the whole tech stack, including architecture, backend, frontend, networking, security, databases.; IT/OT work with AVEVA PI systems (PI AF, PI Vision, PI SMT) related to time-series data for energy sector clients.",
+      "period": "November 2024 - Present",
+      "details": "Building an enterprise chatbot across the full stack, including architecture, backend, frontend, networking, security, and databases.; Working with AVEVA PI systems (PI AF, PI Vision, PI SMT) and time-series data for energy sector clients.",
       "link": "https://docs.aveva.com/category/pi-system",
       "linkLabel": "AVEVA PI systems (PI AF, PI Vision, PI SMT)"
     },
@@ -55,47 +85,75 @@
     }
   ],
   "highlights": [
-    "Bachelor in Computer Science: Computer Technology completed; started joint Master in Software Engineering (UiB/HVL).",
-    "Experience working in small teams handling multiple responsibilities.",
-    "Broad exposure to technologies: Python, AI/ML-libraries, several NoSQL databases, Java, C#/.NET, TypeScript/JavaScript, Angular, SQL, C, Haskell, Kotlin, Linux, Git, HTML/CSS.",
-    "Implemented various different projects in both spare-time and through university, to further develop my skills and interests.",
-    "Fond of optimalizing workflow with experience using vim, tmux, ssh, terminal work and Linux systems daily",
-    "Organizational development and administration as leader of ITxBergen."
+    "Bachelor's completed, Master's underway, with a clear interest in systems that are both capable and useful.",
+    "Comfortable in small teams where the work crosses multiple layers of the stack.",
+    "Hands-on experience with Python, Kotlin, JavaScript/TypeScript, C#/.NET, SQL, NoSQL, Linux, Git, and AI-focused tooling.",
+    "Builds course projects and personal experiments to keep learning by doing.",
+    "Leadership experience from organizing ITxBergen and supporting the local tech student community."
   ],
   "projects": [
     {
       "name": "Portfolio Website",
-      "description": "This site. Built with React + Vite and custom Three.js starfield/galaxy background.",
+      "description": "This site, built with React, Vite, and a custom Three.js background with starfields, galaxies, comets, and scroll-driven camera motion.",
+      "highlight": "Part portfolio, part UI playground, and a good excuse to keep refining the details.",
+      "type": "Personal",
+      "status": "Live",
+      "featured": true,
+      "repo": "https://github.com/frheg/PortfolioWebsite",
       "tech": ["React", "Vite", "Tailwind", "Three.js"]
     },
     {
       "name": "Enterprise Chatbot",
-      "description": "Implementing an enterprise chatbot where I work in the whole tech stack. Handling backend business logic, architectural choices, networking, databases, machine learning techniques, RAG apporaches",
+      "description": "An enterprise chatbot project where I work across business logic, architecture, networking, databases, and retrieval-augmented AI approaches.",
+      "highlight": "This is the kind of work I enjoy most: broad systems work with real users and real constraints.",
+      "type": "Professional",
+      "status": "In progress",
+      "featured": true,
       "tech": ["Kotlin", "Python", "Qdrant", "Neo4j", "Docker", "Azure Open AI", "Azure Resources", "More to come..."]
     },
     {
       "name": "Personal AI Homelab",
-      "description": "I implemented my very own completely custom agent, running locally. I used open-source LLMs from huggingface, running locally on my own desktop through vLLM. I use RAG techniques to enrich the LLM with context from Qdrant where I have embedded the whole of english Wikipedia. The chatbot-agent is also toolcapable where I have implemented several tools the chatbot can call if needed, whereas a selfhosted SearXNG instance, calculator, weather API, current time, create and read files, with more to come.",
+      "description": "A custom local AI agent running on my own hardware with open-source models, vLLM inference, RAG backed by Qdrant, and tool use for search and utilities.",
+      "highlight": "This is where curiosity turns into tinkering: local models, orchestration, retrieval, and self-hosted infrastructure.",
+      "type": "Personal",
+      "status": "Self-hosted",
+      "featured": true,
+      "repo": "https://github.com/frheg/HomeLab",
       "tech": ["Python", "Qdrant", "vLLM", "PyTorch", "Numpy", "Embedding models", "More to come..."]
     },
     {
       "name": "Machine Learning Experimentation",
-      "description": "I am experimenting with various machine learning models and techniques, where as I experiment with quantum computing, raw machine learning algorithms in Numpy only, and embedding models.",
+      "description": "Experiments around machine learning models, embeddings, quantum computing ideas, and implementing algorithms from scratch to understand them better.",
+      "type": "Exploration",
+      "repo": "https://github.com/frheg/MachineLearning",
       "tech": ["Python", "Qdrant", "Different ML libraries", "Qiskit"]
     },
     {
+      "name": "Programming Languages and Low-Level Exploration",
+      "description": "A repository for exploring programming languages and lower-level interests, including RISC-V assembly, x86_64 assembly, C++, Rust, and other systems-oriented experiments.",
+      "type": "Exploration",
+      "repo": "https://github.com/frheg/ProgrammingLanguages",
+      "tech": ["RISC-V assembly", "x86_64 assembly", "C++", "Rust", "Systems exploration"]
+    },
+    {
       "name": "Group Project - Modern Software Development Methods (Kollekt)",
-      "description": "Full-stack application for shared-housing households with aim to imrove common household issues in shared-housing.",
+      "description": "A full-stack application for shared households, aimed at making everyday coordination a bit easier.",
+      "type": "University",
+      "repo": "https://github.com/frheg/DAT251_Kollekt",
       "tech": ["Kotlin", "React", "Spring Boot", "Docker", "Apache Kafka", "Postgres", "Redis", "NginX", "Supabase"]
     },
     {
       "name": "Group Project - Advanced Software Technologies",
-      "description": "Create a pollapp using different several advanced software technologies from the course, aswell as some extra ones.",
-      "tech": ["Kotlin", "Angluar", "Spring Boot", "Docker", "Qdrant", "Redis", "Apache Kafka", "More to come..."]
+      "description": "A poll application built with several advanced technologies from the course, plus a few extra tools added out of curiosity.",
+      "type": "University",
+      "repo": "https://github.com/Maren24/DAT250-project",
+      "tech": ["Kotlin", "Angular", "Spring Boot", "Docker", "Qdrant", "Redis", "Apache Kafka", "More to come..."]
     },
     {
       "name": "Group Project - System Development",
       "description": "A group project where we developed a 2D game using LibGDX in Java for a university course, INF112 at UiB.",
+      "type": "University",
+      "repo": "https://github.com/frheg/CodeMasters",
       "tech": ["Java", "LibGDX"]
     }
   ],
@@ -114,8 +172,22 @@
     "Message brokers",
     "SQL and NoSQL databases",
     "Git & CI/CD",
-    "Azure DevOps $ CI/CD",
+    "Azure DevOps & CI/CD",
     "Docker"
+  ],
+  "skillGroups": [
+    {
+      "title": "Application Engineering",
+      "items": ["Python", "Kotlin", "Java", "React", "Angular", "C#/.NET"]
+    },
+    {
+      "title": "AI and Data Systems",
+      "items": ["AI/ML applications", "RAG workflows", "Embedding models", "SQL", "NoSQL databases", "Qdrant"]
+    },
+    {
+      "title": "Infrastructure and Workflow",
+      "items": ["Linux", "Terminal work", "Networking", "Architecture", "Docker", "Git & CI/CD"]
+    }
   ],
   "languages": [
     { "name": "Norwegian", "level": "Fluent" },
@@ -152,6 +224,8 @@
     "email": "fredric.hegland@gmail.com",
     "linkedin": "https://www.linkedin.com/in/fredric-hegland-8a8972206/",
     "github": "https://github.com/frheg",
-    "website": "https://fredrichegland.no/"
+    "website": "https://fredrichegland.no/",
+    "location": "Based in Bergen, Norway",
+    "note": "Always happy to talk about software engineering, AI systems, practical architecture, or simply an interesting technical problem."
   }
 }

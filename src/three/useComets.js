@@ -7,7 +7,6 @@ export function useComets(
   sceneRef,
   {
     max = spaceConfig.counts.comets,
-    fieldRadius = Math.max(spaceConfig.bounds.width, spaceConfig.bounds.depth) / 2,
   } = {}
 ) {
   const cometsRef = useRef([])
@@ -15,7 +14,7 @@ export function useComets(
 
   function rand(min, max) { return Math.random() * (max - min) + min }
 
-  function createTrailMesh(length, radius, color, opacity, segments = 64) {
+  function createTrailMesh(length, radius, color, opacity, segments = spaceConfig.comets.trail.segments) {
     const trailGeometry = new THREE.BufferGeometry()
     const baseVertices = []
     const colors = []
@@ -58,74 +57,91 @@ export function useComets(
     return new THREE.Mesh(trailGeometry, trailMaterial)
   }
 
-  function spawnComet(scene, comets) {
-    if (!scene || comets.length === undefined || comets.length >= max) return
-    const group = new THREE.Group()
-
-    const core = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }))
-    group.add(core)
-
-    const glow = new THREE.Mesh(
-      new THREE.SphereGeometry(0.9, 16, 16),
-      new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.3, depthWrite: false })
-    )
-    group.add(glow)
-
-    const halo = new THREE.Mesh(
-      new THREE.RingGeometry(0.6, 1.1, 32),
-      new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false })
-    )
-    halo.rotation.x = Math.PI / 2
-    group.add(halo)
-
-    const trailGroup = new THREE.Group()
-    const baseColor = new THREE.Color(0x66ccff)
-    trailGroup.add(createTrailMesh(20, 0.8, baseColor, 0.4))
-    trailGroup.add(createTrailMesh(22, 1.2, baseColor, 0.2))
-    trailGroup.add(createTrailMesh(24, 1.6, baseColor, 0.08))
-    group.add(trailGroup)
-
-    // Spawn at the world bounds, not in the middle of the screen
-    const faces = [
-      new THREE.Vector3(1, 0, 0),
-      new THREE.Vector3(-1, 0, 0),
-      new THREE.Vector3(0, 1, 0),
-      new THREE.Vector3(0, -1, 0),
-      new THREE.Vector3(0, 0, 1),
-      new THREE.Vector3(0, 0, -1),
-    ]
-    const face = faces[Math.floor(Math.random() * faces.length)]
-    const spawnPosition = new THREE.Vector3(
-      face.x !== 0 ? face.x * bounds.x : rand(-bounds.x, bounds.x),
-      face.y !== 0 ? face.y * bounds.y : rand(-bounds.y, bounds.y),
-      face.z !== 0 ? face.z * bounds.z : rand(-bounds.z, bounds.z)
-    )
-    group.position.copy(spawnPosition)
-
-    // Velocity biased inward so comets fly through the space
-    const target = new THREE.Vector3(
-      rand(-bounds.x * 0.2, bounds.x * 0.2),
-      rand(-bounds.y * 0.2, bounds.y * 0.2),
-      rand(-bounds.z * 0.2, bounds.z * 0.2)
-    )
-    const toCenter = target.sub(spawnPosition).normalize()
-    const offset = new THREE.Vector3(rand(-0.3, 0.3), rand(-0.3, 0.3), rand(-0.3, 0.3))
-    const velocity = toCenter
-      .add(offset)
-      .normalize()
-      .multiplyScalar(rand(spaceConfig.cometSpeed.min, spaceConfig.cometSpeed.max))
-
-    scene.add(group)
-    comets.push({ group, velocity, trailGroup })
-  }
-
   useEffect(() => {
     const scene = sceneRef.current
     if (!scene) return
 
     const comets = []
+
+    function spawnComet() {
+      if (comets.length >= max) return
+      const group = new THREE.Group()
+
+      const core = new THREE.Mesh(
+        new THREE.SphereGeometry(spaceConfig.comets.core.radius, spaceConfig.comets.core.segments, spaceConfig.comets.core.segments),
+        new THREE.MeshBasicMaterial({ color: spaceConfig.comets.core.color })
+      )
+      group.add(core)
+
+      const glow = new THREE.Mesh(
+        new THREE.SphereGeometry(spaceConfig.comets.glow.radius, spaceConfig.comets.glow.segments, spaceConfig.comets.glow.segments),
+        new THREE.MeshBasicMaterial({
+          color: spaceConfig.comets.glow.color,
+          transparent: true,
+          opacity: spaceConfig.comets.glow.opacity,
+          depthWrite: false,
+        })
+      )
+      group.add(glow)
+
+      const halo = new THREE.Mesh(
+        new THREE.RingGeometry(spaceConfig.comets.halo.innerRadius, spaceConfig.comets.halo.outerRadius, spaceConfig.comets.halo.segments),
+        new THREE.MeshBasicMaterial({
+          color: spaceConfig.comets.halo.color,
+          transparent: true,
+          opacity: spaceConfig.comets.halo.opacity,
+          side: THREE.DoubleSide,
+          depthWrite: false,
+        })
+      )
+      halo.rotation.x = Math.PI / 2
+      group.add(halo)
+
+      const trailGroup = new THREE.Group()
+      const baseColor = new THREE.Color(spaceConfig.comets.trail.baseColor)
+      spaceConfig.comets.trail.meshes.forEach(({ length, radius, opacity }) => {
+        trailGroup.add(createTrailMesh(length, radius, baseColor, opacity))
+      })
+      group.add(trailGroup)
+
+      const faces = [
+        new THREE.Vector3(1, 0, 0),
+        new THREE.Vector3(-1, 0, 0),
+        new THREE.Vector3(0, 1, 0),
+        new THREE.Vector3(0, -1, 0),
+        new THREE.Vector3(0, 0, 1),
+        new THREE.Vector3(0, 0, -1),
+      ]
+      const face = faces[Math.floor(Math.random() * faces.length)]
+      const spawnPosition = new THREE.Vector3(
+        face.x !== 0 ? face.x * bounds.x : rand(-bounds.x, bounds.x),
+        face.y !== 0 ? face.y * bounds.y : rand(-bounds.y, bounds.y),
+        face.z !== 0 ? face.z * bounds.z : rand(-bounds.z, bounds.z)
+      )
+      group.position.copy(spawnPosition)
+
+      const target = new THREE.Vector3(
+        rand(-bounds.x * spaceConfig.comets.inwardTargetFactor, bounds.x * spaceConfig.comets.inwardTargetFactor),
+        rand(-bounds.y * spaceConfig.comets.inwardTargetFactor, bounds.y * spaceConfig.comets.inwardTargetFactor),
+        rand(-bounds.z * spaceConfig.comets.inwardTargetFactor, bounds.z * spaceConfig.comets.inwardTargetFactor)
+      )
+      const toCenter = target.sub(spawnPosition).normalize()
+      const offset = new THREE.Vector3(
+        rand(spaceConfig.comets.velocityOffset.min, spaceConfig.comets.velocityOffset.max),
+        rand(spaceConfig.comets.velocityOffset.min, spaceConfig.comets.velocityOffset.max),
+        rand(spaceConfig.comets.velocityOffset.min, spaceConfig.comets.velocityOffset.max)
+      )
+      const velocity = toCenter
+        .add(offset)
+        .normalize()
+        .multiplyScalar(rand(spaceConfig.comets.speed.min, spaceConfig.comets.speed.max))
+
+      scene.add(group)
+      comets.push({ group, velocity, trailGroup })
+    }
+
     // Maintain exactly `max` comets from the start
-    for (let i = 0; i < max; i++) spawnComet(scene, comets)
+    for (let i = 0; i < max; i++) spawnComet()
 
     cometsRef.current = comets
 
@@ -133,7 +149,7 @@ export function useComets(
       comets.forEach(({ group }) => scene.remove(group))
       cometsRef.current = []
     }
-  }, [sceneRef, max, fieldRadius, bounds.x, bounds.y, bounds.z])
+  }, [sceneRef, max, bounds.x, bounds.y, bounds.z])
 
   const update = () => {
     const comets = cometsRef.current
@@ -161,17 +177,21 @@ export function useComets(
         )
         group.position.copy(spawnPosition)
         const target = new THREE.Vector3(
-          rand(-bounds.x * 0.2, bounds.x * 0.2),
-          rand(-bounds.y * 0.2, bounds.y * 0.2),
-          rand(-bounds.z * 0.2, bounds.z * 0.2)
+          rand(-bounds.x * spaceConfig.comets.inwardTargetFactor, bounds.x * spaceConfig.comets.inwardTargetFactor),
+          rand(-bounds.y * spaceConfig.comets.inwardTargetFactor, bounds.y * spaceConfig.comets.inwardTargetFactor),
+          rand(-bounds.z * spaceConfig.comets.inwardTargetFactor, bounds.z * spaceConfig.comets.inwardTargetFactor)
         )
         const toCenter = target.sub(spawnPosition).normalize()
-        const offset = new THREE.Vector3(rand(-0.3, 0.3), rand(-0.3, 0.3), rand(-0.3, 0.3))
+        const offset = new THREE.Vector3(
+          rand(spaceConfig.comets.velocityOffset.min, spaceConfig.comets.velocityOffset.max),
+          rand(spaceConfig.comets.velocityOffset.min, spaceConfig.comets.velocityOffset.max),
+          rand(spaceConfig.comets.velocityOffset.min, spaceConfig.comets.velocityOffset.max)
+        )
         velocity.copy(
           toCenter
             .add(offset)
             .normalize()
-            .multiplyScalar(rand(spaceConfig.cometSpeed.min, spaceConfig.cometSpeed.max))
+            .multiplyScalar(rand(spaceConfig.comets.speed.min, spaceConfig.comets.speed.max))
         )
       }
       const axis = new THREE.Vector3(0, 0, -1)

@@ -23,7 +23,7 @@ export default function BackgroundCanvas() {
   const planet = usePlanet(sceneRef)
   const galaxies = useGalaxies(sceneRef)
   const comets = useComets(sceneRef)
-  const scrollCam = useScrollCamera(cameraRef, { baseZ: 150, zPerPx: 0.05, maxYaw: Math.PI / 12, posLerp: 0.06, rotLerp: 0.12 })
+  const scrollCam = useScrollCamera(cameraRef, spaceConfig.camera.scroll)
 
   useEffect(() => {
     let animationId

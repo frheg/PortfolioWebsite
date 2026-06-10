@@ -1,6 +1,7 @@
 // Loads a cube skybox and sets scene.background
 import { useEffect } from 'react'
 import * as THREE from 'three'
+import { spaceConfig } from './spaceConfig'
 
 export function useSkybox(sceneRef) {
   useEffect(() => {
@@ -10,18 +11,19 @@ export function useSkybox(sceneRef) {
     let texture = null
     try {
       const loader = new THREE.CubeTextureLoader()
+      const { faces } = spaceConfig.skybox
       const skyPaths = [
-        new URL('../assets/Pictures/SkyBox/kurt/space_bk.png', import.meta.url).href,
-        new URL('../assets/Pictures/SkyBox/kurt/space_dn.png', import.meta.url).href,
-        new URL('../assets/Pictures/SkyBox/kurt/space_ft.png', import.meta.url).href,
-        new URL('../assets/Pictures/SkyBox/kurt/space_lf.png', import.meta.url).href,
-        new URL('../assets/Pictures/SkyBox/kurt/space_rt.png', import.meta.url).href,
-        new URL('../assets/Pictures/SkyBox/kurt/space_up.png', import.meta.url).href,
+        new URL(faces.back, import.meta.url).href,
+        new URL(faces.down, import.meta.url).href,
+        new URL(faces.front, import.meta.url).href,
+        new URL(faces.left, import.meta.url).href,
+        new URL(faces.right, import.meta.url).href,
+        new URL(faces.up, import.meta.url).href,
       ]
       texture = loader.load(skyPaths)
       scene.background = texture
-    } catch (_) {
-      // keep default background
+    } catch {
+      // Keep the default background if the skybox cannot be loaded.
     }
 
     return () => {
