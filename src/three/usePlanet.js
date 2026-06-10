@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
+import earthTexUrl from '../assets/Models/Earth 3D Model/textures/1_earth_2k.jpg'
 
 export function usePlanet(sceneRef) {
   const planetRef = useRef(null)
@@ -22,7 +23,6 @@ export function usePlanet(sceneRef) {
     scene.add(planet)
 
     try {
-      const earthTexUrl = new URL(spaceConfig.planet.texture.path, import.meta.url).href
       const textureLoader = new THREE.TextureLoader()
       textureLoader.load(earthTexUrl, (tex) => {
         tex.anisotropy = spaceConfig.planet.texture.anisotropy

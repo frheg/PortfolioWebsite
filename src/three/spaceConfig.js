@@ -37,16 +37,7 @@ export const spaceConfig = {
     },
   },
 
-  skybox: {
-    faces: {
-      back: '../assets/Pictures/SkyBox/kurt/space_bk_1536.jpg',
-      down: '../assets/Pictures/SkyBox/kurt/space_dn_1536.jpg',
-      front: '../assets/Pictures/SkyBox/kurt/space_ft_1536.jpg',
-      left: '../assets/Pictures/SkyBox/kurt/space_lf_1536.jpg',
-      right: '../assets/Pictures/SkyBox/kurt/space_rt_1536.jpg',
-      up: '../assets/Pictures/SkyBox/kurt/space_up_1536.jpg',
-    },
-  },
+  skybox: {},
 
   lights: {
     ambient: { color: 0xffffff, intensity: 0.5 },
@@ -92,7 +83,6 @@ export const spaceConfig = {
     scale: 1,
     rotationSpeed: 0.001,
     texture: {
-      path: '../assets/Models/Earth 3D Model/textures/1_earth_2k.jpg',
       anisotropy: 4,
     },
   },

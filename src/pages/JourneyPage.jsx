@@ -132,7 +132,7 @@ export default function JourneyPage() {
               ))}
             </div>
 
-            <div className="space-y-4 pt-0 sm:space-y-6 lg:pt-[4.35rem]">
+            <div className="space-y-4 sm:space-y-6">
               <div className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
                 <h3 className="font-display text-2xl font-semibold text-white">Languages</h3>
                 <div className="mt-5 grid gap-3">

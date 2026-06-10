@@ -30,14 +30,14 @@ export default function ProjectCard({ project, index, featured = false }) {
         </div>
         <div className="mt-5 flex flex-1 flex-col">
           <h3 className="font-display text-2xl font-semibold leading-tight tracking-[0.03em] text-white">{project.name}</h3>
-          <p className="mt-4 text-sm leading-7 text-slate-200/84 xl:min-h-[10.5rem]">{project.description}</p>
-          <div className="mt-4 rounded-[1rem] border border-cyan-300/15 bg-black/20 p-3 text-sm leading-7 text-cyan-100/90 sm:mt-5 sm:rounded-[1.25rem] sm:p-4 xl:min-h-[9rem]">
+          <p className="mt-4 text-sm leading-7 text-slate-200/84">{project.description}</p>
+          <div className="mt-4 rounded-[1rem] border border-cyan-300/15 bg-black/20 p-3 text-sm leading-7 text-cyan-100/90 sm:mt-5 sm:rounded-[1.25rem] sm:p-4">
             {project.highlight}
           </div>
         </div>
-        <div className="mt-auto pt-5 xl:min-h-[8.5rem]">
+        <div className="mt-auto pt-5">
           <p className="mb-3 text-[0.68rem] uppercase tracking-[0.24em] text-cyan-300/65">Stack</p>
-          <div className="flex flex-wrap content-start gap-2 xl:min-h-[4.9rem]">
+          <div className="flex flex-wrap content-start gap-2">
             {project.tech.map((tech) => (
               <span key={tech} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-100/80">
                 {tech}
