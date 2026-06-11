@@ -13,7 +13,7 @@ export const spaceConfig = {
   },
 
   counts: {
-    stars: isDev ? 1800 : 5000,
+    stars: isDev ? 1800 : 8000,
     galaxies: isDev ? 18 : 36,
     comets: isDev ? 8 : 12,
   },
