@@ -8,22 +8,22 @@ import { usePlanet } from '../three/usePlanet'
 import { useGalaxies } from '../three/useGalaxies'
 import { useComets } from '../three/useComets'
 import { useScrollCamera } from '../three/useScrollCamera'
-import { spaceConfig } from '../three/spaceConfig'
+import { useRoutePath } from '../context/RouteContext'
 
 export default function BackgroundCanvas() {
   const canvasRef = useRef(null)
+  const routePath = useRoutePath()
 
   // Core Three.js objects bound to this canvas
   const { sceneRef, cameraRef, rendererRef } = useThree(canvasRef)
   useSkybox(sceneRef)
   useLights(sceneRef)
   // Independent background systems
-  // Use global defaults; you can still override by passing props here
   const stars = useStarField(sceneRef)
   const planet = usePlanet(sceneRef)
   const galaxies = useGalaxies(sceneRef)
   const comets = useComets(sceneRef)
-  const scrollCam = useScrollCamera(cameraRef, spaceConfig.camera.scroll)
+  const scrollCam = useScrollCamera(cameraRef, routePath)
 
   useEffect(() => {
     let animationId

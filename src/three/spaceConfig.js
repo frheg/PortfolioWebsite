@@ -28,12 +28,42 @@ export const spaceConfig = {
 
   camera: {
     initialZ: 150,
+    transitionLerp: 0.025,
     scroll: {
-      baseZ: 150,
-      zPerPx: 0.05,
-      maxYaw: Math.PI / 12,
-      posLerp: 0.06,
-      rotLerp: 0.12,
+      posLerp: 0.04,
+      rotLerp: 0.08,
+    },
+    orbit: {
+      center: { x: -50, y: 10, z: -50 },
+      rx: 80,
+      ry: 25,
+      rz: 70,
+    },
+    pages: {
+      '/': {
+        startAngle: Math.PI / 2,
+        endAngle: 0.05,
+        anglePerPx: -0.0008,
+        heightOffset: 0,
+      },
+      '/projects': {
+        startAngle: 0,
+        endAngle: -Math.PI / 2,
+        anglePerPx: -0.0007,
+        heightOffset: 8,
+      },
+      '/journey': {
+        startAngle: -Math.PI / 2,
+        endAngle: -Math.PI,
+        anglePerPx: -0.0009,
+        heightOffset: 4,
+      },
+      '/contact': {
+        startAngle: -Math.PI,
+        endAngle: -Math.PI * 1.5,
+        anglePerPx: -0.0006,
+        heightOffset: -4,
+      },
     },
   },
 

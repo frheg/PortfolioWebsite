@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
+import { RouteProvider } from './context/RouteProvider'
 import MobileQuickNav from './components/MobileQuickNav'
 import Nav from './components/Nav'
 import ScrollToTop from './components/ScrollToTop'
@@ -16,10 +17,12 @@ export default function App() {
 
   return (
     <main className="relative isolate overflow-x-clip">
-      <Nav />
-      <Suspense fallback={null}>
-        <BackgroundCanvas />
-      </Suspense>
+      <RouteProvider>
+        <Nav />
+        <Suspense fallback={null}>
+          <BackgroundCanvas />
+        </Suspense>
+      </RouteProvider>
       <ScrollToTop />
       <div key={location.pathname} className="route-stage">
         <Suspense fallback={<div className="route-loading" />}>
