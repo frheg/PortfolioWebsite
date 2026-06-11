@@ -25,16 +25,27 @@ export default function BackgroundCanvas() {
   const comets = useComets(sceneRef)
   const scrollCam = useScrollCamera(cameraRef, routePath)
 
+  // Store update functions in refs so the animation loop never re-creates
+  const scrollCamRef = useRef(scrollCam)
+  scrollCamRef.current = scrollCam
+  const starsRef = useRef(stars)
+  starsRef.current = stars
+  const planetRef = useRef(planet)
+  planetRef.current = planet
+  const galaxiesRef = useRef(galaxies)
+  galaxiesRef.current = galaxies
+  const cometsRef = useRef(comets)
+  cometsRef.current = comets
+
   useEffect(() => {
     let animationId
     const animate = () => {
       animationId = requestAnimationFrame(animate)
-      // run updates
-      stars.update?.()
-      planet.update?.()
-      galaxies.update?.()
-      comets.update?.()
-      scrollCam.update?.()
+      starsRef.current.update?.()
+      planetRef.current.update?.()
+      galaxiesRef.current.update?.()
+      cometsRef.current.update?.()
+      scrollCamRef.current.update?.()
 
       const scene = sceneRef.current
       const camera = cameraRef.current
@@ -44,9 +55,8 @@ export default function BackgroundCanvas() {
       }
     }
     animate()
-    // Cancel RAF on unmount; hooks handle object/event cleanup
     return () => cancelAnimationFrame(animationId)
-  }, [sceneRef, cameraRef, rendererRef, stars, planet, galaxies, comets, scrollCam])
+  }, [sceneRef, cameraRef, rendererRef]) // stable deps only
 
   return <canvas id="bg" ref={canvasRef} className="fixed top-0 left-0 w-full h-full -z-10" />
 }
