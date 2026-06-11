@@ -2,9 +2,9 @@ const isDev = import.meta.env.DEV
 
 export const spaceConfig = {
   bounds: {
-    width: 2000,
-    height: 1600,
-    depth: 2000,
+    width: 2800,
+    height: 2200,
+    depth: 2800,
   },
 
   get half() {
@@ -35,6 +35,28 @@ export const spaceConfig = {
       snapThreshold: 0.001,
       lockFrames: 8,
     },
+    explore: {
+      moveSpeed: 96,
+      boostMultiplier: 2.45,
+      acceleration: 3.8,
+      coastDamping: 3.4,
+      brakeAcceleration: 7.5,
+      keyTurnSpeed: 1.8,
+      keyPitchSpeed: 1.35,
+      boostFovIncrease: 16,
+      fovLerp: 0.12,
+      boostShakeAmplitude: 0.18,
+      boostShakeRotation: 0.01,
+      boostShakeFrequency: 26,
+      lookSensitivity: 0.0022,
+      touchLookSensitivity: 0.003,
+      worldMargin: 18,
+      moveFieldRadiusFactor: 1.2,
+      planetClearance: 10,
+      maxPitch: 1.35,
+      bankAngle: 0.1,
+      bankLerp: 0.12,
+    },
     orbit: {
       center: { x: -50, y: 10, z: -50 },
       rx: 55,
@@ -55,8 +77,8 @@ export const spaceConfig = {
     rotations: {
       rt: 1,
       lf: 2,
-      up: 4,
-      dn: 4,
+      up: 2,
+      dn: 3,
       ft: 1,
       bk: 1,
     },
@@ -73,11 +95,18 @@ export const spaceConfig = {
   },
 
   starfield: {
-    fieldRadiusFactor: 1,
+    fieldRadiusFactor: 1.55,
     rotationSpeed: 0.005,
     pointSize: 1.25,
     opacity: 0.9,
     alphaTest: 0.08,
+    boost: {
+      lerp: 0.14,
+      sizeMultiplier: 2.6,
+      spreadMultiplier: 1.08,
+      opacityBoost: 0.08,
+      textureThreshold: 0.18,
+    },
     hRange: { min: 0, max: 1 },
     sRange: { min: 0.6, max: 1 },
     lRange: { min: 0.6, max: 0.9 },
@@ -111,7 +140,7 @@ export const spaceConfig = {
   },
 
   galaxies: {
-    spawnRadiusFactor: 0.9,
+    spawnRadiusFactor: 1.2,
     colorThemes: [
       { h: 0.05, s: 0.8, l: 0.6 },
       { h: 0.6, s: 0.9, l: 0.7 },
@@ -132,7 +161,7 @@ export const spaceConfig = {
   },
 
   comets: {
-    fieldRadiusFactor: 0.5,
+    fieldRadiusFactor: 0.75,
     speed: { min: 0.5, max: 2.0 },
     core: { radius: 0.3, segments: 16, color: 0xffffff },
     glow: { radius: 0.9, segments: 16, color: 0x66ccff, opacity: 0.3 },

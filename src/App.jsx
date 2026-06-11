@@ -1,6 +1,9 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
+import ExploreBoostOverlay from './components/ExploreBoostOverlay'
+import ExploreHelpHint from './components/ExploreHelpHint'
 import { RouteProvider } from './context/RouteProvider'
+import ExploreMobileControls from './components/ExploreMobileControls'
 import MobileQuickNav from './components/MobileQuickNav'
 import Nav from './components/Nav'
 
@@ -9,6 +12,7 @@ const HomePage = lazy(() => import('./pages/HomePage'))
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage'))
 const JourneyPage = lazy(() => import('./pages/JourneyPage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
+const ExplorePage = lazy(() => import('./pages/ExplorePage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 const ROUTE_EXIT_MS = 220
@@ -20,6 +24,7 @@ function prefersReducedMotion() {
 
 export default function App() {
   const location = useLocation()
+  const isExploreRoute = location.pathname === '/explore'
   const [displayedLocation, setDisplayedLocation] = useState(location)
   const [routeStage, setRouteStage] = useState('idle')
   const latestLocationRef = useRef(location)
@@ -78,6 +83,7 @@ export default function App() {
       </RouteProvider>
       <div className={routeVeilClassName} aria-hidden="true" />
       <div className={routeScanClassName} aria-hidden="true" />
+      {isExploreRoute ? <ExploreBoostOverlay /> : null}
       <div className={routeStageClassName}>
         <Suspense fallback={<div className="route-loading" />}>
           <Routes location={displayedLocation}>
@@ -85,11 +91,13 @@ export default function App() {
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/journey" element={<JourneyPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/explore" element={<ExplorePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
       </div>
-      <MobileQuickNav />
+      {isExploreRoute ? <ExploreHelpHint /> : null}
+      {isExploreRoute ? <ExploreMobileControls /> : <MobileQuickNav />}
     </main>
   )
 }

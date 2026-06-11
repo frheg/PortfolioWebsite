@@ -3,4 +3,5 @@ export const navLinks = [
   { to: '/projects', label: 'Projects' },
   { to: '/journey', label: 'Journey' },
   { to: '/contact', label: 'Contact' },
+  { to: '/explore', label: 'Explore' },
 ]

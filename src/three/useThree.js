@@ -27,6 +27,7 @@ export function useThree(
       near,
       far
     )
+    camera.rotation.order = 'YXZ'
     camera.position.z = spaceConfig.camera.initialZ
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: spaceConfig.renderer.powerPreference })

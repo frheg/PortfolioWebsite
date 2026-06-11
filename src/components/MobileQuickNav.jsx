@@ -6,7 +6,7 @@ export default function MobileQuickNav() {
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] md:hidden">
       <div className="pointer-events-auto mx-auto max-w-sm overflow-hidden rounded-[1.4rem] border border-white/10 bg-slate-950/88 shadow-[0_18px_50px_rgba(8,15,35,0.55)] backdrop-blur-xl">
         <div className="h-px bg-gradient-to-r from-transparent via-cyan-300/45 to-transparent" />
-        <div className="grid grid-cols-4 gap-1.5 p-1.5">
+        <div className="grid grid-cols-5 gap-1.5 p-1.5">
           {navLinks.map(({ to, label }) => (
             <NavLink
               key={to}

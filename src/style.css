@@ -138,6 +138,49 @@ summary {
   min-height: 32vh;
 }
 
+.explore-boost {
+  position: fixed;
+  inset: -12%;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse at left center, rgba(125, 211, 252, 0.2), transparent 38%),
+    radial-gradient(ellipse at right center, rgba(192, 132, 252, 0.16), transparent 38%),
+    linear-gradient(
+      90deg,
+      rgba(125, 211, 252, 0.16) 0%,
+      rgba(125, 211, 252, 0.05) 7%,
+      transparent 18%,
+      transparent 82%,
+      rgba(192, 132, 252, 0.05) 93%,
+      rgba(192, 132, 252, 0.16) 100%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.16) 0,
+      rgba(255, 255, 255, 0.16) 2px,
+      transparent 2px,
+      transparent 24px
+    );
+  mix-blend-mode: screen;
+  background-size: auto, auto, auto, 220% 100%;
+  background-position: center, center, center, 0 0;
+  filter: blur(10px) saturate(1.28);
+  transform: scale(1.04);
+  transition: opacity 140ms ease, transform 140ms ease, filter 140ms ease;
+}
+
+.explore-boost--active {
+  opacity: 0.92;
+  filter: blur(7px) saturate(1.8);
+  transform: scale(1);
+  animation:
+    explore-boost-sweep 220ms linear infinite,
+    explore-boost-jitter 90ms steps(2, end) infinite,
+    explore-boost-pulse 180ms ease-in-out infinite alternate;
+}
+
 .hero-glow {
   position: absolute;
   border-radius: 9999px;
@@ -312,6 +355,38 @@ summary {
   }
 }
 
+@keyframes explore-boost-sweep {
+  from {
+    background-position: center, center, center, 0 0;
+  }
+  to {
+    background-position: center, center, center, 280px 0;
+  }
+}
+
+@keyframes explore-boost-jitter {
+  0% {
+    transform: translate3d(-0.8%, 0.2%, 0) scale(1.01);
+  }
+  50% {
+    transform: translate3d(0.9%, -0.3%, 0) scale(0.998);
+  }
+  100% {
+    transform: translate3d(-0.4%, 0.15%, 0) scale(1.005);
+  }
+}
+
+@keyframes explore-boost-pulse {
+  from {
+    opacity: 0.74;
+    filter: blur(8px) saturate(1.55);
+  }
+  to {
+    opacity: 0.96;
+    filter: blur(6px) saturate(1.95);
+  }
+}
+
 @keyframes route-phase-in {
   from {
     opacity: 0;
@@ -390,6 +465,7 @@ summary {
   .route-stage,
   .route-veil,
   .route-scan,
+  .explore-boost,
   .hero-glow,
   .scroll-indicator {
     animation: none !important;

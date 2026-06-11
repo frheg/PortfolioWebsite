@@ -1,7 +1,72 @@
 // Creates a rotating/twinkling star field; returns update() and cleanup
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { getExploreMovement } from './exploreControls'
 import { spaceConfig } from './spaceConfig'
+
+function createCircleSpriteTexture() {
+  const spriteCanvas = document.createElement('canvas')
+  spriteCanvas.width = spaceConfig.starfield.sprite.size
+  spriteCanvas.height = spaceConfig.starfield.sprite.size
+
+  const context = spriteCanvas.getContext('2d')
+  if (!context) return null
+
+  const center = spaceConfig.starfield.sprite.size / 2
+  const gradient = context.createRadialGradient(center, center, 0, center, center, center)
+  spaceConfig.starfield.sprite.gradientStops.forEach(({ offset, color: stopColor }) => {
+    gradient.addColorStop(offset, stopColor)
+  })
+  context.fillStyle = gradient
+  context.fillRect(0, 0, spaceConfig.starfield.sprite.size, spaceConfig.starfield.sprite.size)
+
+  const texture = new THREE.CanvasTexture(spriteCanvas)
+  texture.needsUpdate = true
+  return texture
+}
+
+function createWarpSpriteTexture() {
+  const size = spaceConfig.starfield.sprite.size
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+
+  const context = canvas.getContext('2d')
+  if (!context) return null
+
+  const center = size / 2
+  const lineHeight = size * 0.12
+  const horizontal = context.createLinearGradient(0, center, size, center)
+  horizontal.addColorStop(0, 'rgba(255,255,255,0)')
+  horizontal.addColorStop(0.2, 'rgba(125,211,252,0.18)')
+  horizontal.addColorStop(0.5, 'rgba(255,255,255,0.95)')
+  horizontal.addColorStop(0.8, 'rgba(192,132,252,0.18)')
+  horizontal.addColorStop(1, 'rgba(255,255,255,0)')
+  context.fillStyle = horizontal
+  context.fillRect(0, center - lineHeight / 2, size, lineHeight)
+
+  const vertical = context.createLinearGradient(center, 0, center, size)
+  vertical.addColorStop(0, 'rgba(255,255,255,0)')
+  vertical.addColorStop(0.35, 'rgba(125,211,252,0.08)')
+  vertical.addColorStop(0.5, 'rgba(255,255,255,0.35)')
+  vertical.addColorStop(0.65, 'rgba(192,132,252,0.08)')
+  vertical.addColorStop(1, 'rgba(255,255,255,0)')
+  context.fillStyle = vertical
+  context.fillRect(center - lineHeight * 0.35, 0, lineHeight * 0.7, size)
+
+  const core = context.createRadialGradient(center, center, 0, center, center, size * 0.18)
+  core.addColorStop(0, 'rgba(255,255,255,1)')
+  core.addColorStop(0.35, 'rgba(255,255,255,0.92)')
+  core.addColorStop(1, 'rgba(255,255,255,0)')
+  context.fillStyle = core
+  context.fillRect(0, 0, size, size)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.center.set(0.5, 0.5)
+  texture.rotation = Math.PI / 2
+  texture.needsUpdate = true
+  return texture
+}
 
 export function useStarField(
   sceneRef,
@@ -13,6 +78,7 @@ export function useStarField(
 ) {
   const starsRef = useRef(null)
   const timeRef = useRef(0)
+  const boostBlendRef = useRef(0)
 
   useEffect(() => {
     const scene = sceneRef.current
@@ -27,23 +93,9 @@ export function useStarField(
 
     const geometry = new THREE.BufferGeometry()
     const color = new THREE.Color()
-    const spriteCanvas = document.createElement('canvas')
-    spriteCanvas.width = spaceConfig.starfield.sprite.size
-    spriteCanvas.height = spaceConfig.starfield.sprite.size
-
-    const context = spriteCanvas.getContext('2d')
-    if (!context) return
-
-    const center = spaceConfig.starfield.sprite.size / 2
-    const gradient = context.createRadialGradient(center, center, 0, center, center, center)
-    spaceConfig.starfield.sprite.gradientStops.forEach(({ offset, color: stopColor }) => {
-      gradient.addColorStop(offset, stopColor)
-    })
-    context.fillStyle = gradient
-    context.fillRect(0, 0, spaceConfig.starfield.sprite.size, spaceConfig.starfield.sprite.size)
-
-    const spriteTexture = new THREE.CanvasTexture(spriteCanvas)
-    spriteTexture.needsUpdate = true
+    const spriteTexture = createCircleSpriteTexture()
+    const warpTexture = createWarpSpriteTexture()
+    if (!spriteTexture || !warpTexture) return
 
     for (let i = 0; i < count; i++) {
       const h = spaceConfig.starfield.hRange.min + Math.random() * (spaceConfig.starfield.hRange.max - spaceConfig.starfield.hRange.min)
@@ -97,12 +149,15 @@ export function useStarField(
     const starField = new THREE.Points(geometry, material)
     scene.add(starField)
 
-    starsRef.current = {
-      starField,
-      geometry,
-      positionAttribute,
-      colorAttribute,
-      positions,
+      starsRef.current = {
+        starField,
+        geometry,
+        material,
+        spriteTexture,
+        warpTexture,
+        positionAttribute,
+        colorAttribute,
+        positions,
       colors,
       baseColors,
       radii,
@@ -116,6 +171,7 @@ export function useStarField(
       geometry.dispose()
       material.dispose()
       spriteTexture.dispose()
+      warpTexture.dispose()
       starsRef.current = null
     }
   }, [sceneRef, count, fieldRadius, rotationSpeed])
@@ -126,6 +182,10 @@ export function useStarField(
 
     timeRef.current += spaceConfig.starfield.twinkle.timeStep
     const time = timeRef.current
+    const boosting = getExploreMovement().boost
+    const boostTarget = boosting ? 1 : 0
+    boostBlendRef.current += (boostTarget - boostBlendRef.current) * spaceConfig.starfield.boost.lerp
+    const boostBlend = boostBlendRef.current
     const {
       count: starCount,
       positions,
@@ -134,18 +194,33 @@ export function useStarField(
       radii,
       heights,
       speeds,
+      material,
+      spriteTexture,
+      warpTexture,
       positionAttribute,
       colorAttribute,
     } = stars
 
+    const spread = 1 + (spaceConfig.starfield.boost.spreadMultiplier - 1) * boostBlend
+    const size = spaceConfig.starfield.pointSize * (1 + (spaceConfig.starfield.boost.sizeMultiplier - 1) * boostBlend)
+    const opacity = Math.min(1, spaceConfig.starfield.opacity + spaceConfig.starfield.boost.opacityBoost * boostBlend)
+    const desiredMap = boostBlend > spaceConfig.starfield.boost.textureThreshold ? warpTexture : spriteTexture
+
+    if (material.map !== desiredMap) {
+      material.map = desiredMap
+      material.needsUpdate = true
+    }
+    material.size = size
+    material.opacity = opacity
+
     for (let i = 0; i < starCount; i++) {
       const theta = time * speeds[i] + i * spaceConfig.starfield.twinkle.orbitPhaseStep
-      const x = radii[i] * Math.cos(theta)
-      const z = radii[i] * Math.sin(theta)
+      const x = radii[i] * spread * Math.cos(theta)
+      const z = radii[i] * spread * Math.sin(theta)
       const index = i * 3
 
       positions[index] = x
-      positions[index + 1] = heights[i]
+      positions[index + 1] = heights[i] * spread
       positions[index + 2] = z
 
       const intensity = Math.abs(Math.sin(time + i * spaceConfig.starfield.twinkle.colorPhaseStep)) * spaceConfig.starfield.twinkle.amplitude + spaceConfig.starfield.twinkle.base

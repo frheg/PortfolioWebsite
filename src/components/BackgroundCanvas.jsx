@@ -39,13 +39,18 @@ export default function BackgroundCanvas() {
 
   useEffect(() => {
     let animationId
+    let lastTime = performance.now()
     const animate = () => {
       animationId = requestAnimationFrame(animate)
-      starsRef.current.update?.()
-      planetRef.current.update?.()
-      galaxiesRef.current.update?.()
-      cometsRef.current.update?.()
-      scrollCamRef.current.update?.()
+      const now = performance.now()
+      const deltaSeconds = Math.min((now - lastTime) / 1000, 0.05)
+      lastTime = now
+
+      starsRef.current.update?.(deltaSeconds)
+      planetRef.current.update?.(deltaSeconds)
+      galaxiesRef.current.update?.(deltaSeconds)
+      cometsRef.current.update?.(deltaSeconds)
+      scrollCamRef.current.update?.(deltaSeconds)
 
       const scene = sceneRef.current
       const camera = cameraRef.current
