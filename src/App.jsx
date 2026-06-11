@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
 import ExploreBoostOverlay from './components/ExploreBoostOverlay'
 import ExploreHelpHint from './components/ExploreHelpHint'
+import ExplorePauseOverlay from './components/ExplorePauseOverlay'
 import { RouteProvider } from './context/RouteProvider'
 import ExploreMobileControls from './components/ExploreMobileControls'
 import MobileQuickNav from './components/MobileQuickNav'
@@ -84,6 +85,7 @@ export default function App() {
       <div className={routeVeilClassName} aria-hidden="true" />
       <div className={routeScanClassName} aria-hidden="true" />
       {isExploreRoute ? <ExploreBoostOverlay /> : null}
+      {isExploreRoute ? <ExplorePauseOverlay /> : null}
       <div className={routeStageClassName}>
         <Suspense fallback={<div className="route-loading" />}>
           <Routes location={displayedLocation}>

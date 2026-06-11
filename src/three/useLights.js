@@ -12,7 +12,8 @@ export function useLights(sceneRef) {
     const point = new THREE.PointLight(
       spaceConfig.lights.point.color,
       spaceConfig.lights.point.intensity,
-      spaceConfig.lights.point.distance
+      spaceConfig.lights.point.distance,
+      spaceConfig.lights.point.decay
     )
     point.position.set(spaceConfig.lights.point.position.x, spaceConfig.lights.point.position.y, spaceConfig.lights.point.position.z)
 

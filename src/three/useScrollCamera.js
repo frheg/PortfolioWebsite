@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
+import { getSolarCollisionBodies } from './solarSystemRuntime'
 import {
   addExploreLook,
   consumeExploreLook,
@@ -9,6 +10,13 @@ import {
   resetExploreInput,
   setExploreMove,
 } from './exploreControls'
+import {
+  isExplorePaused,
+  pauseExplore,
+  resumeExplore,
+  resetExplorePauseState,
+  setExplorePaused,
+} from './exploreState'
 
 const {
   orbit,
@@ -117,71 +125,28 @@ function jumpToTop() {
   body.style.scrollBehavior = prevBodyBehavior
 }
 
-function getKeyDirection(event) {
+// Single unified key → explore-action map.
+// Forward/back: W S arrows K J
+// Yaw:          A D arrows H L
+// Tilt:         E (up) Q (down)
+// Boost:        Space (handled separately)
+function getExploreAction(event) {
   switch (event.code) {
-    case 'KeyW':
-      return 'forward'
-    case 'KeyS':
-      return 'backward'
-    case 'KeyA':
-      return 'left'
-    case 'KeyD':
-      return 'right'
-    case 'KeyH':
-      return 'left'
-    case 'KeyJ':
-      return 'backward'
-    case 'KeyK':
-      return 'forward'
-    case 'KeyL':
-      return 'right'
-    default:
-      break
-  }
-
-  switch (event.key.toLowerCase()) {
-    case 'w':
-    case 'arrowup':
-    case 'k':
-      return 'forward'
-    case 's':
-    case 'arrowdown':
-    case 'j':
-      return 'backward'
-    case 'a':
-    case 'arrowleft':
-    case 'h':
-      return 'left'
-    case 'd':
-    case 'arrowright':
-    case 'l':
-      return 'right'
-    default:
-      return null
-  }
-}
-
-function getTurnDirection(event) {
-  switch (event.code) {
-    case 'KeyQ':
-      return 'yawLeft'
-    case 'KeyE':
-      return 'yawRight'
-    default:
-      return null
-  }
-}
-
-function getPitchDirection(event) {
-  switch (event.code) {
-    case 'ShiftLeft':
-    case 'ShiftRight':
-      return 'pitchUp'
-    case 'ControlLeft':
-    case 'ControlRight':
-      return 'pitchDown'
-    default:
-      return null
+    case 'KeyW':      return 'forward'
+    case 'KeyS':      return 'backward'
+    case 'KeyA':      return 'yawLeft'
+    case 'KeyD':      return 'yawRight'
+    case 'KeyH':      return 'yawLeft'
+    case 'KeyJ':      return 'backward'
+    case 'KeyK':      return 'forward'
+    case 'KeyL':      return 'yawRight'
+    case 'KeyE':      return 'pitchUp'
+    case 'KeyQ':      return 'pitchDown'
+    case 'ArrowUp':   return 'forward'
+    case 'ArrowDown': return 'backward'
+    case 'ArrowLeft': return 'yawLeft'
+    case 'ArrowRight':return 'yawRight'
+    default:          return null
   }
 }
 
@@ -209,10 +174,9 @@ export function useScrollCamera(cameraRef, routePath) {
   const upRef = useRef(new THREE.Vector3())
   const nextPosRef = useRef(new THREE.Vector3())
   const previousPosRef = useRef(new THREE.Vector3())
-  const planetOffsetRef = useRef(new THREE.Vector3())
+  const bodyOffsetRef = useRef(new THREE.Vector3())
   const velocityRef = useRef(new THREE.Vector3())
-  const forwardSpeedRef = useRef(0)
-  const rightSpeedRef = useRef(0)
+  const targetVelocityRef = useRef(new THREE.Vector3())
   const appliedShakePosRef = useRef(new THREE.Vector3())
   const appliedShakeRotRef = useRef({ x: 0, y: 0, z: 0 })
 
@@ -223,35 +187,43 @@ export function useScrollCamera(cameraRef, routePath) {
     }
 
     resetExploreInput()
-    let isMouseLooking = false
-    let lastMouseX = 0
-    let lastMouseY = 0
+    resetExplorePauseState() // start paused so the overlay shows on first enter
     let activeTouchId = null
     let lastTouchX = 0
     let lastTouchY = 0
+    // Fallback position-delta tracking (used when pointer lock is unavailable)
+    let lastMouseX = -1
+    let lastMouseY = -1
 
     const ignoreLookTarget = (target) =>
       target instanceof Element && (target.closest('nav') || target.closest('[data-explore-control]'))
 
     const onKeyDown = (event) => {
-      const direction = getKeyDirection(event)
-      if (direction) {
+      // Pause / resume — checked before any other input
+      if (event.code === 'Escape') {
+        // Browser always releases pointer lock on Escape; we just mirror the pause state
+        setExplorePaused(true)
+        resetExploreInput()
+        return
+      }
+      if (event.code === 'KeyP') {
         event.preventDefault()
-        setExploreMove(direction, true)
+        if (isExplorePaused()) {
+          resumeExplore()
+        } else {
+          pauseExplore()
+          resetExploreInput()
+        }
         return
       }
 
-      const turnDirection = getTurnDirection(event)
-      if (turnDirection) {
-        event.preventDefault()
-        setExploreMove(turnDirection, true)
-        return
-      }
+      // Ignore all other input while paused
+      if (isExplorePaused()) return
 
-      const pitchDirection = getPitchDirection(event)
-      if (pitchDirection) {
+      const action = getExploreAction(event)
+      if (action) {
         event.preventDefault()
-        setExploreMove(pitchDirection, true)
+        setExploreMove(action, true)
         return
       }
 
@@ -262,24 +234,12 @@ export function useScrollCamera(cameraRef, routePath) {
     }
 
     const onKeyUp = (event) => {
-      const direction = getKeyDirection(event)
-      if (direction) {
-        event.preventDefault()
-        setExploreMove(direction, false)
-        return
-      }
+      if (isExplorePaused()) return
 
-      const turnDirection = getTurnDirection(event)
-      if (turnDirection) {
+      const action = getExploreAction(event)
+      if (action) {
         event.preventDefault()
-        setExploreMove(turnDirection, false)
-        return
-      }
-
-      const pitchDirection = getPitchDirection(event)
-      if (pitchDirection) {
-        event.preventDefault()
-        setExploreMove(pitchDirection, false)
+        setExploreMove(action, false)
         return
       }
 
@@ -289,15 +249,29 @@ export function useScrollCamera(cameraRef, routePath) {
       }
     }
 
-    const onMouseDown = (event) => {
-      if (event.button !== 0 || ignoreLookTarget(event.target)) return
-      isMouseLooking = true
-      lastMouseX = event.clientX
-      lastMouseY = event.clientY
-    }
-
     const onMouseMove = (event) => {
-      if (!isMouseLooking) return
+      if (isExplorePaused()) return
+
+      if (document.pointerLockElement) {
+        // Pointer is locked — raw movementX/Y, no edge limit
+        addExploreLook(
+          event.movementX * exploreConfig.lookSensitivity,
+          event.movementY * exploreConfig.lookSensitivity
+        )
+        return
+      }
+
+      // Fallback: position-delta tracking when pointer lock is unavailable
+      if (ignoreLookTarget(event.target)) {
+        lastMouseX = -1
+        lastMouseY = -1
+        return
+      }
+      if (lastMouseX < 0) {
+        lastMouseX = event.clientX
+        lastMouseY = event.clientY
+        return
+      }
       const dx = event.clientX - lastMouseX
       const dy = event.clientY - lastMouseY
       lastMouseX = event.clientX
@@ -305,8 +279,17 @@ export function useScrollCamera(cameraRef, routePath) {
       addExploreLook(dx * exploreConfig.lookSensitivity, dy * exploreConfig.lookSensitivity)
     }
 
-    const stopMouseLook = () => {
-      isMouseLooking = false
+    const resetMouse = () => {
+      lastMouseX = -1
+      lastMouseY = -1
+    }
+
+    // When the browser releases pointer lock (e.g. user Alt-Tabs) → auto-pause
+    const onPointerLockChange = () => {
+      if (!document.pointerLockElement && !isExplorePaused()) {
+        setExplorePaused(true)
+        resetExploreInput()
+      }
     }
 
     const onTouchStart = (event) => {
@@ -339,10 +322,10 @@ export function useScrollCamera(cameraRef, routePath) {
 
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
-    window.addEventListener('mousedown', onMouseDown)
     window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('mouseup', stopMouseLook)
-    window.addEventListener('mouseleave', stopMouseLook)
+    window.addEventListener('mouseleave', resetMouse)
+    window.addEventListener('blur', resetMouse)
+    document.addEventListener('pointerlockchange', onPointerLockChange)
     window.addEventListener('touchstart', onTouchStart, { passive: true })
     window.addEventListener('touchmove', onTouchMove, { passive: false })
     window.addEventListener('touchend', stopTouchLook)
@@ -351,15 +334,17 @@ export function useScrollCamera(cameraRef, routePath) {
     return () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
-      window.removeEventListener('mousedown', onMouseDown)
       window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('mouseup', stopMouseLook)
-      window.removeEventListener('mouseleave', stopMouseLook)
+      window.removeEventListener('mouseleave', resetMouse)
+      window.removeEventListener('blur', resetMouse)
+      document.removeEventListener('pointerlockchange', onPointerLockChange)
       window.removeEventListener('touchstart', onTouchStart)
       window.removeEventListener('touchmove', onTouchMove)
       window.removeEventListener('touchend', stopTouchLook)
       window.removeEventListener('touchcancel', stopTouchLook)
       resetExploreInput()
+      pauseExplore()           // release lock + set paused
+      resetExplorePauseState() // reset to paused for next visit
     }
   }, [routePath])
 
@@ -377,8 +362,7 @@ export function useScrollCamera(cameraRef, routePath) {
       currentYawRef.current = camera?.rotation.y ?? currentYawRef.current
       currentPitchRef.current = camera?.rotation.x ?? currentPitchRef.current
       velocityRef.current.set(0, 0, 0)
-      forwardSpeedRef.current = 0
-      rightSpeedRef.current = 0
+      targetVelocityRef.current.set(0, 0, 0)
       transToRef.current = transFromRef.current
       transTRef.current = 1
       settleFramesRef.current = 0
@@ -392,8 +376,7 @@ export function useScrollCamera(cameraRef, routePath) {
       displayProgressRef.current = 0
       pageScrollRangeRef.current = 1
       velocityRef.current.set(0, 0, 0)
-      forwardSpeedRef.current = 0
-      rightSpeedRef.current = 0
+      targetVelocityRef.current.set(0, 0, 0)
       routeRef.current = routePath
       resetExploreInput()
     }
@@ -416,26 +399,27 @@ export function useScrollCamera(cameraRef, routePath) {
       position.z *= scale
     }
 
-    const minPlanetDistance =
-      spaceConfig.planet.radius * spaceConfig.planet.scale + exploreConfig.planetClearance
-    const minPlanetDistanceSq = minPlanetDistance * minPlanetDistance
-    planetOffsetRef.current.set(
-      position.x - spaceConfig.planet.position.x,
-      position.y - spaceConfig.planet.position.y,
-      position.z - spaceConfig.planet.position.z
-    )
-
-    if (planetOffsetRef.current.lengthSq() < minPlanetDistanceSq) {
-      if (planetOffsetRef.current.lengthSq() < 1e-6) {
-        planetOffsetRef.current.set(0, 1, 0)
-      }
-      planetOffsetRef.current.normalize().multiplyScalar(minPlanetDistance)
-      position.set(
-        spaceConfig.planet.position.x + planetOffsetRef.current.x,
-        spaceConfig.planet.position.y + planetOffsetRef.current.y,
-        spaceConfig.planet.position.z + planetOffsetRef.current.z
+    getSolarCollisionBodies().forEach((body) => {
+      const minDistance = body.radius + exploreConfig.planetClearance
+      const minDistanceSq = minDistance * minDistance
+      bodyOffsetRef.current.set(
+        position.x - body.position.x,
+        position.y - body.position.y,
+        position.z - body.position.z
       )
-    }
+
+      if (bodyOffsetRef.current.lengthSq() < minDistanceSq) {
+        if (bodyOffsetRef.current.lengthSq() < 1e-6) {
+          bodyOffsetRef.current.set(0, 1, 0)
+        }
+        bodyOffsetRef.current.normalize().multiplyScalar(minDistance)
+        position.set(
+          body.position.x + bodyOffsetRef.current.x,
+          body.position.y + bodyOffsetRef.current.y,
+          body.position.z + bodyOffsetRef.current.z
+        )
+      }
+    })
   }
 
   const clearAppliedShake = (camera) => {
@@ -486,12 +470,15 @@ export function useScrollCamera(cameraRef, routePath) {
   }
 
   const updateExplore = (camera, deltaSeconds) => {
+    // Drain accumulated look even when paused to avoid stale deltas on resume
     const look = consumeExploreLook()
+    if (isExplorePaused()) return false
+
     const movement = getExploreMovement()
     const turnInput = (movement.yawLeft ? 1 : 0) - (movement.yawRight ? 1 : 0)
     const pitchInput = (movement.pitchUp ? 1 : 0) - (movement.pitchDown ? 1 : 0)
     const lookTurnIntent = clamp(-look.dx / 0.03, -1, 1)
-    const bankIntent = clamp(turnInput + lookTurnIntent - movement.right * 0.3 + movement.left * 0.3, -1, 1)
+    const bankIntent = clamp(turnInput + lookTurnIntent, -1, 1)
     const boostActive = movement.boost && movement.forward && !movement.backward
 
     currentYawRef.current += turnInput * exploreConfig.keyTurnSpeed * deltaSeconds
@@ -515,50 +502,39 @@ export function useScrollCamera(cameraRef, routePath) {
     camera.rotation.z = currentRollRef.current
 
     const moveForward = (movement.forward ? 1 : 0) - (movement.backward ? 1 : 0)
-    const moveRight = (movement.right ? 1 : 0) - (movement.left ? 1 : 0)
-    const hasMoveInput = moveForward !== 0 || moveRight !== 0
+    const hasMoveInput = moveForward !== 0
 
     camera.getWorldDirection(forwardRef.current)
-    rightRef.current.crossVectors(forwardRef.current, camera.up).normalize()
 
     const speed = exploreConfig.moveSpeed * (boostActive ? exploreConfig.boostMultiplier : 1)
     const accelPerSecond = speed * exploreConfig.acceleration
     const brakePerSecond = speed * exploreConfig.brakeAcceleration
     const coastPerSecond = exploreConfig.moveSpeed * exploreConfig.coastDamping
-    const diagonalScale = hasMoveInput ? 1 / (Math.hypot(moveForward, moveRight) || 1) : 0
-    const targetForwardSpeed = moveForward * diagonalScale * speed
-    const targetRightSpeed = moveRight * diagonalScale * speed
 
-    const nextForwardSpeed = stepToward(
-      forwardSpeedRef.current,
-      targetForwardSpeed,
-      (targetForwardSpeed === 0
-        ? coastPerSecond
-        : Math.sign(targetForwardSpeed) !== Math.sign(forwardSpeedRef.current) && Math.abs(forwardSpeedRef.current) > 0.001
-          ? brakePerSecond
-          : accelPerSecond) * deltaSeconds
+    targetVelocityRef.current.set(0, 0, 0)
+    if (hasMoveInput) {
+      targetVelocityRef.current.addScaledVector(forwardRef.current, moveForward * speed)
+    }
+
+    const reversing =
+      hasMoveInput &&
+      velocityRef.current.lengthSq() > 0.0001 &&
+      targetVelocityRef.current.lengthSq() > 0.0001 &&
+      velocityRef.current.dot(targetVelocityRef.current) < 0
+
+    const maxDelta = (hasMoveInput
+      ? reversing
+        ? brakePerSecond
+        : accelPerSecond
+      : coastPerSecond) * deltaSeconds
+
+    velocityRef.current.set(
+      stepToward(velocityRef.current.x, targetVelocityRef.current.x, maxDelta),
+      stepToward(velocityRef.current.y, targetVelocityRef.current.y, maxDelta),
+      stepToward(velocityRef.current.z, targetVelocityRef.current.z, maxDelta)
     )
-
-    const nextRightSpeed = stepToward(
-      rightSpeedRef.current,
-      targetRightSpeed,
-      (targetRightSpeed === 0
-        ? coastPerSecond
-        : Math.sign(targetRightSpeed) !== Math.sign(rightSpeedRef.current) && Math.abs(rightSpeedRef.current) > 0.001
-          ? brakePerSecond
-          : accelPerSecond) * deltaSeconds
-    )
-
-    forwardSpeedRef.current = Math.abs(nextForwardSpeed) < 0.001 ? 0 : nextForwardSpeed
-    rightSpeedRef.current = Math.abs(nextRightSpeed) < 0.001 ? 0 : nextRightSpeed
-
-    velocityRef.current.set(0, 0, 0)
-    velocityRef.current.addScaledVector(forwardRef.current, forwardSpeedRef.current)
-    velocityRef.current.addScaledVector(rightRef.current, rightSpeedRef.current)
 
     if (!hasMoveInput && velocityRef.current.lengthSq() < 0.0001) {
-      forwardSpeedRef.current = 0
-      rightSpeedRef.current = 0
       velocityRef.current.set(0, 0, 0)
     }
 

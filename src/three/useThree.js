@@ -34,6 +34,9 @@ export function useThree(
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, spaceConfig.renderer.maxPixelRatio))
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setClearColor(clearColor, 1)
+    // Physical light units need tonemapping so highlights compress instead of clipping
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = spaceConfig.renderer.toneMappingExposure
 
     sceneRef.current = scene
     cameraRef.current = camera

@@ -2,9 +2,9 @@ const isDev = import.meta.env.DEV
 
 export const spaceConfig = {
   bounds: {
-    width: 2800,
-    height: 2200,
-    depth: 2800,
+    width: 5000,
+    height: 3200,
+    depth: 5000,
   },
 
   get half() {
@@ -24,6 +24,8 @@ export const spaceConfig = {
     clearColor: 0x000000,
     maxPixelRatio: 2,
     powerPreference: 'high-performance',
+    // ACES tonemapping maps physical candela values gracefully without clipping
+    toneMappingExposure: 1.1,
   },
 
   camera: {
@@ -38,8 +40,8 @@ export const spaceConfig = {
     explore: {
       moveSpeed: 96,
       boostMultiplier: 2.45,
-      acceleration: 3.8,
-      coastDamping: 3.4,
+      acceleration: 3.0,
+      coastDamping: 1.75,     // low = long space-like glide after releasing keys
       brakeAcceleration: 7.5,
       keyTurnSpeed: 1.8,
       keyPitchSpeed: 1.35,
@@ -51,23 +53,23 @@ export const spaceConfig = {
       lookSensitivity: 0.0022,
       touchLookSensitivity: 0.003,
       worldMargin: 18,
-      moveFieldRadiusFactor: 1.2,
-      planetClearance: 10,
+      moveFieldRadiusFactor: 1.20,
+      planetClearance: 8,
       maxPitch: 1.35,
       bankAngle: 0.1,
       bankLerp: 0.12,
     },
     orbit: {
-      center: { x: -50, y: 10, z: -50 },
-      rx: 55,
-      ry: 25,
-      rz: 50,
+      center: { x: 0, y: 0, z: 0 },
+      rx: 168,
+      ry: 28,
+      rz: 152,
     },
     pageStops: [
-      { path: '/', angle: 3.4, heightOffset: 0 },
-      { path: '/projects', angle: 1.9, heightOffset: -8 },
-      { path: '/journey', angle: 0.4, heightOffset: -5 },
-      { path: '/contact', angle: -1.1, heightOffset: -9 },
+      { path: '/', angle: 3.4, heightOffset: 8 },
+      { path: '/projects', angle: 1.9, heightOffset: -10 },
+      { path: '/journey', angle: 0.4, heightOffset: -4 },
+      { path: '/contact', angle: -1.1, heightOffset: -12 },
     ],
   },
 
@@ -85,17 +87,20 @@ export const spaceConfig = {
   },
 
   lights: {
-    ambient: { color: 0xffffff, intensity: 0.5 },
+    // Low ambient so sun-lit vs dark side is visible; point light does the heavy work
+    ambient: { color: 0xffffff, intensity: 0.08 },
     point: {
-      color: 0xffffff,
-      intensity: 1,
-      distance: 500,
-      position: { x: 50, y: 50, z: 50 },
+      // Physical candelas at scene scale: 100k gives Earth ~0.5 lux → ACES maps it to ~60% brightness
+      color: 0xfff4e0,
+      intensity: 100000,
+      distance: 0,   // 0 = infinite range (quadratic decay handles falloff naturally)
+      decay: 2,
+      position: { x: 0, y: 0, z: 0 },
     },
   },
 
   starfield: {
-    fieldRadiusFactor: 1.55,
+    fieldRadiusFactor: 1.7,
     rotationSpeed: 0.005,
     pointSize: 1.25,
     opacity: 0.9,
@@ -128,19 +133,43 @@ export const spaceConfig = {
     },
   },
 
-  planet: {
-    radius: 10,
-    segments: { width: 32, height: 32 },
-    position: { x: -50, y: 10, z: -50 },
-    scale: 1,
-    rotationSpeed: 0.001,
-    texture: {
-      anisotropy: 4,
+  solarSystem: {
+    center: { x: 0, y: 0, z: 0 },
+    // Slowed down ~3× from original so orbits feel stately
+    timeScale: 0.055,
+    textureAnisotropy: 4,
+    segments: { width: 48, height: 48 },
+    bodyCollisionPadding: 3,
+    bodies: [
+      // All radii and orbitRadii scaled ×0.625 so Pluto (orbit 800) fits
+      // comfortably within the ~960-unit explore movement area.
+      { key: 'sun',     radius: 19,  orbitRadius: 0,   orbitSpeed: 0,     rotationSpeed: 0.00075, axialTilt: 0.12, texture: 'sun',     emissive: true },
+      { key: 'mercury', radius: 2.0, orbitRadius: 56,  orbitSpeed: 0.95,  rotationSpeed: 0.00150, axialTilt: 0.03, texture: 'mercury' },
+      { key: 'venus',   radius: 3.5, orbitRadius: 92,  orbitSpeed: 0.74,  rotationSpeed: -0.0005, axialTilt: 3.09, texture: 'venus'   },
+      { key: 'earth',   radius: 3.9, orbitRadius: 128, orbitSpeed: 0.62,  rotationSpeed: 0.00250, axialTilt: 0.41, texture: 'earth'   },
+      // tidallyLocked: moon rotation tracks its orbital angle so the near side always faces Earth
+      { key: 'moon',    radius: 1.2, orbitRadius: 13,  orbitSpeed: 2.60,  rotationSpeed: 0.00075, axialTilt: 0.09, texture: 'moon',   parent: 'earth', tidallyLocked: true },
+      { key: 'mars',    radius: 2.9, orbitRadius: 181, orbitSpeed: 0.50,  rotationSpeed: 0.00250, axialTilt: 0.44, texture: 'mars'    },
+      { key: 'jupiter', radius: 9.1, orbitRadius: 300, orbitSpeed: 0.28,  rotationSpeed: 0.00550, axialTilt: 0.05, texture: 'jupiter' },
+      { key: 'saturn',  radius: 7.8, orbitRadius: 412, orbitSpeed: 0.20,  rotationSpeed: 0.00475, axialTilt: 0.47, texture: 'saturn',  ringTexture: 'saturnRing', ringInner: 9.4,  ringOuter: 21,   ringOpacity: 0.72 },
+      { key: 'uranus',  radius: 5.8, orbitRadius: 512, orbitSpeed: 0.15,  rotationSpeed: 0.00375, axialTilt: 1.71, texture: 'uranus',  ringTexture: 'uranusRing', ringInner: 7.8,  ringOuter: 10.6, ringOpacity: 0.48 },
+      { key: 'neptune', radius: 5.6, orbitRadius: 612, orbitSpeed: 0.11,  rotationSpeed: 0.00325, axialTilt: 0.49, texture: 'neptune' },
+      { key: 'pluto',   radius: 1.4, orbitRadius: 800, orbitSpeed: 0.073, rotationSpeed: 0.00039, axialTilt: 2.13, texture: 'pluto'   },
+    ],
+    ufo: {
+      count: 3,
+      scale: 0.45,
+      roamRadius: 875,
+      minSunDistance: 44,
+      speed: 20,
+      steering: 0.22,
+      wobble: 0.18,
+      collisionRadius: 4,
     },
   },
 
   galaxies: {
-    spawnRadiusFactor: 1.2,
+    spawnRadiusFactor: 1.25,
     colorThemes: [
       { h: 0.05, s: 0.8, l: 0.6 },
       { h: 0.6, s: 0.9, l: 0.7 },
@@ -161,7 +190,7 @@ export const spaceConfig = {
   },
 
   comets: {
-    fieldRadiusFactor: 0.75,
+    fieldRadiusFactor: 0.85,
     speed: { min: 0.5, max: 2.0 },
     core: { radius: 0.3, segments: 16, color: 0xffffff },
     glow: { radius: 0.9, segments: 16, color: 0x66ccff, opacity: 0.3 },

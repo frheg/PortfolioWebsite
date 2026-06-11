@@ -1,8 +1,6 @@
 const movement = {
   forward: false,
   backward: false,
-  left: false,
-  right: false,
   yawLeft: false,
   yawRight: false,
   pitchUp: false,

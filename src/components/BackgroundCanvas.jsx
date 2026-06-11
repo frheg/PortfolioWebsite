@@ -4,11 +4,12 @@ import { useThree } from '../three/useThree'
 import { useSkybox } from '../three/useSkybox'
 import { useLights } from '../three/useLights'
 import { useStarField } from '../three/useStarField'
-import { usePlanet } from '../three/usePlanet'
+import { useSolarSystem } from '../three/useSolarSystem'
 import { useGalaxies } from '../three/useGalaxies'
 import { useComets } from '../three/useComets'
 import { useScrollCamera } from '../three/useScrollCamera'
 import { useRoutePath } from '../context/RouteContext'
+import PlanetLabels from './PlanetLabels'
 
 export default function BackgroundCanvas() {
   const canvasRef = useRef(null)
@@ -20,7 +21,7 @@ export default function BackgroundCanvas() {
   useLights(sceneRef)
   // Independent background systems
   const stars = useStarField(sceneRef)
-  const planet = usePlanet(sceneRef)
+  const solarSystem = useSolarSystem(sceneRef)
   const galaxies = useGalaxies(sceneRef)
   const comets = useComets(sceneRef)
   const scrollCam = useScrollCamera(cameraRef, routePath)
@@ -30,8 +31,8 @@ export default function BackgroundCanvas() {
   scrollCamRef.current = scrollCam
   const starsRef = useRef(stars)
   starsRef.current = stars
-  const planetRef = useRef(planet)
-  planetRef.current = planet
+  const solarSystemRef = useRef(solarSystem)
+  solarSystemRef.current = solarSystem
   const galaxiesRef = useRef(galaxies)
   galaxiesRef.current = galaxies
   const cometsRef = useRef(comets)
@@ -47,7 +48,7 @@ export default function BackgroundCanvas() {
       lastTime = now
 
       starsRef.current.update?.(deltaSeconds)
-      planetRef.current.update?.(deltaSeconds)
+      solarSystemRef.current.update?.(deltaSeconds)
       galaxiesRef.current.update?.(deltaSeconds)
       cometsRef.current.update?.(deltaSeconds)
       scrollCamRef.current.update?.(deltaSeconds)
@@ -63,5 +64,14 @@ export default function BackgroundCanvas() {
     return () => cancelAnimationFrame(animationId)
   }, [sceneRef, cameraRef, rendererRef]) // stable deps only
 
-  return <canvas id="bg" ref={canvasRef} className="fixed top-0 left-0 w-full h-full -z-10" />
+  return (
+    <>
+      <canvas id="bg" ref={canvasRef} className="fixed top-0 left-0 w-full h-full -z-10" />
+      <PlanetLabels
+        cameraRef={cameraRef}
+        rendererRef={rendererRef}
+        isExplore={routePath === '/explore'}
+      />
+    </>
+  )
 }
