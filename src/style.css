@@ -43,7 +43,94 @@ summary {
 }
 
 .route-stage {
-  animation: route-enter 360ms ease both;
+  position: relative;
+  z-index: 2;
+  transform-origin: 50% 0%;
+  will-change: opacity, transform, filter;
+}
+
+.route-stage--idle {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  filter: blur(0);
+}
+
+.route-stage--exit {
+  animation: route-phase-out 220ms cubic-bezier(0.35, 0, 0.65, 1) both;
+}
+
+.route-stage--enter {
+  animation: route-phase-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.route-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(103, 232, 249, 0.18), transparent 22%),
+    radial-gradient(circle at 78% 64%, rgba(168, 85, 247, 0.15), transparent 24%),
+    linear-gradient(
+      112deg,
+      transparent 18%,
+      rgba(8, 47, 73, 0.22) 42%,
+      rgba(103, 232, 249, 0.14) 50%,
+      rgba(168, 85, 247, 0.14) 58%,
+      transparent 82%
+    );
+  filter: blur(26px);
+  mix-blend-mode: screen;
+  will-change: opacity, transform;
+}
+
+.route-scan {
+  position: fixed;
+  inset: -8%;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    linear-gradient(
+      104deg,
+      transparent 0%,
+      transparent 34%,
+      rgba(103, 232, 249, 0.08) 42%,
+      rgba(103, 232, 249, 0.22) 48%,
+      rgba(168, 85, 247, 0.18) 52%,
+      rgba(168, 85, 247, 0.08) 58%,
+      transparent 66%,
+      transparent 100%
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.045) 0,
+      rgba(255, 255, 255, 0.045) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.08), transparent 54%);
+  mix-blend-mode: screen;
+  filter: blur(1px);
+  transform: translate3d(-18%, 0, 0) skewX(-10deg) scaleX(1.08);
+  will-change: opacity, transform, background-position;
+}
+
+.route-veil--exit {
+  animation: route-veil-in 220ms cubic-bezier(0.35, 0, 0.65, 1) both;
+}
+
+.route-veil--enter {
+  animation: route-veil-out 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.route-scan--exit {
+  animation: route-scan-in 220ms cubic-bezier(0.35, 0, 0.65, 1) both;
+}
+
+.route-scan--enter {
+  animation: route-scan-out 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .route-loading {
@@ -211,14 +298,86 @@ summary {
   }
 }
 
-@keyframes route-enter {
+@keyframes route-phase-out {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0) scale(0.988);
+    filter: blur(10px);
+  }
+}
+
+@keyframes route-phase-in {
   from {
     opacity: 0;
-    transform: translate3d(0, 10px, 0);
+    transform: translate3d(0, 14px, 0) scale(1.012);
+    filter: blur(14px);
+  }
+  55% {
+    opacity: 0.84;
   }
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
+@keyframes route-veil-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-22%, 0, 0) scale(1.05);
+  }
+  to {
+    opacity: 0.52;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes route-veil-out {
+  from {
+    opacity: 0.46;
+    transform: translate3d(4%, 0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(22%, 0, 0) scale(1.05);
+  }
+}
+
+@keyframes route-scan-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-26%, 0, 0) skewX(-12deg) scaleX(1.12);
+    background-position: 0 0, 0 0, 50% 50%;
+  }
+  55% {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 0.78;
+    transform: translate3d(0, 0, 0) skewX(-8deg) scaleX(1);
+    background-position: 120px 0, 0 12px, 50% 50%;
+  }
+}
+
+@keyframes route-scan-out {
+  from {
+    opacity: 0.62;
+    transform: translate3d(4%, 0, 0) skewX(-8deg) scaleX(1);
+    background-position: 160px 0, 0 14px, 50% 50%;
+  }
+  45% {
+    opacity: 0.3;
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(28%, 0, 0) skewX(-5deg) scaleX(1.06);
+    background-position: 360px 0, 0 40px, 50% 50%;
   }
 }
 
@@ -228,6 +387,8 @@ summary {
   }
 
   .route-stage,
+  .route-veil,
+  .route-scan,
   .hero-glow,
   .scroll-indicator {
     animation: none !important;
