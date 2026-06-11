@@ -30,8 +30,10 @@ export const spaceConfig = {
     initialZ: 150,
     transitionLerp: 0.025,
     scroll: {
-      posLerp: 0.04,
+      progressLerp: 0.08,
       rotLerp: 0.08,
+      snapThreshold: 0.001,
+      lockFrames: 8,
     },
     orbit: {
       center: { x: -50, y: 10, z: -50 },
@@ -39,32 +41,12 @@ export const spaceConfig = {
       ry: 25,
       rz: 50,
     },
-    pages: {
-      '/': {
-        startAngle: 3.4,
-        endAngle: 2.1,
-        anglePerPx: -0.0005,
-        heightOffset: 0,
-      },
-      '/projects': {
-        startAngle: 1.9,
-        endAngle: 0.6,
-        anglePerPx: -0.00045,
-        heightOffset: 5,
-      },
-      '/journey': {
-        startAngle: 0.4,
-        endAngle: -0.9,
-        anglePerPx: -0.00055,
-        heightOffset: -3,
-      },
-      '/contact': {
-        startAngle: -1.1,
-        endAngle: -2.3,
-        anglePerPx: -0.0004,
-        heightOffset: 2,
-      },
-    },
+    pageStops: [
+      { path: '/', angle: 3.4, heightOffset: 0 },
+      { path: '/projects', angle: 1.9, heightOffset: 5 },
+      { path: '/journey', angle: 0.4, heightOffset: -3 },
+      { path: '/contact', angle: -1.1, heightOffset: 2 },
+    ],
   },
 
   skybox: {},

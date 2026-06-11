@@ -3,7 +3,6 @@ import { Route, Routes, useLocation } from 'react-router-dom'
 import { RouteProvider } from './context/RouteProvider'
 import MobileQuickNav from './components/MobileQuickNav'
 import Nav from './components/Nav'
-import ScrollToTop from './components/ScrollToTop'
 
 const BackgroundCanvas = lazy(() => import('./components/BackgroundCanvas'))
 const HomePage = lazy(() => import('./pages/HomePage'))
@@ -23,7 +22,6 @@ export default function App() {
           <BackgroundCanvas />
         </Suspense>
       </RouteProvider>
-      <ScrollToTop />
       <div key={location.pathname} className="route-stage">
         <Suspense fallback={<div className="route-loading" />}>
           <Routes>

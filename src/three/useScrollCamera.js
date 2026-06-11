@@ -1,11 +1,42 @@
-// Continuous orbit around the planet; each page covers a segment of the loop
-import { useEffect, useRef } from 'react'
+// Map each route to a fixed orbit segment so page tops and bottoms are exact.
+import { useRef } from 'react'
 import { spaceConfig } from './spaceConfig'
 
-const { orbit, pages, scroll: globalScroll, transitionLerp } = spaceConfig.camera
+const { orbit, pageStops, scroll: scrollConfig, transitionLerp } = spaceConfig.camera
+const TWO_PI = Math.PI * 2
+const fallbackPath = pageStops[0]?.path || '/'
 
-function getPageConfig(pathname) {
-  return pages[pathname] || pages['/']
+function buildPageSegments(stops) {
+  const segments = new Map()
+
+  for (let index = 0; index < stops.length; index += 1) {
+    const stop = stops[index]
+    const nextStop = stops[(index + 1) % stops.length]
+    let endAngle = nextStop.angle
+
+    while (endAngle >= stop.angle) {
+      endAngle -= TWO_PI
+    }
+
+    segments.set(stop.path, {
+      startAngle: stop.angle,
+      endAngle,
+      startHeightOffset: stop.heightOffset,
+      endHeightOffset: nextStop.heightOffset,
+    })
+  }
+
+  return segments
+}
+
+const pageSegments = buildPageSegments(pageStops)
+
+function getPageSegment(pathname) {
+  return pageSegments.get(pathname) || pageSegments.get(fallbackPath)
+}
+
+function clamp01(value) {
+  return Math.max(0, Math.min(1, value))
 }
 
 function orbitPos(angle, heightOffset = 0) {
@@ -14,6 +45,15 @@ function orbitPos(angle, heightOffset = 0) {
     y: orbit.center.y + orbit.ry * Math.sin(angle * 0.5) + heightOffset,
     z: orbit.center.z + orbit.rz * Math.sin(angle),
   }
+}
+
+function poseForSegment(segment, progress) {
+  const t = clamp01(progress)
+  const angle = segment.startAngle + (segment.endAngle - segment.startAngle) * t
+  const heightOffset =
+    segment.startHeightOffset + (segment.endHeightOffset - segment.startHeightOffset) * t
+
+  return orbitPos(angle, heightOffset)
 }
 
 function lerp(a, b, t) {
@@ -29,88 +69,113 @@ function angleTo(from, to) {
   return from + d
 }
 
+function getScrollRange() {
+  const doc = document.documentElement
+  const body = document.body
+  const fullHeight = Math.max(doc.scrollHeight, body.scrollHeight)
+  return Math.max(fullHeight - window.innerHeight, 0)
+}
+
+function jumpToTop() {
+  const doc = document.documentElement
+  const body = document.body
+  const prevDocBehavior = doc.style.scrollBehavior
+  const prevBodyBehavior = body.style.scrollBehavior
+
+  doc.style.scrollBehavior = 'auto'
+  body.style.scrollBehavior = 'auto'
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  doc.style.scrollBehavior = prevDocBehavior
+  body.style.scrollBehavior = prevBodyBehavior
+}
+
 export function useScrollCamera(cameraRef, routePath) {
-  const scrollMaxRef = useRef(1)
-  const currentScrollYRef = useRef(0)
   const currentYawRef = useRef(0)
+  const displayProgressRef = useRef(0)
 
   const routeRef = useRef(routePath)
   const transFromRef = useRef(null)
   const transToRef = useRef(null)
   const transTRef = useRef(1)
-  const cooldownRef = useRef(0)
-
-  const computeScrollMax = () => {
-    const doc = document.documentElement
-    const body = document.body
-    const fullHeight = Math.max(doc.scrollHeight, body.scrollHeight)
-    scrollMaxRef.current = Math.max(fullHeight - window.innerHeight, 1)
-  }
+  const settleFramesRef = useRef(0)
 
   if (routePath !== routeRef.current) {
-    const cam = cameraRef.current
-    const prevPage = getPageConfig(routeRef.current)
-    const prevAngle = prevPage.startAngle + currentScrollYRef.current * prevPage.anglePerPx
-    transFromRef.current = cam
-      ? { x: cam.position.x, y: cam.position.y, z: cam.position.z }
-      : orbitPos(prevAngle, prevPage.heightOffset)
+    const camera = cameraRef.current
+    const previousSegment = getPageSegment(routeRef.current)
+    transFromRef.current = camera
+      ? { x: camera.position.x, y: camera.position.y, z: camera.position.z }
+      : poseForSegment(previousSegment, displayProgressRef.current)
 
-    const nextPage = getPageConfig(routePath)
-    transToRef.current = orbitPos(nextPage.startAngle, nextPage.heightOffset)
+    const nextSegment = getPageSegment(routePath)
+    transToRef.current = poseForSegment(nextSegment, 0)
 
     transTRef.current = 0
-    cooldownRef.current = 8
-    currentScrollYRef.current = 0
+    settleFramesRef.current = 0
+    displayProgressRef.current = 0
     routeRef.current = routePath
   }
-
-  useEffect(() => {
-    computeScrollMax()
-    window.scrollTo(0, 0)
-    const onResize = () => computeScrollMax()
-    window.addEventListener('resize', onResize)
-    return () => {
-      window.removeEventListener('resize', onResize)
-    }
-  }, [])
 
   const update = () => {
     const camera = cameraRef.current
     if (!camera) return
 
-    if (cooldownRef.current > 0) {
-      cooldownRef.current--
-      window.scrollTo(0, 0)
-      currentScrollYRef.current = 0
-    }
-
     if (transTRef.current < 1) {
+      jumpToTop()
+      displayProgressRef.current = 0
       transTRef.current = Math.min(transTRef.current + transitionLerp, 1)
+
       const t = transTRef.current
       const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
-      const pos = lerp(transFromRef.current, transToRef.current, ease)
-      camera.position.x = pos.x
-      camera.position.y = pos.y
-      camera.position.z = pos.z
-    } else {
-      if (cooldownRef.current <= 0) {
-        const rawScroll = window.scrollY || 0
-        const max = scrollMaxRef.current
-        currentScrollYRef.current = Math.max(0, Math.min(rawScroll, max))
+      const pose = lerp(transFromRef.current, transToRef.current, ease)
+
+      camera.position.set(pose.x, pose.y, pose.z)
+
+      if (transTRef.current >= 1) {
+        camera.position.set(transToRef.current.x, transToRef.current.y, transToRef.current.z)
+        settleFramesRef.current = scrollConfig.lockFrames
       }
-      const page = getPageConfig(routeRef.current)
-      const angle = page.startAngle + currentScrollYRef.current * page.anglePerPx
-      const target = orbitPos(angle, page.heightOffset)
-      camera.position.x += (target.x - camera.position.x) * globalScroll.posLerp
-      camera.position.y += (target.y - camera.position.y) * globalScroll.posLerp
-      camera.position.z += (target.z - camera.position.z) * globalScroll.posLerp
+    } else {
+      const segment = getPageSegment(routeRef.current)
+
+      if (settleFramesRef.current > 0) {
+        settleFramesRef.current -= 1
+        jumpToTop()
+        displayProgressRef.current = 0
+      } else {
+        const scrollRange = getScrollRange()
+        const targetProgress = scrollRange > 0 ? clamp01((window.scrollY || 0) / scrollRange) : 0
+
+        if (targetProgress <= scrollConfig.snapThreshold) {
+          displayProgressRef.current = 0
+        } else if (targetProgress >= 1 - scrollConfig.snapThreshold) {
+          displayProgressRef.current = 1
+        } else {
+          displayProgressRef.current +=
+            (targetProgress - displayProgressRef.current) * scrollConfig.progressLerp
+
+          if (Math.abs(targetProgress - displayProgressRef.current) <= scrollConfig.snapThreshold) {
+            displayProgressRef.current = targetProgress
+          }
+        }
+      }
+
+      const pose = poseForSegment(segment, displayProgressRef.current)
+      camera.position.set(pose.x, pose.y, pose.z)
     }
 
     const dx = orbit.center.x - camera.position.x
     const dz = orbit.center.z - camera.position.z
     const yawDesired = Math.atan2(-dx, -dz)
-    currentYawRef.current = angleTo(currentYawRef.current, yawDesired)
-    currentYawRef.current += (yawDesired - currentYawRef.current) * globalScroll.rotLerp
+    const shouldSnapYaw =
+      transTRef.current < 1 || settleFramesRef.current > 0 || displayProgressRef.current === 0
+
+    if (shouldSnapYaw) {
+      currentYawRef.current = yawDesired
+    } else {
+      currentYawRef.current = angleTo(currentYawRef.current, yawDesired)
+      currentYawRef.current += (yawDesired - currentYawRef.current) * scrollConfig.rotLerp
+    }
+
     camera.rotation.y = currentYawRef.current
   }
 
