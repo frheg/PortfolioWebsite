@@ -39,18 +39,28 @@ export default function Nav() {
         : 'border-white/10 bg-black/10 text-cyan-300 hover:border-cyan-300/30 hover:text-cyan-100 hover:bg-cyan-300/10'
     }`
 
+  const featuredLinkClass = (isActive) =>
+    `explore-pill relative isolate overflow-visible rounded-full border px-3 py-2 text-sm font-medium uppercase tracking-[0.18em] transition duration-300 ${
+      isActive
+        ? 'border-cyan-200/75 bg-cyan-300/22 text-cyan-50 shadow-[0_0_26px_rgba(103,232,249,0.34)]'
+        : 'border-cyan-300/50 bg-cyan-300/12 text-cyan-100 shadow-[0_0_24px_rgba(103,232,249,0.18)] hover:border-cyan-200/80 hover:bg-cyan-300/18 hover:text-cyan-50'
+    }`
+
   const Links = ({ vertical = false }) => (
-    <div className={`${vertical ? 'flex flex-col gap-2 py-2' : 'flex items-center gap-2'} overflow-x-auto`}>
-      {navLinks.map(({ to, label }) => {
+    <div className={`${vertical ? 'flex flex-col gap-2 py-2 overflow-visible' : 'flex items-center gap-2 overflow-visible'} `}>
+      {navLinks.map(({ to, label, featured, sticker }) => {
         return (
           <NavLink
             key={to}
             to={to}
             onClick={() => setOpen(false)}
-            className={({ isActive }) => `${linkClass(isActive)} ${vertical ? 'w-full justify-center py-3 text-center' : ''}`}
+            className={({ isActive }) => `${featured ? featuredLinkClass(isActive) : linkClass(isActive)} ${vertical ? 'w-full justify-center py-3 text-center' : ''}`}
             end={to === '/'}
           >
-            {label}
+            <span className="relative inline-flex items-center justify-center">
+              {label}
+              {featured ? <span className={`explore-sticker ${vertical ? 'explore-sticker--stacked' : ''}`}>{sticker}</span> : null}
+            </span>
           </NavLink>
         )
       })}

@@ -8,7 +8,7 @@ export default function ExploreHelpHint() {
             Move: WASD, arrows, HJKL. Turn: mouse drag or Q/E. Pitch: Shift/Ctrl. Boost: Space while moving forward.
           </p>
           <p className="mt-1 leading-6 text-cyan-100/72 md:hidden">
-            Drag to look. Use the on-screen pad to move.
+            Drag to look. Use the on-screen pad to move. Drag the forward pad upward to boost.
           </p>
         </div>
       </div>
