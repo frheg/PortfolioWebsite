@@ -3,19 +3,19 @@ import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { setSolarCollisionBodies } from './solarSystemRuntime'
 
-import sunTexUrl from '../assets/Models/solar/sun/sol/2k_sun.jpg'
-import mercuryTexUrl from '../assets/Models/solar/mercury/2k_mercury.jpg'
-import venusTexUrl from '../assets/Models/solar/venus/venusmap.jpg'
-import earthTexUrl from '../assets/Models/Earth 3D Model/textures/1_earth_2k.jpg'
-import moonTexUrl from '../assets/Models/solar/moon/Moon_photorealistic.jpg'
-import marsTexUrl from '../assets/Models/solar/mars/mars_1k_color.jpg'
-import jupiterTexUrl from '../assets/Models/solar/jupiter/Jupiter/Maps/jupitermap.jpg'
-import saturnTexUrl from '../assets/Models/solar/saturn/saturno/2k_saturn.jpg'
-import saturnRingTexUrl from '../assets/Models/solar/saturn/saturno/ring.PNG'
-import uranusTexUrl from '../assets/Models/solar/uranus/Uranus_v2_L3.123cca176b4e-b004-4e02-8841-1970086e0076/13907_Uranus_planet_diff.jpg'
-import uranusRingTexUrl from '../assets/Models/solar/uranus/Uranus_v2_L3.123cca176b4e-b004-4e02-8841-1970086e0076/13907_Uranus_Rings_diff.jpg'
-import neptuneTexUrl from '../assets/Models/solar/neptune/Neptune/Maps/neptunemap.jpg'
-import plutoTexUrl from '../assets/Models/solar/pluto/Pluto_diff.jpg'
+import sunTexUrl from '../assets/Models/solar/sun/sol/sun.webp'
+import mercuryTexUrl from '../assets/Models/solar/mercury/mercury.webp'
+import venusTexUrl from '../assets/Models/solar/venus/venus.webp'
+import earthTexUrl from '../assets/Models/Earth 3D Model/textures/earth.webp'
+import moonTexUrl from '../assets/Models/solar/moon/moon.webp'
+import marsTexUrl from '../assets/Models/solar/mars/mars.webp'
+import jupiterTexUrl from '../assets/Models/solar/jupiter/jupiter.webp'
+import saturnTexUrl from '../assets/Models/solar/saturn/saturno/saturn.webp'
+import saturnRingTexUrl from '../assets/Models/solar/saturn/saturno/ring.webp'
+import uranusTexUrl from '../assets/Models/solar/uranus/uranus.webp'
+import uranusRingTexUrl from '../assets/Models/solar/uranus/uranus_rings.webp'
+import neptuneTexUrl from '../assets/Models/solar/neptune/neptune.webp'
+import plutoTexUrl from '../assets/Models/solar/pluto/pluto.webp'
 
 const textureUrls = {
   sun: sunTexUrl,
@@ -31,6 +31,18 @@ const textureUrls = {
   uranusRing: uranusRingTexUrl,
   neptune: neptuneTexUrl,
   pluto: plutoTexUrl,
+}
+
+// ─── Singleton glow texture cache ────────────────────────────────────────────
+// Canvas textures are created exactly once per page load and reused across all
+// mounts/remounts — avoids allocating new GPU texture objects every time the
+// explore page is visited.
+
+const _glowCache = new Map()
+
+function cachedGlowTex(key, factory) {
+  if (!_glowCache.has(key)) _glowCache.set(key, factory())
+  return _glowCache.get(key)
 }
 
 // ─── Shared texture helper ────────────────────────────────────────────────────
@@ -161,37 +173,24 @@ function buildSunRimGlowTexture() {
 
 /**
  * Adds the full layered glow system to the sun's anchor.
- *
- * Layer 0 — rim glow sprite: transparent inside sun, peaks at sun surface,
- *            smooth outward fade → no hard seam at the sphere edge.
- * Layers 1–4 — wide soft-gradient corona Sprites for the ambient warm glow.
- * Layer 5 — astigmatism/spike halo Sprite.
- *
- * No BackSide spheres are used anywhere — they produce hard concentric rings.
+ * All canvas textures are module-level singletons (see _glowCache) so they are
+ * created once per page load — NOT pushed to disposables.
  */
-function buildSunGlowEffect(radius, anchor, disposables) {
+function buildSunGlowEffect(radius, anchor) {
   const glowSprites = []
 
-  // ── Layer 0: rim glow ── transparent centre, peak at sun surface, fade out
-  // Sprite sized so that 50 % of canvas radius = sun sphere radius (see docstring).
-  const rimTex = buildSunRimGlowTexture()
-  disposables.push(rimTex)
+  // Layer 0: rim glow (transparent centre, peak at sun surface)
+  const rimTex = cachedGlowTex('sun-rim', buildSunRimGlowTexture)
   const rimSprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({
-      map: rimTex,
-      transparent: true,
-      opacity: 0.88,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    })
+    new THREE.SpriteMaterial({ map: rimTex, transparent: true, opacity: 0.88, blending: THREE.AdditiveBlending, depthWrite: false })
   )
-  rimSprite.scale.setScalar(radius * 4.0) // 50 % of half-scale = sun surface radius
+  rimSprite.scale.setScalar(radius * 4.0)
   rimSprite.userData.baseOpacity = 0.88
-  rimSprite.userData.baseSize   = radius * 4.0
+  rimSprite.userData.baseSize    = radius * 4.0
   anchor.add(rimSprite)
   glowSprites.push(rimSprite)
 
-  // ── Layers 1–4: wide soft-gradient corona ── (tight → wide)
+  // Layers 1–4: wide soft-gradient corona
   const coronaLayers = [
     { size: radius *  3.0, baseOpacity: 0.50, rgb: [255, 252, 225] },
     { size: radius *  6.5, baseOpacity: 0.42, rgb: [255, 220, 120] },
@@ -200,16 +199,9 @@ function buildSunGlowEffect(radius, anchor, disposables) {
   ]
 
   coronaLayers.forEach(({ size, baseOpacity, rgb }) => {
-    const tex = buildSoftGlowTexture(rgb)
-    disposables.push(tex)
+    const tex = cachedGlowTex(`soft-${rgb.join(',')}`, () => buildSoftGlowTexture(rgb))
     const sprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({
-        map: tex,
-        transparent: true,
-        opacity: baseOpacity,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      })
+      new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: baseOpacity, blending: THREE.AdditiveBlending, depthWrite: false })
     )
     sprite.scale.setScalar(size)
     sprite.userData.baseOpacity = baseOpacity
@@ -218,18 +210,11 @@ function buildSunGlowEffect(radius, anchor, disposables) {
     glowSprites.push(sprite)
   })
 
-  // Outer halo + astigmatism diffraction spike sprite
-  const haloTex = buildSunHaloTexture()
-  disposables.push(haloTex)
+  // Outer halo + diffraction spike sprite
+  const haloTex = cachedGlowTex('sun-halo', buildSunHaloTexture)
   const haloSize = radius * 26
   const haloSprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({
-      map: haloTex,
-      transparent: true,
-      opacity: 0.80,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    })
+    new THREE.SpriteMaterial({ map: haloTex, transparent: true, opacity: 0.80, blending: THREE.AdditiveBlending, depthWrite: false })
   )
   haloSprite.scale.setScalar(haloSize)
   haloSprite.userData.baseScale = haloSize
@@ -248,14 +233,14 @@ function buildSunGlowEffect(radius, anchor, disposables) {
  */
 function buildSaucer(anchor) {
   // Main disc — tapered rim edge
-  const hullGeo = new THREE.CylinderGeometry(5.2, 6.8, 1.2, 36, 1)
+  const hullGeo = new THREE.CylinderGeometry(5.2, 6.8, 1.2, 24, 1)
   const hull = new THREE.Mesh(
     hullGeo,
     new THREE.MeshStandardMaterial({ color: 0x8899aa, metalness: 0.88, roughness: 0.15 })
   )
 
   // Flat underside plate
-  const plateGeo = new THREE.CylinderGeometry(6.8, 6.8, 0.22, 36, 1)
+  const plateGeo = new THREE.CylinderGeometry(6.8, 6.8, 0.22, 24, 1)
   const plate = new THREE.Mesh(
     plateGeo,
     new THREE.MeshStandardMaterial({
@@ -269,7 +254,7 @@ function buildSaucer(anchor) {
   plate.position.y = -0.70
 
   // Dome
-  const domeGeo = new THREE.SphereGeometry(4.0, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2)
+  const domeGeo = new THREE.SphereGeometry(4.0, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2)
   const dome = new THREE.Mesh(
     domeGeo,
     new THREE.MeshStandardMaterial({
@@ -279,7 +264,7 @@ function buildSaucer(anchor) {
   dome.position.y = 0.50
 
   // Thin emissive light band at the rim edge (replaces the ugly torus)
-  const bandGeo = new THREE.CylinderGeometry(6.95, 6.95, 0.18, 40, 1, true)
+  const bandGeo = new THREE.CylinderGeometry(6.95, 6.95, 0.18, 24, 1, true)
   const band = new THREE.Mesh(
     bandGeo,
     new THREE.MeshBasicMaterial({
@@ -309,10 +294,9 @@ function buildSaucer(anchor) {
  * self-illuminated from below — this makes the UFO visible even in dark areas
  * without creating an over-bright glow that competes with the sun.
  */
-function addUfoGlow(anchor, disposables) {
-  // Soft radial glow sprite — full-centre, smooth edge, no ring artifact
-  const tex = buildSoftGlowTexture([0, 210, 160])
-  disposables.push(tex)
+function addUfoGlow(anchor) {
+  // Singleton glow texture — created once, reused for all UFO instances
+  const tex = cachedGlowTex('ufo-glow', () => buildSoftGlowTexture([0, 210, 160]))
   const sprite = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: tex,
@@ -400,7 +384,7 @@ export function useSolarSystem(sceneRef) {
 
       // Sun gets layered smooth-gradient glow (no hard-edged BackSide spheres)
       if (def.emissive) {
-        sunGlowRef.current = buildSunGlowEffect(def.radius, anchor, disposables)
+        sunGlowRef.current = buildSunGlowEffect(def.radius, anchor)
       }
 
       system.add(anchor)
@@ -417,7 +401,7 @@ export function useSolarSystem(sceneRef) {
       system.add(ufoAnchor)
 
       buildSaucer(ufoAnchor)
-      addUfoGlow(ufoAnchor, disposables)
+      addUfoGlow(ufoAnchor)
 
       const angle = (i / count) * Math.PI * 2
       const startR = roamRadius * 0.3

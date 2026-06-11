@@ -13,7 +13,7 @@ export const spaceConfig = {
   },
 
   counts: {
-    stars: isDev ? 3200 : 9000,
+    stars: isDev ? 1800 : 5000,
     galaxies: isDev ? 18 : 36,
     comets: isDev ? 8 : 12,
   },
@@ -138,7 +138,7 @@ export const spaceConfig = {
     // Slowed down ~3× from original so orbits feel stately
     timeScale: 0.055,
     textureAnisotropy: 4,
-    segments: { width: 48, height: 48 },
+    segments: { width: 32, height: 32 },
     bodyCollisionPadding: 3,
     bodies: [
       // All radii and orbitRadii scaled ×0.625 so Pluto (orbit 800) fits

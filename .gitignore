@@ -17,8 +17,25 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
+**/.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# ── 3D asset source files ──────────────────────────────────────────────────
+# Source archives — extract textures and commit those (WebP) instead
+src/assets/Models/**/*.rar
+src/assets/Models/**/*.zip
+
+# 3D model/scene geometry — we only use WebP texture maps, not geometry
+src/assets/Models/**/*.blend
+src/assets/Models/**/*.fbx
+src/assets/Models/**/*.c4d
+src/assets/Models/**/*.max
+src/assets/Models/**/*.ma
+src/assets/Models/**/*.mtl
+src/assets/Models/**/*.obj
+src/assets/Models/**/*.3ds
+src/assets/Models/**/*.pdf
