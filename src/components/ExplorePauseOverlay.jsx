@@ -15,16 +15,14 @@ export default function ExplorePauseOverlay() {
   if (!paused) return null
 
   return (
-    /* Clicking the backdrop also resumes — quick shortcut for experienced players */
+    /* Full-screen backdrop (inset-0) so there is no gap, but z-30 keeps it
+       below the navbar (z-40) so the nav is never blurred or dimmed. */
     <div
-      className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm"
-      onClick={resumeExplore}
-      aria-label="Explore mode paused — click to resume"
+      className="pointer-events-none fixed inset-0 z-30 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm"
+      aria-label="Explore mode paused"
     >
-      {/* Card — stopPropagation so inner clicks don't bubble to backdrop */}
       <div
-        className="mx-4 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950/88 px-8 py-8 text-center shadow-[0_24px_64px_rgba(0,0,0,0.7)] backdrop-blur-xl"
-        onClick={(e) => e.stopPropagation()}
+        className="pointer-events-auto mx-4 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950/88 px-8 py-8 text-center shadow-[0_24px_64px_rgba(0,0,0,0.7)] backdrop-blur-xl"
       >
         <p className="text-[0.6rem] uppercase tracking-[0.35em] text-cyan-400/70">Explore Mode</p>
         <h2 className="mt-1 text-2xl font-light uppercase tracking-[0.25em] text-cyan-100">
@@ -51,7 +49,7 @@ export default function ExplorePauseOverlay() {
           Resume
         </button>
         <p className="mt-3 text-[0.58rem] uppercase tracking-[0.18em] text-white/25">
-          or press P · or click anywhere
+          or press P to resume
         </p>
       </div>
     </div>

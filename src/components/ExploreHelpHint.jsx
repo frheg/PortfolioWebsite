@@ -1,4 +1,12 @@
+import { useSyncExternalStore } from 'react'
+import { isExplorePaused, subscribeExplorePause } from '../three/exploreState'
+
 export default function ExploreHelpHint() {
+  const paused = useSyncExternalStore(subscribeExplorePause, isExplorePaused, isExplorePaused)
+
+  // Only show the hint while paused — hide it during active exploration
+  if (!paused) return null
+
   return (
     <div className="pointer-events-none fixed inset-x-0 top-[4.9rem] z-40 px-4 sm:top-[5.3rem]">
       <div className="mx-auto flex max-w-6xl justify-end">
