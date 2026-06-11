@@ -77,12 +77,12 @@ export const spaceConfig = {
     seamBlendPx: 32,
     // Quarter-turns per face: 1=90deg, 2=180deg, 3=270deg, 4=360deg/no-op.
     rotations: {
-      rt: 1,
-      lf: 2,
-      up: 2,
-      dn: 3,
-      ft: 1,
-      bk: 1,
+      rt: 4,
+      lf: 4,
+      up: 3,
+      dn: 1,
+      ft: 2,
+      bk: 4,
     },
   },
 
