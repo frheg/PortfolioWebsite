@@ -70,17 +70,17 @@ summary {
   pointer-events: none;
   opacity: 0;
   background:
-    radial-gradient(circle at 18% 30%, rgba(103, 232, 249, 0.18), transparent 22%),
-    radial-gradient(circle at 78% 64%, rgba(168, 85, 247, 0.15), transparent 24%),
+    radial-gradient(circle at 18% 30%, rgba(103, 232, 249, 0.26), transparent 22%),
+    radial-gradient(circle at 78% 64%, rgba(168, 85, 247, 0.22), transparent 24%),
     linear-gradient(
       112deg,
       transparent 18%,
-      rgba(8, 47, 73, 0.22) 42%,
-      rgba(103, 232, 249, 0.14) 50%,
-      rgba(168, 85, 247, 0.14) 58%,
+      rgba(8, 47, 73, 0.34) 40%,
+      rgba(103, 232, 249, 0.24) 50%,
+      rgba(168, 85, 247, 0.22) 60%,
       transparent 82%
     );
-  filter: blur(26px);
+  filter: blur(34px);
   mix-blend-mode: screen;
   will-change: opacity, transform;
 }
@@ -95,25 +95,26 @@ summary {
     linear-gradient(
       104deg,
       transparent 0%,
-      transparent 34%,
-      rgba(103, 232, 249, 0.08) 42%,
-      rgba(103, 232, 249, 0.22) 48%,
-      rgba(168, 85, 247, 0.18) 52%,
-      rgba(168, 85, 247, 0.08) 58%,
-      transparent 66%,
+      transparent 30%,
+      rgba(255, 255, 255, 0.1) 38%,
+      rgba(103, 232, 249, 0.26) 44%,
+      rgba(255, 255, 255, 0.38) 50%,
+      rgba(168, 85, 247, 0.28) 56%,
+      rgba(168, 85, 247, 0.12) 62%,
+      transparent 70%,
       transparent 100%
     ),
     repeating-linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.045) 0,
-      rgba(255, 255, 255, 0.045) 1px,
+      rgba(255, 255, 255, 0.075) 0,
+      rgba(255, 255, 255, 0.075) 1px,
       transparent 1px,
-      transparent 7px
+      transparent 5px
     ),
-    radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.08), transparent 54%);
+    radial-gradient(circle at 50% 50%, rgba(34, 211, 238, 0.16), transparent 54%);
   mix-blend-mode: screen;
-  filter: blur(1px);
-  transform: translate3d(-18%, 0, 0) skewX(-10deg) scaleX(1.08);
+  filter: blur(1.4px) saturate(1.3);
+  transform: translate3d(-22%, 0, 0) skewX(-12deg) scaleX(1.12);
   will-change: opacity, transform, background-position;
 }
 
@@ -333,14 +334,14 @@ summary {
     transform: translate3d(-22%, 0, 0) scale(1.05);
   }
   to {
-    opacity: 0.52;
+    opacity: 0.72;
     transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes route-veil-out {
   from {
-    opacity: 0.46;
+    opacity: 0.66;
     transform: translate3d(4%, 0, 0) scale(1);
   }
   to {
@@ -352,32 +353,32 @@ summary {
 @keyframes route-scan-in {
   from {
     opacity: 0;
-    transform: translate3d(-26%, 0, 0) skewX(-12deg) scaleX(1.12);
+    transform: translate3d(-32%, 0, 0) skewX(-14deg) scaleX(1.16);
     background-position: 0 0, 0 0, 50% 50%;
   }
   55% {
-    opacity: 0.4;
+    opacity: 0.58;
   }
   to {
-    opacity: 0.78;
-    transform: translate3d(0, 0, 0) skewX(-8deg) scaleX(1);
-    background-position: 120px 0, 0 12px, 50% 50%;
+    opacity: 1;
+    transform: translate3d(0, 0, 0) skewX(-9deg) scaleX(1.02);
+    background-position: 180px 0, 0 18px, 50% 50%;
   }
 }
 
 @keyframes route-scan-out {
   from {
-    opacity: 0.62;
-    transform: translate3d(4%, 0, 0) skewX(-8deg) scaleX(1);
-    background-position: 160px 0, 0 14px, 50% 50%;
+    opacity: 0.88;
+    transform: translate3d(4%, 0, 0) skewX(-9deg) scaleX(1.02);
+    background-position: 220px 0, 0 18px, 50% 50%;
   }
   45% {
-    opacity: 0.3;
+    opacity: 0.48;
   }
   to {
     opacity: 0;
-    transform: translate3d(28%, 0, 0) skewX(-5deg) scaleX(1.06);
-    background-position: 360px 0, 0 40px, 50% 50%;
+    transform: translate3d(34%, 0, 0) skewX(-5deg) scaleX(1.1);
+    background-position: 460px 0, 0 52px, 50% 50%;
   }
 }
 

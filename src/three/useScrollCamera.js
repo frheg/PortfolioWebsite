@@ -64,12 +64,11 @@ function lerp(a, b, t) {
   }
 }
 
-function angleTo(from, to) {
-  const d = Math.atan2(Math.sin(to - from), Math.cos(to - from))
-  return from + d
+function shortestAngleDelta(from, to) {
+  return Math.atan2(Math.sin(to - from), Math.cos(to - from))
 }
 
-function getScrollRange() {
+function measureScrollRange() {
   const doc = document.documentElement
   const body = document.body
   const fullHeight = Math.max(doc.scrollHeight, body.scrollHeight)
@@ -92,6 +91,7 @@ function jumpToTop() {
 export function useScrollCamera(cameraRef, routePath) {
   const currentYawRef = useRef(0)
   const displayProgressRef = useRef(0)
+  const pageScrollRangeRef = useRef(typeof window === 'undefined' ? 1 : Math.max(measureScrollRange(), 1))
 
   const routeRef = useRef(routePath)
   const transFromRef = useRef(null)
@@ -112,6 +112,7 @@ export function useScrollCamera(cameraRef, routePath) {
     transTRef.current = 0
     settleFramesRef.current = 0
     displayProgressRef.current = 0
+    pageScrollRangeRef.current = 1
     routeRef.current = routePath
   }
 
@@ -141,8 +142,9 @@ export function useScrollCamera(cameraRef, routePath) {
         settleFramesRef.current -= 1
         jumpToTop()
         displayProgressRef.current = 0
+        pageScrollRangeRef.current = Math.max(pageScrollRangeRef.current, measureScrollRange())
       } else {
-        const scrollRange = getScrollRange()
+        const scrollRange = pageScrollRangeRef.current
         const targetProgress = scrollRange > 0 ? clamp01((window.scrollY || 0) / scrollRange) : 0
 
         if (targetProgress <= scrollConfig.snapThreshold) {
@@ -150,12 +152,9 @@ export function useScrollCamera(cameraRef, routePath) {
         } else if (targetProgress >= 1 - scrollConfig.snapThreshold) {
           displayProgressRef.current = 1
         } else {
-          displayProgressRef.current +=
-            (targetProgress - displayProgressRef.current) * scrollConfig.progressLerp
-
-          if (Math.abs(targetProgress - displayProgressRef.current) <= scrollConfig.snapThreshold) {
-            displayProgressRef.current = targetProgress
-          }
+          // Keep page scroll -> orbit progress deterministic.
+          // Frame-based smoothing can create visible catch-up snaps during heavier paint moments.
+          displayProgressRef.current = targetProgress
         }
       }
 
@@ -166,14 +165,13 @@ export function useScrollCamera(cameraRef, routePath) {
     const dx = orbit.center.x - camera.position.x
     const dz = orbit.center.z - camera.position.z
     const yawDesired = Math.atan2(-dx, -dz)
-    const shouldSnapYaw =
-      transTRef.current < 1 || settleFramesRef.current > 0 || displayProgressRef.current === 0
+    const shouldSnapYaw = transTRef.current < 1 || settleFramesRef.current > 0
 
     if (shouldSnapYaw) {
       currentYawRef.current = yawDesired
     } else {
-      currentYawRef.current = angleTo(currentYawRef.current, yawDesired)
-      currentYawRef.current += (yawDesired - currentYawRef.current) * scrollConfig.rotLerp
+      currentYawRef.current +=
+        shortestAngleDelta(currentYawRef.current, yawDesired) * scrollConfig.rotLerp
     }
 
     camera.rotation.y = currentYawRef.current

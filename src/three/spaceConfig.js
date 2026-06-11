@@ -43,13 +43,24 @@ export const spaceConfig = {
     },
     pageStops: [
       { path: '/', angle: 3.4, heightOffset: 0 },
-      { path: '/projects', angle: 1.9, heightOffset: 5 },
-      { path: '/journey', angle: 0.4, heightOffset: -3 },
-      { path: '/contact', angle: -1.1, heightOffset: 2 },
+      { path: '/projects', angle: 1.9, heightOffset: -8 },
+      { path: '/journey', angle: 0.4, heightOffset: -5 },
+      { path: '/contact', angle: -1.1, heightOffset: -9 },
     ],
   },
 
-  skybox: {},
+  skybox: {
+    seamBlendPx: 32,
+    // Quarter-turns per face: 1=90deg, 2=180deg, 3=270deg, 4=360deg/no-op.
+    rotations: {
+      rt: 1,
+      lf: 2,
+      up: 4,
+      dn: 4,
+      ft: 1,
+      bk: 1,
+    },
+  },
 
   lights: {
     ambient: { color: 0xffffff, intensity: 0.5 },
