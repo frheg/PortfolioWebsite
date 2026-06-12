@@ -17,6 +17,7 @@ import {
   resetExplorePauseState,
   setExplorePaused,
 } from './exploreState'
+import { setCameraSpeed } from './cameraRuntime'
 
 const {
   orbit,
@@ -550,6 +551,9 @@ export function useScrollCamera(cameraRef, routePath) {
       velocityRef.current.multiplyScalar(0.2)
     }
 
+    // Publish real-time speed for the audio system
+    setCameraSpeed(velocityRef.current.length())
+
     return boostActive && velocityRef.current.lengthSq() > 0.05
   }
 
@@ -638,6 +642,7 @@ export function useScrollCamera(cameraRef, routePath) {
     }
 
     boostTimeRef.current = 0
+    setCameraSpeed(0) // not in explore — reset so audio returns to idle
     updateScrollRoute(camera)
   }
 

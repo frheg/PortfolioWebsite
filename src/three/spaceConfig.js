@@ -38,13 +38,13 @@ export const spaceConfig = {
       lockFrames: 8,
     },
     explore: {
-      moveSpeed: 96,
-      boostMultiplier: 2.45,
-      acceleration: 3.0,
-      coastDamping: 1.75,     // low = long space-like glide after releasing keys
-      brakeAcceleration: 7.5,
-      keyTurnSpeed: 1.8,
-      keyPitchSpeed: 1.35,
+      moveSpeed: 38,
+      boostMultiplier: 3.8,
+      acceleration: 2.2,
+      coastDamping: 0.55,     // low = long space-like glide after releasing keys
+      brakeAcceleration: 10.5,
+      keyTurnSpeed: 1.0,
+      keyPitchSpeed: 0.8,
       boostFovIncrease: 16,
       fovLerp: 0.12,
       boostShakeAmplitude: 0.18,
@@ -54,7 +54,7 @@ export const spaceConfig = {
       touchLookSensitivity: 0.003,
       worldMargin: 18,
       moveFieldRadiusFactor: 1.20,
-      planetClearance: 8,
+      planetClearance: 4,
       maxPitch: 1.35,
       bankAngle: 0.1,
       bankLerp: 0.12,
@@ -139,7 +139,7 @@ export const spaceConfig = {
     timeScale: 0.055,
     textureAnisotropy: 4,
     segments: { width: 32, height: 32 },
-    bodyCollisionPadding: 3,
+    bodyCollisionPadding: 1,
     bodies: [
       // All radii and orbitRadii scaled ×0.625 so Pluto (orbit 800) fits
       // comfortably within the ~960-unit explore movement area.

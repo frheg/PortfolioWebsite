@@ -3,6 +3,7 @@ import { Route, Routes, useLocation } from 'react-router-dom'
 import ExploreBoostOverlay from './components/ExploreBoostOverlay'
 import ExploreHelpHint from './components/ExploreHelpHint'
 import ExplorePauseOverlay from './components/ExplorePauseOverlay'
+import { useExploreAudio } from './hooks/useExploreAudio'
 import { RouteProvider } from './context/RouteProvider'
 import ExploreMobileControls from './components/ExploreMobileControls'
 import MobileQuickNav from './components/MobileQuickNav'
@@ -26,6 +27,7 @@ function prefersReducedMotion() {
 export default function App() {
   const location = useLocation()
   const isExploreRoute = location.pathname === '/explore'
+  useExploreAudio(isExploreRoute)
   const [displayedLocation, setDisplayedLocation] = useState(location)
   const [routeStage, setRouteStage] = useState('idle')
   const latestLocationRef = useRef(location)
