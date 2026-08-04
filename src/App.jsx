@@ -15,6 +15,7 @@ const ProjectsPage = lazy(() => import('./pages/ProjectsPage'))
 const JourneyPage = lazy(() => import('./pages/JourneyPage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
 const ExplorePage = lazy(() => import('./pages/ExplorePage'))
+const ChatPage = lazy(() => import('./pages/ChatPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 const ROUTE_EXIT_MS = 220
@@ -96,6 +97,7 @@ export default function App() {
             <Route path="/journey" element={<JourneyPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/explore" element={<ExplorePage />} />
+            <Route path="/chat" element={<ChatPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
