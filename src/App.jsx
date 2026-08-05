@@ -10,6 +10,7 @@ import MobileQuickNav from './components/MobileQuickNav'
 import Nav from './components/Nav'
 
 const BackgroundCanvas = lazy(() => import('./components/BackgroundCanvas'))
+const FlythroughPage = lazy(() => import('./pages/FlythroughPage'))
 const HomePage = lazy(() => import('./pages/HomePage'))
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage'))
 const JourneyPage = lazy(() => import('./pages/JourneyPage'))
@@ -92,7 +93,8 @@ export default function App() {
       <div className={routeStageClassName}>
         <Suspense fallback={<div className="route-loading" />}>
           <Routes location={displayedLocation}>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<FlythroughPage />} />
+            <Route path="/about" element={<HomePage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/journey" element={<JourneyPage />} />
             <Route path="/contact" element={<ContactPage />} />

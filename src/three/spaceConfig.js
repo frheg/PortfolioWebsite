@@ -37,6 +37,13 @@ export const spaceConfig = {
       snapThreshold: 0.001,
       lockFrames: 8,
     },
+    flythrough: {
+      autoplaySpeed: 0.12,        // rad/sec base drift around the loop
+      scrollSensitivity: 0.0009,  // wheel deltaY -> angular nudge
+      touchScrollSensitivity: 0.004,
+      maxNudge: 0.9,              // clamp on nudge magnitude (rad/sec)
+      nudgeDecay: 0.06,           // per-frame pull back toward the base pace
+    },
     explore: {
       moveSpeed: 38,
       boostMultiplier: 3.8,
@@ -70,6 +77,7 @@ export const spaceConfig = {
       { path: '/projects', angle: 1.9, heightOffset: -10 },
       { path: '/journey', angle: 0.4, heightOffset: -4 },
       { path: '/contact', angle: -1.1, heightOffset: -12 },
+      { path: '/chat', angle: -2.6, heightOffset: -6 },
     ],
   },
 

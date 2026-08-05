@@ -5,6 +5,20 @@ import { usePageMeta } from '../hooks/usePageMeta'
 
 const MODEL_ID = 'gemma-2-2b-it-q4f16_1-MLC'
 
+const WEBGPU_LIMIT_PATTERNS = [
+  'exceeds limit',
+  'maxbuffersize',
+  'maxstoragebufferbindingsize',
+  'maxstoragebuffersperShaderstage',
+  'maxcomputeworkgroupstoragesize',
+  'maxcomputeinvocationsperworkgroup',
+]
+
+function isLikelyImmatureWebGpu(message) {
+  const text = (message || '').toLowerCase()
+  return WEBGPU_LIMIT_PATTERNS.some((pattern) => text.includes(pattern.toLowerCase()))
+}
+
 export default function ChatPage() {
   usePageMeta({
     title: 'Fredric Hegland | Local Chat',
@@ -81,7 +95,15 @@ export default function ChatPage() {
       setStatus('ready')
     } catch (err) {
       console.error(err)
-      setError(err?.message || 'Failed to load the model.')
+      const message = err?.message || 'Failed to load the model.'
+      if (isLikelyImmatureWebGpu(message)) {
+        setError(
+          'Your browser reports lower GPU limits than this model needs. This is common on Firefox-based browsers ' +
+            '(including Zen), whose WebGPU support is still incomplete. Try this page in Chrome, Edge, or Safari instead.'
+        )
+      } else {
+        setError(message)
+      }
       setStatus('error')
     }
   }
