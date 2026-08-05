@@ -24,21 +24,28 @@ const { pageStops, orbit } = spaceConfig.camera
 const OFFSET_INWARD = 34
 const OFFSET_UP = 16
 
-// Each plate in a stop's "cluster" sits at its own angle along the actual
+// Each plate in a stop's "cluster" sits at its own point along the actual
 // railroad curve (title first, then each section in travel order) instead of
-// all stacking at one point — so they're naturally strung out along the fixed
-// path itself, not just nudged sideways from a single spot. The loop's
-// tightest stop-to-stop gap is ~0.28 rad, so keep well under that.
-const ANGLE_STEP = 0.045
+// all stacking together — naturally strung out along the fixed path itself.
+// The loop's tightest stop-to-stop gap is ~0.28 rad, so the along-path step
+// alone has to stay small; a zigzag in height and depth adds separation on
+// two more axes without eating further into that angular budget.
+const ANGLE_STEP = 0.055
+const ZIGZAG_UP = 10
+const ZIGZAG_DEPTH = 8
 
 // These are true 3D objects, so "distance" drives real perspective size as
 // well as opacity — cards read clearly up close and shrink/fade with range.
 const FULL_DISTANCE = 45
 const FADE_DISTANCE = 170
 
+// Plate content is authored at a normal, legible CSS size and then visually
+// shrunk by this factor (see PlateContent) — keeps text rendering sharp.
+const PLATE_SCALE = 0.2
+
 const cardsByPath = new Map(profile.flythroughCards.map((card) => [card.path, card]))
 
-function plateAtAngle(stop, angle) {
+function plateAtAngle(stop, angle, zigzagIndex = 0) {
   const base = orbitPos(angle, stop.heightOffset)
   const toCenter = new THREE.Vector3(orbit.center.x - base.x, 0, orbit.center.z - base.z).normalize()
   // The camera stays further out than the plate and always looks inward
@@ -46,10 +53,13 @@ function plateAtAngle(stop, angle) {
   // toward the flight path — not inward toward the sun. Fixed once per
   // plate, not recomputed from the camera's actual position each frame.
   const yaw = Math.atan2(-toCenter.x, -toCenter.z)
+  const zigzagSign = zigzagIndex % 2 === 0 ? 1 : -1
+  const inward = OFFSET_INWARD + zigzagSign * ZIGZAG_DEPTH
+  const up = OFFSET_UP + zigzagSign * ZIGZAG_UP
   const position = new THREE.Vector3(
-    base.x + toCenter.x * OFFSET_INWARD,
-    base.y + OFFSET_UP,
-    base.z + toCenter.z * OFFSET_INWARD
+    base.x + toCenter.x * inward,
+    base.y + up,
+    base.z + toCenter.z * inward
   )
   return { position, yaw }
 }
@@ -61,7 +71,7 @@ function buildPlates() {
     const card = cardsByPath.get(stop.path)
     if (!card) return
 
-    const titlePose = plateAtAngle(stop, stop.angle)
+    const titlePose = plateAtAngle(stop, stop.angle, 0)
     plates.push({
       id: `${stop.path}-title`,
       path: stop.path,
@@ -72,7 +82,7 @@ function buildPlates() {
     })
 
     card.sections.forEach((section, index) => {
-      const pose = plateAtAngle(stop, stop.angle - (index + 1) * ANGLE_STEP)
+      const pose = plateAtAngle(stop, stop.angle - (index + 1) * ANGLE_STEP, index + 1)
       plates.push({
         id: `${stop.path}-section-${index}`,
         path: stop.path,
@@ -91,20 +101,30 @@ function buildPlates() {
 const plates = buildPlates()
 
 function PlateContent({ plate }) {
+  // Rendered at a normal, crisp CSS size (real font sizes, real antialiasing)
+  // and then visually shrunk with a transform — native tiny font sizes like
+  // 2-3px render as blurry mush in every browser, but scaling a properly
+  // rendered element down keeps the text sharp at the final small footprint.
   if (plate.kind === 'title') {
     return (
-      <div className="w-[21px] select-none rounded-[2px] border border-cyan-300/30 bg-slate-950/55 px-[2px] py-[1px] text-center shadow-[0_2px_5px_rgba(8,15,35,0.5)] backdrop-blur-sm">
-        <p className="text-[2px] font-semibold uppercase leading-tight tracking-[0.04em] text-cyan-100">{plate.title}</p>
+      <div
+        style={{ transform: `scale(${PLATE_SCALE})` }}
+        className="w-[80px] select-none rounded-md border border-cyan-300/30 bg-slate-950/55 px-2 py-1 text-center shadow-[0_6px_16px_rgba(8,15,35,0.5)] backdrop-blur-sm"
+      >
+        <p className="text-[10px] font-semibold uppercase leading-tight tracking-[0.06em] text-cyan-100">{plate.title}</p>
       </div>
     )
   }
 
   return (
-    <div className="w-[33px] select-none rounded-[2px] border border-cyan-300/25 bg-slate-950/50 px-[3px] py-[2px] text-left shadow-[0_2px_5px_rgba(8,15,35,0.5)] backdrop-blur-sm">
-      <p className="text-[2px] font-semibold uppercase tracking-[0.05em] text-cyan-300/80">{plate.section.heading}</p>
-      <ul className="mt-[1px] space-y-[1px]">
+    <div
+      style={{ transform: `scale(${PLATE_SCALE})` }}
+      className="w-[120px] select-none rounded-md border border-cyan-300/25 bg-slate-950/50 px-2.5 py-2 text-left shadow-[0_6px_16px_rgba(8,15,35,0.5)] backdrop-blur-sm"
+    >
+      <p className="text-[8px] font-semibold uppercase tracking-[0.08em] text-cyan-300/80">{plate.section.heading}</p>
+      <ul className="mt-1 space-y-0.5">
         {plate.section.lines.map((line) => (
-          <li key={line} className="text-[2px] leading-[1.3] text-slate-100/88">
+          <li key={line} className="text-[8px] leading-[1.35] text-slate-100/88">
             {line}
           </li>
         ))}
@@ -112,7 +132,7 @@ function PlateContent({ plate }) {
       {plate.cta ? (
         <Link
           to={plate.path}
-          className="mt-[1px] inline-flex text-[2px] font-semibold text-cyan-200 transition hover:text-cyan-100"
+          className="mt-1 inline-flex text-[8px] font-semibold text-cyan-200 transition hover:text-cyan-100"
         >
           {plate.cta} →
         </Link>

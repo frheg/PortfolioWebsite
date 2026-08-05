@@ -38,7 +38,7 @@ export const spaceConfig = {
       lockFrames: 8,
     },
     flythrough: {
-      autoplaySpeed: 0.12,        // rad/sec base drift around the loop
+      autoplaySpeed: 0.05,        // rad/sec base drift around the loop
       scrollSensitivity: 0.0009,  // wheel deltaY -> angular nudge
       touchScrollSensitivity: 0.004,
       maxNudge: 0.9,              // clamp on nudge magnitude (rad/sec)
