@@ -12,6 +12,7 @@ export default function ChatPage() {
   })
 
   const [supported, setSupported] = useState(true)
+  const [unsupportedReason, setUnsupportedReason] = useState('')
   const [status, setStatus] = useState('idle') // idle | loading | ready | error
   const [progress, setProgress] = useState('')
   const [error, setError] = useState('')
@@ -23,8 +24,52 @@ export default function ChatPage() {
   const scrollRef = useRef(null)
 
   useEffect(() => {
-    if (typeof navigator === 'undefined' || !navigator.gpu) {
-      setSupported(false)
+    let cancelled = false
+
+    async function checkGpu() {
+      if (typeof navigator === 'undefined' || !navigator.gpu) {
+        if (!cancelled) {
+          setSupported(false)
+          setUnsupportedReason('Your browser does not appear to support WebGPU. Try a recent version of Chrome or Edge on desktop.')
+        }
+        return
+      }
+
+      try {
+        const adapter = await navigator.gpu.requestAdapter()
+        if (!adapter) {
+          if (!cancelled) {
+            setSupported(false)
+            setUnsupportedReason('Your browser supports WebGPU, but no compatible GPU adapter was found.')
+          }
+          return
+        }
+        if (!adapter.features?.has('shader-f16')) {
+          if (!cancelled) {
+            setSupported(false)
+            setUnsupportedReason('This model needs a GPU with float16 shader support (shader-f16), which your device does not report. Loading it here would likely crash the tab.')
+          }
+          return
+        }
+        const minRequiredMB = 1900
+        if (adapter.limits?.maxBufferSize && adapter.limits.maxBufferSize < minRequiredMB * 1024 * 1024) {
+          if (!cancelled) {
+            setSupported(false)
+            setUnsupportedReason('Your GPU reports less memory than this model needs, so loading it would likely crash the tab.')
+          }
+        }
+      } catch (err) {
+        console.error(err)
+        if (!cancelled) {
+          setSupported(false)
+          setUnsupportedReason('Could not query your GPU for WebGPU support.')
+        }
+      }
+    }
+
+    checkGpu()
+    return () => {
+      cancelled = true
     }
   }, [])
 
@@ -98,8 +143,7 @@ export default function ChatPage() {
         >
           {!supported ? (
             <p className="rounded-[1rem] border border-amber-300/30 bg-amber-300/10 p-4 text-sm text-amber-100">
-              Your browser does not appear to support WebGPU, which this page needs to run the model locally.
-              Try a recent version of Chrome or Edge on desktop.
+              {unsupportedReason || 'Your browser does not appear to support WebGPU, which this page needs to run the model locally.'}
             </p>
           ) : status === 'idle' ? (
             <button
