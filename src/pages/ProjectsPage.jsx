@@ -19,7 +19,7 @@ export default function ProjectsPage() {
       <PageHero
         eyebrow="Build Log"
         title="Projects, experiments, and the things I learn by building."
-        description="This page holds the fuller project view: the polished ones, the practical ones, and the side quests that taught me something useful."
+        description="The fuller project list: the finished ones, the in-progress ones, and a few side experiments."
         actions={[
           { label: 'Featured', href: '#projects' },
           { label: 'Archive', href: '#archive', kind: 'secondary' },
@@ -31,8 +31,8 @@ export default function ProjectsPage() {
         <SectionCard
           id="projects"
           eyebrow="Featured"
-          title="The projects I would show first."
-          description="These are the builds that best represent the mix of software engineering, curiosity, and practical systems work I enjoy most."
+          title="A few projects I'd point to first."
+          description="A mix of software engineering, applied AI, and curiosity-driven builds."
         >
           <div className="grid gap-4 sm:gap-5 xl:grid-cols-3">
             {featuredProjects.map((project, index) => (
@@ -45,7 +45,7 @@ export default function ProjectsPage() {
           id="archive"
           eyebrow="Archive"
           title="More builds and experiments."
-          description="These may be smaller or more course-driven, but they still show how I like to explore tools, ideas, and implementations."
+          description="Smaller or more course-driven, but still part of how I like to explore tools and ideas."
         >
           <OrbitDisclosure title="Open project archive" hint="University work, side explorations, and smaller builds" defaultOpen>
             <div className="grid gap-3 sm:gap-4 md:grid-cols-2">

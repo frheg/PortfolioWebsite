@@ -3,12 +3,12 @@ import PageHero from '../components/PageHero'
 import SectionCard from '../components/ui/SectionCard'
 import { usePageMeta } from '../hooks/usePageMeta'
 
-const MODEL_ID = 'SmolLM2-135M-Instruct-q0f16-MLC'
+const MODEL_ID = 'gemma-2-2b-it-q4f16_1-MLC'
 
 export default function ChatPage() {
   usePageMeta({
     title: 'Fredric Hegland | Local Chat',
-    description: 'Chat with SmolLM2-135M running entirely inside your browser via WebGPU.',
+    description: 'Chat with Gemma 2 2B running entirely inside your browser via WebGPU.',
   })
 
   const [supported, setSupported] = useState(true)
@@ -85,16 +85,16 @@ export default function ChatPage() {
     <>
       <PageHero
         eyebrow="Local Inference"
-        title="Chat with SmolLM2-135M, running entirely in your browser."
+        title="Chat with Gemma 2 2B, running entirely in your browser."
         description="No server, no API keys, no data leaving your machine. The model downloads once via WebGPU and runs client-side from then on."
       />
 
       <div className="relative mx-auto w-full max-w-4xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
           id="chat"
-          eyebrow="SmolLM2 · 135M · WebGPU"
-          title="A tiny model, entirely local."
-          description="This uses WebLLM to compile and run the model in your browser via WebGPU. The first load downloads a few hundred MB, which your browser then caches."
+          eyebrow="Gemma 2 · 2B · WebGPU"
+          title="A small model, entirely local."
+          description="This uses WebLLM to compile and run the model in your browser via WebGPU. The first load downloads roughly 1.5 GB, which your browser then caches."
         >
           {!supported ? (
             <p className="rounded-[1rem] border border-amber-300/30 bg-amber-300/10 p-4 text-sm text-amber-100">

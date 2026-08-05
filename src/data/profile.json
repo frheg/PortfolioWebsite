@@ -2,34 +2,36 @@
   "name": "Fredric Hegland",
   "location": "Bergen, Norway",
   "hero": {
-    "eyebrow": "Software engineering, systems curiosity, and a bit of orbit",
-    "headline": "I like building digital systems that are practical, polished, and quietly ambitious.",
-    "description": "I am a software engineering master's student who enjoys working across architecture, backend, frontend, AI, infrastructure, and the small details that make a system feel good to use.",
-    "primaryCtaLabel": "Explore projects",
+    "eyebrow": "Software Engineering Student",
+    "headline": "I build software, and I'm still learning what makes it good.",
+    "description": "I'm a software engineering master's student working across backend, frontend, and AI. Lately most of my curiosity goes toward applied AI — agentic systems, LLM harnesses, and RAG — and that's a focus I expect to keep expanding as I work with it more.",
+    "primaryCtaLabel": "See my projects",
     "primaryCtaHref": "/projects",
-    "secondaryCtaLabel": "Send a signal",
+    "secondaryCtaLabel": "Get in touch",
     "secondaryCtaHref": "/contact",
-    "panelLabel": "Builder profile",
-    "status": "Open to good conversations"
+    "panelLabel": "Profile",
+    "status": "Open to conversations"
   },
   "quickFacts": [
     "Master's student in Software Engineering",
-    "Works across backend, frontend, AI, and infrastructure",
-    "Enjoys systems that feel practical, polished, and a little playful"
+    "Works across backend, frontend, and AI",
+    "Increasingly focused on applied AI: agents, harnesses, and RAG"
   ],
   "currently": [
     "Pursuing a joint Master's in Software Engineering (UiB/HVL)",
-    "Building enterprise AI systems and chatbot workflows at Amitec AS",
-    "Experimenting with self-hosted AI, local inference, and RAG pipelines"
+    "Working on an enterprise chatbot and AI workflows at Amitec AS",
+    "Learning applied AI on my own time: agentic systems, LLM harnesses, local inference, and RAG"
   ],
   "interests": [
+    "Applied AI: agentic systems, LLM harnesses, and RAG",
+    "Neovim as a daily driver, and slowly trying to learn Emacs too",
+    "NixOS and reproducible, declarative system setups",
     "Cars, engines, and mechanical systems",
     "Sailing, boats, and aviation",
-    "AI, machine learning, and quantum computing",
     "Low-level computing, terminals, and efficient tooling",
-    "New and old technology with real-world utility"
+    "New and old technology with practical use"
   ],
-  "about": "I completed a Bachelor's in Computer Technology at the University of Bergen and am now continuing with a joint Master's in Software Engineering. What keeps software interesting for me is the mix of big-picture thinking and small details: architecture, networking, backend logic, UX polish, developer workflow, and how a system feels for the person actually using it.",
+  "about": "I studied a Bachelor's in Computer Technology at the University of Bergen and am now continuing with a joint Master's in Software Engineering. I like the mix of big-picture thinking and small details in software: architecture, backend logic, UX, and developer workflow. Most of my current curiosity goes toward applied AI — agentic systems, LLM harnesses, and retrieval-augmented generation. It's still an area I'm learning, and one I expect to keep expanding into as I use it more. Day to day I work in Neovim on NixOS, and I'm slowly trying to pick up Emacs on the side.",
   "experience": [
     {
       "title": "Student Software Engineer",
@@ -85,17 +87,17 @@
     }
   ],
   "highlights": [
-    "Bachelor's completed, Master's underway, with a clear interest in systems that are both capable and useful.",
-    "Comfortable in small teams where the work crosses multiple layers of the stack.",
-    "Hands-on experience with Python, Kotlin, JavaScript/TypeScript, C#/.NET, SQL, NoSQL, Linux, Git, and AI-focused tooling.",
+    "Bachelor's completed, Master's underway in Software Engineering.",
+    "Worked in small teams where the work crosses multiple layers of the stack.",
+    "Some experience with Python, Kotlin, JavaScript/TypeScript, C#/.NET, SQL, NoSQL, Linux, Git, and AI tooling.",
     "Builds course projects and personal experiments to keep learning by doing.",
-    "Leadership experience from organizing ITxBergen and supporting the local tech student community."
+    "Helped organize ITxBergen and the local tech student community."
   ],
   "projects": [
     {
       "name": "Portfolio Website",
       "description": "This site, built with React, Vite, and a custom Three.js background with starfields, galaxies, comets, and scroll-driven camera motion.",
-      "highlight": "Part portfolio, part UI playground, and a good excuse to keep refining the details.",
+      "highlight": "An ongoing excuse to keep tinkering with the details.",
       "type": "Personal",
       "status": "Live",
       "featured": true,
@@ -105,7 +107,7 @@
     {
       "name": "Enterprise Chatbot",
       "description": "An enterprise chatbot project where I work across business logic, architecture, networking, databases, and retrieval-augmented AI approaches.",
-      "highlight": "This is the kind of work I enjoy most: broad systems work with real users and real constraints.",
+      "highlight": "Broad systems work with real users and real constraints, still in progress.",
       "type": "Professional",
       "status": "In progress",
       "featured": true,
@@ -113,8 +115,8 @@
     },
     {
       "name": "Personal AI Homelab",
-      "description": "A custom local AI agent running on my own hardware with open-source models, vLLM inference, RAG backed by Qdrant, and tool use for search and utilities.",
-      "highlight": "This is where curiosity turns into tinkering: local models, orchestration, retrieval, and self-hosted infrastructure.",
+      "description": "A local AI agent running on my own hardware: open-source models, vLLM inference, RAG backed by Qdrant, and tool use for search and utilities. My main space for learning agentic AI and LLM harnesses hands-on.",
+      "highlight": "Where curiosity turns into tinkering with agents, retrieval, and self-hosted infrastructure.",
       "type": "Personal",
       "status": "Self-hosted",
       "featured": true,
@@ -159,7 +161,7 @@
   ],
   "skills": [
     "Python",
-    "AI/ML work and applications of AI/ML for both personal use and enterprise",
+    "Applied AI: agentic systems, LLM harnesses, and RAG, both personal and enterprise",
     "Networking and architecture",
     "JavaScript/TypeScript",
     "Linux and terminal work",
@@ -182,11 +184,11 @@
     },
     {
       "title": "AI and Data Systems",
-      "items": ["AI/ML applications", "RAG workflows", "Embedding models", "SQL", "NoSQL databases", "Qdrant"]
+      "items": ["Agentic AI", "LLM harnesses", "RAG workflows", "Embedding models", "SQL", "NoSQL databases", "Qdrant"]
     },
     {
       "title": "Infrastructure and Workflow",
-      "items": ["Linux", "Terminal work", "Networking", "Architecture", "Docker", "Git & CI/CD"]
+      "items": ["Linux", "NixOS", "Neovim", "Terminal work", "Networking", "Architecture", "Docker", "Git & CI/CD"]
     }
   ],
   "languages": [
@@ -226,6 +228,6 @@
     "github": "https://github.com/frheg",
     "website": "https://fredrichegland.no/",
     "location": "Based in Bergen, Norway",
-    "note": "Always happy to talk about software engineering, AI systems, practical architecture, or simply an interesting technical problem."
+    "note": "Happy to talk about software engineering, applied AI, or any interesting technical problem."
   }
 }

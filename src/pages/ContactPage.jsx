@@ -55,9 +55,9 @@ export default function ContactPage() {
 
         <SectionCard
           id="contact"
-          eyebrow="Open Channel"
-          title="If you want to build something thoughtful and technically solid, I’m happy to talk."
-          description="The easiest way to reach me is by email or LinkedIn. GitHub is where the side projects, experiments, and slightly nerdy detours keep growing."
+          eyebrow="Get in Touch"
+          title="Feel free to reach out."
+          description="The easiest way to reach me is by email or LinkedIn. GitHub is where the side projects and experiments live."
         >
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_0.9fr]">
             <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
@@ -101,7 +101,7 @@ export default function ContactPage() {
             </div>
 
             <div className="rounded-[1.2rem] border border-cyan-300/20 bg-gradient-to-br from-cyan-300/12 via-slate-950/80 to-slate-950 p-4 sm:rounded-[1.8rem] sm:p-6">
-              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/75">Navigation data</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/75">Details</p>
               <div className="mt-5 space-y-4 text-sm leading-7 text-slate-200/84">
                 <p>{profile.contact.location}</p>
                 <p>{profile.contact.note}</p>

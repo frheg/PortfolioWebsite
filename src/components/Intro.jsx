@@ -127,7 +127,7 @@ export default function Intro() {
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-black/25 p-3.5 sm:p-4">
-                <p className="text-xs uppercase tracking-[0.28em] text-cyan-300/70">Off-screen interests</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-cyan-300/70">Interests</p>
                 <ul className="mt-2.5 space-y-2 text-sm leading-6 text-slate-200/88 sm:mt-3">
                   {profile.interests.slice(0, 2).map((item) => (
                     <li key={item}>{item}</li>
@@ -139,7 +139,7 @@ export default function Intro() {
 
           <div className="mt-4 hidden items-center gap-3 text-sm text-cyan-200/80 sm:flex lg:mt-6">
             <span className="scroll-indicator" aria-hidden="true" />
-            <span>Scroll to move through projects, work, and the rest of the orbit.</span>
+            <span>Scroll to see projects, experience, and more.</span>
           </div>
         </div>
       </div>

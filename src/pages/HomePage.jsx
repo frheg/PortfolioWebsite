@@ -23,9 +23,9 @@ export default function HomePage() {
       <div className="relative mx-auto w-full max-w-6xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
           id="about"
-          eyebrow="Mission Control"
-          title="A playful portfolio, with a fairly serious interest in good engineering."
-          description="I like software that is practical, polished, and well thought through. That can mean architecture, UX, AI workflows, or just making the rough edges smaller."
+          eyebrow="About"
+          title="A portfolio, and a running log of what I'm building and learning."
+          description="I like software that's practical and well thought through — architecture, UX, AI workflows, or just fixing rough edges."
         >
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-4 sm:space-y-6">
@@ -61,7 +61,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="h-full rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
-                  <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/75">Currently in orbit</p>
+                  <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/75">Currently</p>
                   <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-200/84">
                     {profile.currently.map((item) => (
                       <li key={item}>{item}</li>
@@ -73,7 +73,7 @@ export default function HomePage() {
 
             <div className="space-y-3 sm:space-y-4">
               <div className="rounded-[1.2rem] border border-cyan-300/20 bg-cyan-300/10 p-4 sm:rounded-[1.6rem] sm:p-6">
-                <p className="text-xs uppercase tracking-[0.3em] text-cyan-100/90">Outside the IDE</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-cyan-100/90">Interests</p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   {profile.interests.map((item) => (
                     <span key={item} className="rounded-full border border-cyan-100/10 bg-black/20 px-4 py-2 text-sm text-slate-100/88">
@@ -88,7 +88,7 @@ export default function HomePage() {
                 <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-200/84">
                   <li>Prefer simple tools and clear architecture over unnecessary complexity.</li>
                   <li>Like understanding the whole system, not just one layer of it.</li>
-                  <li>Care about polish, but only after the fundamentals are doing their job.</li>
+                  <li>Still learning, and trying to stay honest about what I don't know yet.</li>
                 </ul>
               </div>
             </div>
@@ -97,9 +97,9 @@ export default function HomePage() {
 
         <SectionCard
           id="featured-projects"
-          eyebrow="Featured Orbit"
-          title="A few builds that represent me best."
-          description="Rather than placing everything on the front page, these are the projects I would start with. The rest live on their own page."
+          eyebrow="Featured Projects"
+          title="A few things I've built."
+          description="A short list to start with. The rest live on their own page."
         >
           <div className="grid gap-4 sm:gap-5 xl:grid-cols-3">
             {featuredProjects.map((project, index) => (
