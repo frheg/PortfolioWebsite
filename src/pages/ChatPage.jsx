@@ -47,15 +47,7 @@ export default function ChatPage() {
         if (!adapter.features?.has('shader-f16')) {
           if (!cancelled) {
             setSupported(false)
-            setUnsupportedReason('This model needs a GPU with float16 shader support (shader-f16), which your device does not report. Loading it here would likely crash the tab.')
-          }
-          return
-        }
-        const minRequiredMB = 1900
-        if (adapter.limits?.maxBufferSize && adapter.limits.maxBufferSize < minRequiredMB * 1024 * 1024) {
-          if (!cancelled) {
-            setSupported(false)
-            setUnsupportedReason('Your GPU reports less memory than this model needs, so loading it would likely crash the tab.')
+            setUnsupportedReason('This model needs a GPU with float16 shader support (shader-f16), which your device does not report.')
           }
         }
       } catch (err) {
