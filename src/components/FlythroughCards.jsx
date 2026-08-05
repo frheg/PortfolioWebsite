@@ -1,8 +1,14 @@
-// FlythroughCards — floating, screen-projected preview cards for each stop
-// along the flythrough loop. Positions are updated every frame by direct
-// DOM mutation (no React state churn), mirroring PlanetLabels.
-import { useEffect, useRef } from 'react'
+// FlythroughCards — small transparent plates fixed in 3D space near each
+// flythrough stop, rendered with CSS3DRenderer so they have a real position
+// AND rotation (not screen-space billboards). Each stop gets a cluster of two
+// smaller plates (title + detail) instead of one dense card, sized to be
+// fully readable as the camera passes. Plates are single-sided React content
+// on a rotated DOM element with no backface-visibility rule, so the default
+// browser behavior shows the same content mirrored when viewed from behind.
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import * as THREE from 'three'
+import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js'
 import { Link } from 'react-router-dom'
 import { spaceConfig } from '../three/spaceConfig'
 import { orbitPos } from '../three/useScrollCamera'
@@ -10,115 +16,159 @@ import profile from '../data/profile.json'
 
 const { pageStops, orbit } = spaceConfig.camera
 
-// The flythrough ellipse has a ~150-170 unit radius, so cards fade in well
-// before the camera reaches them and fade out again once it's passed.
-const FULL_DISTANCE = 70
-const FADE_DISTANCE = 240
+// Plates can't sit exactly on the camera's own flight path (the camera would
+// be standing on top of them). Nudge the cluster inward — toward the sun,
+// which is the direction the camera always looks — and up, so it reads as a
+// distinct place the camera approaches and passes, not a point under its feet.
+const CLUSTER_OFFSET_INWARD = 34
+const CLUSTER_OFFSET_UP = 16
+const PLATE_GAP = 22 // world-unit spacing between the title and detail plate
 
-// Cards can't sit exactly on the camera's own flight path (the camera would
-// be standing on top of them). Nudge each one inward — toward the sun, which
-// is the direction the camera always looks — and up, so it reads as a
-// distinct object the camera approaches and passes, not a point under its feet.
-const CARD_OFFSET_INWARD = 55
-const CARD_OFFSET_UP = 22
+// These are true 3D objects now, so "distance" drives real perspective size
+// as well as opacity — cards read clearly up close and shrink/fade with range.
+const FULL_DISTANCE = 45
+const FADE_DISTANCE = 170
 
-function anchorForStop(stop) {
-  const base = orbitPos(stop.angle, stop.heightOffset)
-  const toCenterX = orbit.center.x - base.x
-  const toCenterZ = orbit.center.z - base.z
-  const len = Math.hypot(toCenterX, toCenterZ) || 1
-  return new THREE.Vector3(
-    base.x + (toCenterX / len) * CARD_OFFSET_INWARD,
-    base.y + CARD_OFFSET_UP,
-    base.z + (toCenterZ / len) * CARD_OFFSET_INWARD
+const cardsByPath = new Map(profile.flythroughCards.map((card) => [card.path, card]))
+
+function buildPlates() {
+  const plates = []
+
+  pageStops.forEach((stop) => {
+    const card = cardsByPath.get(stop.path)
+    if (!card) return
+
+    const base = orbitPos(stop.angle, stop.heightOffset)
+    const toCenter = new THREE.Vector3(orbit.center.x - base.x, 0, orbit.center.z - base.z).normalize()
+    const tangent = new THREE.Vector3(-toCenter.z, 0, toCenter.x)
+
+    const clusterCenter = new THREE.Vector3(
+      base.x + toCenter.x * CLUSTER_OFFSET_INWARD,
+      base.y + CLUSTER_OFFSET_UP,
+      base.z + toCenter.z * CLUSTER_OFFSET_INWARD
+    )
+    // Fixed heading, chosen once — faces back out toward the flight path
+    // rather than continuously tracking the camera.
+    const yaw = Math.atan2(toCenter.x, toCenter.z)
+
+    plates.push({
+      id: `${stop.path}-title`,
+      path: stop.path,
+      kind: 'title',
+      title: card.title,
+      position: clusterCenter.clone().addScaledVector(tangent, -PLATE_GAP / 2),
+      yaw,
+    })
+    plates.push({
+      id: `${stop.path}-detail`,
+      path: stop.path,
+      kind: 'detail',
+      card,
+      position: clusterCenter.clone().addScaledVector(tangent, PLATE_GAP / 2),
+      yaw,
+    })
+  })
+
+  return plates
+}
+
+const plates = buildPlates()
+
+function PlateContent({ plate }) {
+  if (plate.kind === 'title') {
+    return (
+      <div className="w-[150px] select-none rounded-xl border border-cyan-300/30 bg-slate-950/55 px-3 py-2.5 text-center shadow-[0_10px_30px_rgba(8,15,35,0.5)] backdrop-blur-sm">
+        <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-cyan-100">{plate.title}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-[210px] select-none rounded-xl border border-cyan-300/25 bg-slate-950/45 px-3.5 py-3 text-left shadow-[0_10px_30px_rgba(8,15,35,0.5)] backdrop-blur-sm">
+      <p className="text-[11px] leading-[1.5] text-slate-100/90">{plate.card.blurb}</p>
+      <Link
+        to={plate.path}
+        className="mt-2 inline-flex text-[11px] font-semibold text-cyan-200 transition hover:text-cyan-100"
+      >
+        {plate.card.cta} →
+      </Link>
+    </div>
   )
 }
 
-const cardsByPath = new Map(profile.flythroughCards.map((card) => [card.path, card]))
-const stops = pageStops
-  .map((stop) => ({ ...stop, card: cardsByPath.get(stop.path) }))
-  .filter((stop) => stop.card)
-
 export default function FlythroughCards({ cameraRef, rendererRef, isFlythrough }) {
-  const containerRef = useRef(null)
+  const wrapperRef = useRef(null)
+  const [mounted, setMounted] = useState([])
 
   useEffect(() => {
     if (!isFlythrough) return undefined
 
-    const vec = new THREE.Vector3()
-    const anchors = stops.map((stop) => anchorForStop(stop))
-    let frameId
+    const container = wrapperRef.current
+    if (!container) return undefined
 
-    const tick = () => {
-      const camera = cameraRef.current
+    const cssRenderer = new CSS3DRenderer()
+    cssRenderer.domElement.style.position = 'absolute'
+    cssRenderer.domElement.style.top = '0'
+    cssRenderer.domElement.style.left = '0'
+    cssRenderer.domElement.style.pointerEvents = 'none'
+    container.appendChild(cssRenderer.domElement)
+
+    const scene = new THREE.Scene()
+    const objects = plates.map((plate) => {
+      const el = document.createElement('div')
+      const object = new CSS3DObject(el)
+      object.position.copy(plate.position)
+      object.rotation.y = plate.yaw
+      scene.add(object)
+      return { plate, object, el }
+    })
+
+    setMounted(objects.map(({ plate, el }) => ({ plate, el })))
+
+    const syncSize = () => {
       const renderer = rendererRef.current
-      const container = containerRef.current
-
-      if (!camera || !renderer || !container) {
-        frameId = requestAnimationFrame(tick)
-        return
-      }
-
+      if (!renderer) return
+      const { width, height } = cssRenderer.getSize()
       const w = renderer.domElement.clientWidth
       const h = renderer.domElement.clientHeight
-
-      stops.forEach((stop, index) => {
-        const el = container.querySelector(`[data-flythrough-card="${stop.path}"]`)
-        if (!el) return
-
-        const anchor = anchors[index]
-        vec.copy(anchor)
-        vec.project(camera)
-
-        const sx = (vec.x * 0.5 + 0.5) * w
-        const sy = (-vec.y * 0.5 + 0.5) * h
-
-        if (vec.z > 1.0 || sx < -160 || sx > w + 160 || sy < -160 || sy > h + 160) {
-          el.style.opacity = '0'
-          el.style.pointerEvents = 'none'
-          return
-        }
-
-        el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`
-
-        const dist = camera.position.distanceTo(anchor)
-        const opacity =
-          dist <= FULL_DISTANCE ? 1 : Math.max(0, 1 - (dist - FULL_DISTANCE) / (FADE_DISTANCE - FULL_DISTANCE))
-
-        el.style.opacity = opacity.toFixed(3)
-        el.style.pointerEvents = opacity > 0.15 ? 'auto' : 'none'
-      })
-
-      frameId = requestAnimationFrame(tick)
+      if (width !== w || height !== h) cssRenderer.setSize(w, h)
     }
 
+    window.addEventListener('resize', syncSize)
+
+    let frameId
+    const tick = () => {
+      const camera = cameraRef.current
+      if (camera) {
+        syncSize()
+
+        objects.forEach(({ object, el }) => {
+          const dist = camera.position.distanceTo(object.position)
+          const opacity =
+            dist <= FULL_DISTANCE ? 1 : Math.max(0, 1 - (dist - FULL_DISTANCE) / (FADE_DISTANCE - FULL_DISTANCE))
+          el.style.opacity = opacity.toFixed(3)
+          el.style.pointerEvents = opacity > 0.15 ? 'auto' : 'none'
+        })
+
+        cssRenderer.render(scene, camera)
+      }
+      frameId = requestAnimationFrame(tick)
+    }
     frameId = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frameId)
+
+    return () => {
+      cancelAnimationFrame(frameId)
+      window.removeEventListener('resize', syncSize)
+      container.removeChild(cssRenderer.domElement)
+      setMounted([])
+    }
   }, [isFlythrough, cameraRef, rendererRef])
 
   if (!isFlythrough) return null
 
   return (
-    <div ref={containerRef} className="pointer-events-none fixed inset-0 z-20 overflow-hidden" aria-hidden="true">
-      {stops.map((stop) => (
-        <div
-          key={stop.path}
-          data-flythrough-card={stop.path}
-          className="absolute left-0 top-0 w-60 select-none"
-          style={{ opacity: 0 }}
-        >
-          <div className="rounded-[1.2rem] border border-cyan-300/25 bg-slate-950/70 p-4 text-left shadow-[0_20px_60px_rgba(8,15,35,0.55)] backdrop-blur-md">
-            <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/75">{stop.card.title}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-100/88">{stop.card.blurb}</p>
-            <Link
-              to={stop.path}
-              className="mt-3 inline-flex text-sm font-semibold text-cyan-200 transition hover:text-cyan-100"
-            >
-              {stop.card.cta} →
-            </Link>
-          </div>
-        </div>
-      ))}
+    <div ref={wrapperRef} className="pointer-events-none fixed inset-0 z-20 overflow-hidden">
+      {mounted.map(({ plate, el }) => createPortal(<PlateContent plate={plate} />, el, plate.id))}
     </div>
   )
 }

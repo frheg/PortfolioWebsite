@@ -2,8 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import PageHero from '../components/PageHero'
 import SectionCard from '../components/ui/SectionCard'
 import { usePageMeta } from '../hooks/usePageMeta'
+import { chatSystemPrompt } from '../data/chatKnowledge'
 
 const MODEL_ID = 'gemma-2-2b-it-q4f16_1-MLC'
+// The model runs with a 4k-token context window. The system prompt + knowledge
+// base already use a good chunk of that, so cap how much back-and-forth we
+// resend each turn rather than let a long conversation overflow it.
+const MAX_HISTORY_MESSAGES = 16
 
 const WEBGPU_LIMIT_PATTERNS = [
   'exceeds limit',
@@ -123,7 +128,10 @@ export default function ChatPage() {
       setMessages([...nextMessages, reply])
 
       const stream = await engineRef.current.chat.completions.create({
-        messages: nextMessages,
+        messages: [
+          { role: 'system', content: chatSystemPrompt },
+          ...nextMessages.slice(-MAX_HISTORY_MESSAGES),
+        ],
         stream: true,
       })
 
@@ -153,7 +161,7 @@ export default function ChatPage() {
           id="chat"
           eyebrow="Gemma 2 · 2B · WebGPU"
           title="A small model, entirely local."
-          description="This uses WebLLM to compile and run the model in your browser via WebGPU. The first load downloads roughly 1.5 GB, which your browser then caches."
+          description="This uses WebLLM to compile and run the model in your browser via WebGPU. The first load downloads roughly 1.5 GB, which your browser then caches. It's given a compact knowledge base about Fredric and the site's solar system, so ask it about either."
         >
           {!supported ? (
             <p className="rounded-[1rem] border border-amber-300/30 bg-amber-300/10 p-4 text-sm text-amber-100">
