@@ -73,11 +73,9 @@ export default function BackgroundCanvas() {
         rendererRef={rendererRef}
         isExplore={routePath === '/explore'}
       />
-      <FlythroughCards
-        cameraRef={cameraRef}
-        rendererRef={rendererRef}
-        isFlythrough={routePath === '/'}
-      />
+      {/* Plates stay mounted on every route so they're visible in explore/take-control
+          mode too, not just on the flythrough page itself. */}
+      <FlythroughCards cameraRef={cameraRef} rendererRef={rendererRef} active />
     </>
   )
 }

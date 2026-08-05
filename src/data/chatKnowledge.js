@@ -1,13 +1,13 @@
 import profile from './profile.json'
 import { planetFacts } from './planetFacts'
 
-// A hand-trimmed view of profile.json + planetFacts.js — small enough (with
+// A hand-trimmed view of profile.json + planetFacts.js, small enough (with
 // the wrapper text below) to sit alongside the whole conversation inside the
 // ~4k-token context window this model runs with. No retrieval step: the
 // entire "knowledge base" is just always in context as a system message.
 function buildProfileSummary() {
   const lines = [
-    `${profile.name} — ${profile.location}.`,
+    `${profile.name}, ${profile.location}.`,
     profile.hero.description,
     `Currently: ${profile.currently.join('; ')}.`,
     `Interests: ${profile.interests.join('; ')}.`,
@@ -18,7 +18,7 @@ function buildProfileSummary() {
       .map((ed) => `${ed.program}, ${ed.school} (${ed.period})`)
       .join('; ')}.`,
     `Projects: ${profile.projects
-      .map((project) => `${project.name} — ${project.highlight || project.description}`)
+      .map((project) => `${project.name}: ${project.highlight || project.description}`)
       .join(' | ')}.`,
     `Skills: ${profile.skills.join(', ')}.`,
     `Leadership: ${profile.boardPositions.map((position) => position.title).join('; ')}.`,

@@ -1,10 +1,11 @@
 // FlythroughCards — small transparent plates fixed in 3D space near each
 // flythrough stop, rendered with CSS3DRenderer so they have a real position
-// AND rotation (not screen-space billboards). Each stop gets a cluster of two
-// smaller plates (title + detail) instead of one dense card, sized to be
-// fully readable as the camera passes. Plates are single-sided React content
-// on a rotated DOM element with no backface-visibility rule, so the default
-// browser behavior shows the same content mirrored when viewed from behind.
+// AND rotation (not screen-space billboards). Each stop gets a cluster of a
+// title plate plus one plate per content section — a condensed stand-in for
+// that page's full content, not just a teaser — sized to be fully readable
+// as the camera passes. Plates are single-sided React content on a rotated
+// DOM element with no backface-visibility rule, so the default browser
+// behavior shows the same content mirrored when viewed from behind.
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import * as THREE from 'three'
@@ -22,7 +23,8 @@ const { pageStops, orbit } = spaceConfig.camera
 // distinct place the camera approaches and passes, not a point under its feet.
 const CLUSTER_OFFSET_INWARD = 34
 const CLUSTER_OFFSET_UP = 16
-const PLATE_GAP = 12 // world-unit spacing between the title and detail plate
+const TITLE_LIFT = 11 // extra height for the title plate above the section row
+const PLATE_GAP = 12 // world-unit spacing between adjacent section plates
 
 // These are true 3D objects now, so "distance" drives real perspective size
 // as well as opacity — cards read clearly up close and shrink/fade with range.
@@ -47,25 +49,33 @@ function buildPlates() {
       base.y + CLUSTER_OFFSET_UP,
       base.z + toCenter.z * CLUSTER_OFFSET_INWARD
     )
-    // Fixed heading, chosen once — faces back out toward the flight path
-    // rather than continuously tracking the camera.
-    const yaw = Math.atan2(toCenter.x, toCenter.z)
+    // The camera stays further out than the cluster and always looks inward
+    // toward the sun, so the readable front face has to point outward — back
+    // toward the flight path — not inward toward the sun. Fixed once, not
+    // recomputed from the camera's actual position each frame.
+    const yaw = Math.atan2(-toCenter.x, -toCenter.z)
 
     plates.push({
       id: `${stop.path}-title`,
       path: stop.path,
       kind: 'title',
       title: card.title,
-      position: clusterCenter.clone().addScaledVector(tangent, -PLATE_GAP / 2),
+      position: clusterCenter.clone().add(new THREE.Vector3(0, TITLE_LIFT, 0)),
       yaw,
     })
-    plates.push({
-      id: `${stop.path}-detail`,
-      path: stop.path,
-      kind: 'detail',
-      card,
-      position: clusterCenter.clone().addScaledVector(tangent, PLATE_GAP / 2),
-      yaw,
+
+    const sections = card.sections
+    sections.forEach((section, index) => {
+      const offset = (index - (sections.length - 1) / 2) * PLATE_GAP
+      plates.push({
+        id: `${stop.path}-section-${index}`,
+        path: stop.path,
+        kind: 'section',
+        section,
+        cta: index === sections.length - 1 ? card.cta : null,
+        position: clusterCenter.clone().addScaledVector(tangent, offset),
+        yaw,
+      })
     })
   })
 
@@ -84,24 +94,33 @@ function PlateContent({ plate }) {
   }
 
   return (
-    <div className="w-[90px] select-none rounded-md border border-cyan-300/25 bg-slate-950/45 px-2 py-1.5 text-left shadow-[0_6px_16px_rgba(8,15,35,0.5)] backdrop-blur-sm">
-      <p className="text-[5.5px] leading-[1.4] text-slate-100/90">{plate.card.blurb}</p>
-      <Link
-        to={plate.path}
-        className="mt-1 inline-flex text-[5.5px] font-semibold text-cyan-200 transition hover:text-cyan-100"
-      >
-        {plate.card.cta} →
-      </Link>
+    <div className="w-[100px] select-none rounded-md border border-cyan-300/25 bg-slate-950/50 px-2 py-1.5 text-left shadow-[0_6px_16px_rgba(8,15,35,0.5)] backdrop-blur-sm">
+      <p className="text-[5px] font-semibold uppercase tracking-[0.08em] text-cyan-300/80">{plate.section.heading}</p>
+      <ul className="mt-0.5 space-y-0.5">
+        {plate.section.lines.map((line) => (
+          <li key={line} className="text-[5px] leading-[1.35] text-slate-100/88">
+            {line}
+          </li>
+        ))}
+      </ul>
+      {plate.cta ? (
+        <Link
+          to={plate.path}
+          className="mt-1 inline-flex text-[5px] font-semibold text-cyan-200 transition hover:text-cyan-100"
+        >
+          {plate.cta} →
+        </Link>
+      ) : null}
     </div>
   )
 }
 
-export default function FlythroughCards({ cameraRef, rendererRef, isFlythrough }) {
+export default function FlythroughCards({ cameraRef, rendererRef, active }) {
   const wrapperRef = useRef(null)
   const [mounted, setMounted] = useState([])
 
   useEffect(() => {
-    if (!isFlythrough) return undefined
+    if (!active) return undefined
 
     const container = wrapperRef.current
     if (!container) return undefined
@@ -162,9 +181,9 @@ export default function FlythroughCards({ cameraRef, rendererRef, isFlythrough }
       container.removeChild(cssRenderer.domElement)
       setMounted([])
     }
-  }, [isFlythrough, cameraRef, rendererRef])
+  }, [active, cameraRef, rendererRef])
 
-  if (!isFlythrough) return null
+  if (!active) return null
 
   return (
     <div ref={wrapperRef} className="pointer-events-none fixed inset-0 z-20 overflow-hidden">

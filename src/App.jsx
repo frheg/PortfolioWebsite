@@ -6,8 +6,7 @@ import ExplorePauseOverlay from './components/ExplorePauseOverlay'
 import { useExploreAudio } from './hooks/useExploreAudio'
 import { RouteProvider } from './context/RouteProvider'
 import ExploreMobileControls from './components/ExploreMobileControls'
-import MobileQuickNav from './components/MobileQuickNav'
-import Nav from './components/Nav'
+import FloatingNav from './components/FloatingNav'
 import TakeControlButton from './components/TakeControlButton'
 import ReturnToRailroadButton from './components/ReturnToRailroadButton'
 
@@ -84,7 +83,6 @@ export default function App() {
   return (
     <main className="relative isolate overflow-x-clip">
       <RouteProvider>
-        <Nav />
         <Suspense fallback={null}>
           <BackgroundCanvas />
         </Suspense>
@@ -110,7 +108,7 @@ export default function App() {
         </Suspense>
       </div>
       {isExploreRoute ? <ExploreHelpHint /> : null}
-      {isExploreRoute ? <ExploreMobileControls /> : <MobileQuickNav />}
+      {isExploreRoute ? <ExploreMobileControls /> : <FloatingNav />}
     </main>
   )
 }

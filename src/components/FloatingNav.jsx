@@ -1,20 +1,26 @@
+// FloatingNav — the site's only navigation: a compact floating pill-bar
+// anchored to the bottom of the viewport, used on both desktop and mobile.
+// Replaces the old solid top navbar for a simpler, more concise UI.
 import { NavLink } from 'react-router-dom'
 import { navLinks } from '../content/navLinks'
 
-export default function MobileQuickNav() {
+export default function FloatingNav() {
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] md:hidden">
-      <div className="pointer-events-auto mx-auto max-w-sm overflow-visible">
+    <div
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)]"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
+      <div className="pointer-events-auto mx-auto w-full max-w-xl overflow-visible">
         <div className="overflow-visible rounded-[1.4rem] border border-white/10 bg-slate-950/88 shadow-[0_18px_50px_rgba(8,15,35,0.55)] backdrop-blur-xl">
           <div className="h-px bg-gradient-to-r from-transparent via-cyan-300/45 to-transparent" />
-          <div className="grid grid-cols-5 gap-1.5 p-1.5 overflow-visible">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 overflow-visible p-1.5">
             {navLinks.map(({ to, label, featured, sticker }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={to === '/'}
                 className={({ isActive }) =>
-                  `relative isolate overflow-visible rounded-xl px-2 py-2 text-center text-[0.62rem] font-medium uppercase tracking-[0.16em] transition ${
+                  `relative isolate overflow-visible whitespace-nowrap rounded-xl px-2.5 py-2 text-center text-[0.62rem] font-medium uppercase tracking-[0.16em] transition ${
                     featured
                       ? isActive
                         ? 'explore-pill-mobile bg-cyan-300/18 text-cyan-50 shadow-[0_0_18px_rgba(103,232,249,0.16)]'

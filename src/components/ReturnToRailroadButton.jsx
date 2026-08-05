@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 
 export default function ReturnToRailroadButton() {
   return (
-    <div className="pointer-events-none fixed right-4 top-[4.9rem] z-40 sm:top-[5.3rem]">
+    <div className="pointer-events-none fixed right-4 top-4 z-40 sm:top-5">
       <Link
         to="/"
         data-explore-control="true"

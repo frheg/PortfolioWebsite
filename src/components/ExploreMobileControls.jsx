@@ -80,7 +80,7 @@ export default function ExploreMobileControls() {
         */}
         <div className="grid grid-cols-3 gap-2.5">
           <ExploreButton direction="pitchUp"   label="Tilt up"    small>↑</ExploreButton>
-          <ExploreButton direction="forward"   label="Move forward — drag up to boost" enableBoostDrag>▲</ExploreButton>
+          <ExploreButton direction="forward"   label="Move forward, drag up to boost" enableBoostDrag>▲</ExploreButton>
           <div className="pointer-events-none h-14 w-14" />
 
           <ExploreButton direction="yawLeft"   label="Turn left"  >◀</ExploreButton>

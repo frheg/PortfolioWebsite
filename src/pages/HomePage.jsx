@@ -25,7 +25,7 @@ export default function HomePage() {
           id="about"
           eyebrow="About"
           title="A portfolio, and a running log of what I'm building and learning."
-          description="I like software that's practical and well thought through — architecture, UX, AI workflows, or just fixing rough edges."
+          description="I like software that's practical and well thought through: architecture, UX, AI workflows, or just fixing rough edges."
         >
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-4 sm:space-y-6">
@@ -87,6 +87,7 @@ export default function HomePage() {
                 <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/75">How I like to work</p>
                 <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-200/84">
                   <li>Prefer simple tools and clear architecture over unnecessary complexity.</li>
+                  <li>Drawn to the Unix philosophy where it fits: small tools that do one thing well.</li>
                   <li>Like understanding the whole system, not just one layer of it.</li>
                   <li>Still learning, and trying to stay honest about what I don't know yet.</li>
                 </ul>

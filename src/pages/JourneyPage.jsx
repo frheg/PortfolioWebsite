@@ -35,7 +35,7 @@ export default function JourneyPage() {
           id="journey"
           eyebrow="Professional and Academic"
           title="A mix of engineering, study, service work, and leadership."
-          description="Different kinds of work, different kinds of problems — here's the background behind it."
+          description="Different kinds of work, different kinds of problems, here's the background behind it."
         >
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             <div className="space-y-3 sm:space-y-4">

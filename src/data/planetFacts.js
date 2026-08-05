@@ -29,7 +29,7 @@ export const planetFacts = [
     facts: [
       'Diameter: 12,104 km',
       'Year: 225 Earth days',
-      'Day: 243 Earth days — longer than its year',
+      'Day: 243 Earth days, longer than its year',
       'Hottest planet: avg 465 °C',
       'Dense CO₂ atmosphere, crushing pressure',
     ],
@@ -51,7 +51,7 @@ export const planetFacts = [
     facts: [
       'Diameter: 3,474 km',
       'Orbit: 27.3 days around Earth',
-      'Tidally locked — same face always toward us',
+      'Tidally locked, same face always toward us',
       'Water ice confirmed at the poles',
       'Distance from Earth: ~384,400 km',
     ],
@@ -73,7 +73,7 @@ export const planetFacts = [
     facts: [
       'Diameter: 139,820 km (11× Earth)',
       'Year: ~12 Earth years',
-      'Day: ~10 hours — fastest rotation',
+      'Day: ~10 hours, fastest rotation',
       'Great Red Spot: storm > 350 years old',
       '95 known moons, incl. Ganymede (largest)',
     ],
@@ -119,7 +119,7 @@ export const planetFacts = [
       'Year: ~248 Earth years',
       'Day: 6.4 Earth days',
       'Reclassified as dwarf planet in 2006',
-      '5 moons — largest is Charon (half Pluto\'s size)',
+      '5 moons, largest is Charon (half Pluto\'s size)',
     ],
   },
   {

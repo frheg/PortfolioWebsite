@@ -4,7 +4,7 @@
   "hero": {
     "eyebrow": "Software Engineering Student",
     "headline": "I build software, and I'm still learning what makes it good.",
-    "description": "I'm a software engineering master's student working across backend, frontend, and AI. Lately most of my curiosity goes toward applied AI — agentic systems, LLM harnesses, and RAG — and that's a focus I expect to keep expanding as I work with it more.",
+    "description": "I'm a software engineering master's student working across backend, frontend, and AI. Lately most of my curiosity goes toward applied AI: agentic systems, LLM harnesses, and RAG, and that's a focus I expect to keep expanding as I work with it more.",
     "primaryCtaLabel": "See my projects",
     "primaryCtaHref": "/projects",
     "secondaryCtaLabel": "Get in touch",
@@ -19,6 +19,7 @@
   ],
   "currently": [
     "Pursuing a joint Master's in Software Engineering (UiB/HVL)",
+    "Summer interning at TV 2 (Digital), working on applied AI",
     "Working on an enterprise chatbot and AI workflows at Amitec AS",
     "Learning applied AI on my own time: agentic systems, LLM harnesses, local inference, and RAG"
   ],
@@ -28,11 +29,17 @@
     "NixOS and reproducible, declarative system setups",
     "Cars, engines, and mechanical systems",
     "Sailing, boats, and aviation",
-    "Low-level computing, terminals, and efficient tooling",
+    "Low-level computing, terminals, and the Unix philosophy",
     "New and old technology with practical use"
   ],
-  "about": "I studied a Bachelor's in Computer Technology at the University of Bergen and am now continuing with a joint Master's in Software Engineering. I like the mix of big-picture thinking and small details in software: architecture, backend logic, UX, and developer workflow. Most of my current curiosity goes toward applied AI — agentic systems, LLM harnesses, and retrieval-augmented generation. It's still an area I'm learning, and one I expect to keep expanding into as I use it more. Day to day I work in Neovim on NixOS, and I'm slowly trying to pick up Emacs on the side.",
+  "about": "I studied a Bachelor's in Computer Technology at the University of Bergen and am now continuing with a joint Master's in Software Engineering. I like the mix of big-picture thinking and small details in software: architecture, backend logic, UX, and developer workflow. I'm drawn to the Unix philosophy where it fits: small tools that do one thing well and compose cleanly. Most of my current curiosity goes toward applied AI: agentic systems, LLM harnesses, and retrieval-augmented generation. It's still an area I'm learning, and one I expect to keep expanding into as I use it more. Day to day I work in Neovim on NixOS, and I'm slowly trying to pick up Emacs on the side.",
   "experience": [
+    {
+      "title": "Summer Intern",
+      "company": "TV 2, Digital / Redaksjonell Utvikling",
+      "period": "June 2026 - August 2026",
+      "details": "Working on AI and its practical application, on the Redaksjonell Utvikling team within TV 2's Digital department."
+    },
     {
       "title": "Student Software Engineer",
       "company": "Amitec AS",
@@ -231,10 +238,53 @@
     "note": "Happy to talk about software engineering, applied AI, or any interesting technical problem."
   },
   "flythroughCards": [
-    { "path": "/about", "title": "About", "blurb": "Who I am and what I'm building toward.", "cta": "Read more" },
-    { "path": "/projects", "title": "Projects", "blurb": "A few things I've built, from this site to a local AI homelab.", "cta": "See projects" },
-    { "path": "/journey", "title": "Journey", "blurb": "Work, study, and the roles that shaped how I think.", "cta": "See journey" },
-    { "path": "/contact", "title": "Contact", "blurb": "Email, LinkedIn, GitHub — the easiest ways to reach me.", "cta": "Get in touch" },
-    { "path": "/chat", "title": "Local Chat", "blurb": "Chat with a small AI model running entirely in your browser.", "cta": "Try it" }
+    {
+      "path": "/about",
+      "title": "About",
+      "cta": "Full bio",
+      "sections": [
+        { "heading": "Who", "lines": ["Fredric Hegland, Bergen, Norway", "MSc Software Engineering, UiB/HVL", "BSc Computer Technology, UiB"] },
+        { "heading": "Currently", "lines": ["Interning at TV 2 (Digital) on applied AI", "Amitec AS: enterprise chatbot + AI workflows", "Tinkering with a personal AI homelab"] },
+        { "heading": "How I work", "lines": ["Simple tools, clear architecture", "Drawn to the Unix philosophy where it fits", "Understand the whole system, not one layer"] },
+        { "heading": "Off-screen", "lines": ["Neovim on NixOS, learning Emacs", "Cars, sailing, aviation"] }
+      ]
+    },
+    {
+      "path": "/projects",
+      "title": "Projects",
+      "cta": "See projects",
+      "sections": [
+        { "heading": "Featured", "lines": ["Portfolio Website: React, Three.js", "Enterprise Chatbot: Kotlin, Qdrant, Azure", "AI Homelab: vLLM, RAG, self-hosted"] },
+        { "heading": "More", "lines": ["ML experiments & quantum computing ideas", "Low-level/systems exploration (Rust, ASM)", "3 university group projects"] }
+      ]
+    },
+    {
+      "path": "/journey",
+      "title": "Journey",
+      "cta": "Full journey",
+      "sections": [
+        { "heading": "Experience", "lines": ["Summer Intern, TV 2 (Digital), Jun–Aug 2026", "Student SW Engineer, Amitec AS, Nov 2024–present", "Retail & food service roles, 2021–2025"] },
+        { "heading": "Education", "lines": ["MSc Software Eng, UiB/HVL, 2025–2027", "BSc Computer Technology, UiB, 2022–2025"] },
+        { "heading": "Leadership", "lines": ["ITxBergen Leader, 2024–2026", "ITxBergen Board Member, 2022–2026"] }
+      ]
+    },
+    {
+      "path": "/contact",
+      "title": "Contact",
+      "cta": "More",
+      "sections": [
+        { "heading": "Reach me", "lines": ["fredric.hegland@gmail.com", "github.com/frheg", "linkedin.com/in/fredric-hegland"] },
+        { "heading": "Skills", "lines": ["Python, Kotlin, JS/TS, React", "Applied AI, RAG, Qdrant", "Linux, NixOS, Docker, CI/CD"] }
+      ]
+    },
+    {
+      "path": "/chat",
+      "title": "Local Chat",
+      "cta": "Try it",
+      "sections": [
+        { "heading": "What it is", "lines": ["Gemma 2 2B running via WebGPU", "No server, no API keys, nothing leaves your machine"] },
+        { "heading": "What it knows", "lines": ["A condensed knowledge base about Fredric", "Solar system trivia from this site's background"] }
+      ]
+    }
   ]
 }
