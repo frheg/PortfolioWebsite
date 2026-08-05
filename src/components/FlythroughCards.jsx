@@ -22,7 +22,7 @@ const { pageStops, orbit } = spaceConfig.camera
 // distinct place the camera approaches and passes, not a point under its feet.
 const CLUSTER_OFFSET_INWARD = 34
 const CLUSTER_OFFSET_UP = 16
-const PLATE_GAP = 22 // world-unit spacing between the title and detail plate
+const PLATE_GAP = 12 // world-unit spacing between the title and detail plate
 
 // These are true 3D objects now, so "distance" drives real perspective size
 // as well as opacity — cards read clearly up close and shrink/fade with range.
@@ -77,18 +77,18 @@ const plates = buildPlates()
 function PlateContent({ plate }) {
   if (plate.kind === 'title') {
     return (
-      <div className="w-[150px] select-none rounded-xl border border-cyan-300/30 bg-slate-950/55 px-3 py-2.5 text-center shadow-[0_10px_30px_rgba(8,15,35,0.5)] backdrop-blur-sm">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.2em] text-cyan-100">{plate.title}</p>
+      <div className="w-[62px] select-none rounded-md border border-cyan-300/30 bg-slate-950/55 px-1.5 py-1 text-center shadow-[0_6px_16px_rgba(8,15,35,0.5)] backdrop-blur-sm">
+        <p className="text-[6px] font-semibold uppercase leading-tight tracking-[0.06em] text-cyan-100">{plate.title}</p>
       </div>
     )
   }
 
   return (
-    <div className="w-[210px] select-none rounded-xl border border-cyan-300/25 bg-slate-950/45 px-3.5 py-3 text-left shadow-[0_10px_30px_rgba(8,15,35,0.5)] backdrop-blur-sm">
-      <p className="text-[11px] leading-[1.5] text-slate-100/90">{plate.card.blurb}</p>
+    <div className="w-[90px] select-none rounded-md border border-cyan-300/25 bg-slate-950/45 px-2 py-1.5 text-left shadow-[0_6px_16px_rgba(8,15,35,0.5)] backdrop-blur-sm">
+      <p className="text-[5.5px] leading-[1.4] text-slate-100/90">{plate.card.blurb}</p>
       <Link
         to={plate.path}
-        className="mt-2 inline-flex text-[11px] font-semibold text-cyan-200 transition hover:text-cyan-100"
+        className="mt-1 inline-flex text-[5.5px] font-semibold text-cyan-200 transition hover:text-cyan-100"
       >
         {plate.card.cta} →
       </Link>
