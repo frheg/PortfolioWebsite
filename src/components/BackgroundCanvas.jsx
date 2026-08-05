@@ -10,6 +10,7 @@ import { useComets } from '../three/useComets'
 import { useScrollCamera } from '../three/useScrollCamera'
 import { useRoutePath } from '../context/RouteContext'
 import PlanetLabels from './PlanetLabels'
+import FlythroughCards from './FlythroughCards'
 
 export default function BackgroundCanvas() {
   const canvasRef = useRef(null)
@@ -71,6 +72,11 @@ export default function BackgroundCanvas() {
         cameraRef={cameraRef}
         rendererRef={rendererRef}
         isExplore={routePath === '/explore'}
+      />
+      <FlythroughCards
+        cameraRef={cameraRef}
+        rendererRef={rendererRef}
+        isFlythrough={routePath === '/'}
       />
     </>
   )

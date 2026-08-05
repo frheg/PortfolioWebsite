@@ -89,6 +89,50 @@ function poseForLoopAngle(rawAngle) {
   return poseForSegment(loopSegments[0], 0)
 }
 
+// "Return to railroad" needs the closest point on the loop to wherever
+// free-flight left off. The ellipse's angle isn't evenly spaced in arc
+// length, so this samples the loop coarsely, then refines around the best
+// sample — cheap, and only ever runs once per explore→flythrough transition.
+const NEAREST_ANGLE_SAMPLES = 360
+
+function findNearestLoopAngle(position) {
+  let bestAngle = loopTopAngle
+  let bestDistSq = Infinity
+
+  for (let i = 0; i < NEAREST_ANGLE_SAMPLES; i += 1) {
+    const angle = loopTopAngle - (TWO_PI * i) / NEAREST_ANGLE_SAMPLES
+    const pose = poseForLoopAngle(angle)
+    const dx = pose.x - position.x
+    const dy = pose.y - position.y
+    const dz = pose.z - position.z
+    const distSq = dx * dx + dy * dy + dz * dz
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq
+      bestAngle = angle
+    }
+  }
+
+  const refineStep = TWO_PI / NEAREST_ANGLE_SAMPLES / 10
+  let refinedAngle = bestAngle
+  let refinedDistSq = bestDistSq
+
+  for (let i = -9; i <= 9; i += 1) {
+    if (i === 0) continue
+    const angle = bestAngle + refineStep * i
+    const pose = poseForLoopAngle(angle)
+    const dx = pose.x - position.x
+    const dy = pose.y - position.y
+    const dz = pose.z - position.z
+    const distSq = dx * dx + dy * dy + dz * dz
+    if (distSq < refinedDistSq) {
+      refinedDistSq = distSq
+      refinedAngle = angle
+    }
+  }
+
+  return refinedAngle
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value))
 }
@@ -97,7 +141,7 @@ function clamp01(value) {
   return clamp(value, 0, 1)
 }
 
-function orbitPos(angle, heightOffset = 0) {
+export function orbitPos(angle, heightOffset = 0) {
   return {
     x: orbit.center.x + orbit.rx * Math.cos(angle),
     y: orbit.center.y + orbit.ry * Math.sin(angle * 0.5) + heightOffset,
@@ -447,8 +491,19 @@ export function useScrollCamera(cameraRef, routePath) {
       routeRef.current = routePath
       if (!currentIsExplore) resetExploreInput()
     } else {
-      const nextSegment = getPageSegment(routePath)
-      transToRef.current = poseForSegment(nextSegment, 0)
+      if (isFlythroughRoute(routePath)) {
+        // Returning from free-flight resumes at the nearest point on the
+        // loop; arriving from any other route resumes at Home.
+        const targetAngle = currentIsExplore
+          ? findNearestLoopAngle(transFromRef.current)
+          : pageStops[0]?.angle ?? 0
+        railroadAngleRef.current = targetAngle
+        railroadVelocityRef.current = 0
+        transToRef.current = poseForLoopAngle(targetAngle)
+      } else {
+        const nextSegment = getPageSegment(routePath)
+        transToRef.current = poseForSegment(nextSegment, 0)
+      }
       transTRef.current = 0
       settleFramesRef.current = 0
       displayProgressRef.current = 0
@@ -725,8 +780,9 @@ export function useScrollCamera(cameraRef, routePath) {
       if (transTRef.current >= 1) {
         camera.position.set(transToRef.current.x, transToRef.current.y, transToRef.current.z)
         settleFramesRef.current = scrollConfig.lockFrames
-        railroadAngleRef.current = pageStops[0]?.angle ?? 0
-        railroadVelocityRef.current = 0
+        // railroadAngleRef is already set to the resume angle by the route
+        // transition above (nearest point when returning from explore, or
+        // Home when arriving fresh).
       }
     } else {
       if (settleFramesRef.current > 0) {

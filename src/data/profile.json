@@ -229,5 +229,12 @@
     "website": "https://fredrichegland.no/",
     "location": "Based in Bergen, Norway",
     "note": "Happy to talk about software engineering, applied AI, or any interesting technical problem."
-  }
+  },
+  "flythroughCards": [
+    { "path": "/about", "title": "About", "blurb": "Who I am and what I'm building toward.", "cta": "Read more" },
+    { "path": "/projects", "title": "Projects", "blurb": "A few things I've built, from this site to a local AI homelab.", "cta": "See projects" },
+    { "path": "/journey", "title": "Journey", "blurb": "Work, study, and the roles that shaped how I think.", "cta": "See journey" },
+    { "path": "/contact", "title": "Contact", "blurb": "Email, LinkedIn, GitHub — the easiest ways to reach me.", "cta": "Get in touch" },
+    { "path": "/chat", "title": "Local Chat", "blurb": "Chat with a small AI model running entirely in your browser.", "cta": "Try it" }
+  ]
 }
