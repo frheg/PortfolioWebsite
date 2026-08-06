@@ -1,10 +1,18 @@
 // FloatingNav — the site's only navigation: a compact floating pill-bar
 // anchored to the bottom of the viewport, used on both desktop and mobile.
 // Replaces the old solid top navbar for a simpler, more concise UI.
-import { NavLink } from 'react-router-dom'
+import { useSyncExternalStore } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { navLinks } from '../content/navLinks'
+import { getActiveStopPath, subscribeActiveStop } from '../three/railroadState'
 
 export default function FloatingNav() {
+  const location = useLocation()
+  const isFlythrough = location.pathname === '/'
+  // The URL never changes while flying the loop, so on "/" the highlight
+  // instead follows whichever stop's cluster the camera is nearest to.
+  const activeStopPath = useSyncExternalStore(subscribeActiveStop, getActiveStopPath, getActiveStopPath)
+
   return (
     <div
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)]"
@@ -14,12 +22,14 @@ export default function FloatingNav() {
         <div className="overflow-visible rounded-[1.4rem] border border-white/10 bg-slate-950/88 shadow-[0_18px_50px_rgba(8,15,35,0.55)] backdrop-blur-xl">
           <div className="h-px bg-gradient-to-r from-transparent via-cyan-300/45 to-transparent" />
           <div className="flex flex-wrap items-center justify-center gap-1.5 overflow-visible p-1.5">
-            {navLinks.map(({ to, label, featured, sticker }) => (
+            {navLinks.map(({ to, label, featured, sticker }) => {
+              const isActive = isFlythrough ? to === (activeStopPath || '/') : location.pathname === to
+              return (
               <NavLink
                 key={to}
                 to={to}
                 end={to === '/'}
-                className={({ isActive }) =>
+                className={
                   `relative isolate overflow-visible whitespace-nowrap rounded-xl px-2.5 py-2 text-center text-[0.62rem] font-medium uppercase tracking-[0.16em] transition ${
                     featured
                       ? isActive
@@ -36,7 +46,8 @@ export default function FloatingNav() {
                   {featured ? <span className="explore-sticker explore-sticker--mobile">{sticker}</span> : null}
                 </span>
               </NavLink>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>

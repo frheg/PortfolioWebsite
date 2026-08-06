@@ -18,6 +18,7 @@ import {
   setExplorePaused,
 } from './exploreState'
 import { setCameraSpeed } from './cameraRuntime'
+import { setActiveStopPath } from './railroadState'
 
 const {
   orbit,
@@ -168,6 +169,19 @@ function lerp(a, b, t) {
 
 function shortestAngleDelta(from, to) {
   return Math.atan2(Math.sin(to - from), Math.cos(to - from))
+}
+
+function nearestStopPath(angle) {
+  let bestPath = pageStops[0]?.path ?? fallbackPath
+  let bestDelta = Infinity
+  pageStops.forEach((stop) => {
+    const delta = Math.abs(shortestAngleDelta(angle, stop.angle))
+    if (delta < bestDelta) {
+      bestDelta = delta
+      bestPath = stop.path
+    }
+  })
+  return bestPath
 }
 
 function stepToward(current, target, maxDelta) {
@@ -796,6 +810,7 @@ export function useScrollCamera(cameraRef, routePath) {
 
       const pose = poseForLoopAngle(railroadAngleRef.current)
       camera.position.set(pose.x, pose.y, pose.z)
+      setActiveStopPath(nearestStopPath(railroadAngleRef.current))
     }
 
     const dx = orbit.center.x - camera.position.x
