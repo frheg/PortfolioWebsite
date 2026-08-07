@@ -39,7 +39,11 @@ export function useGalaxies(
     galaxiesRef.current = galaxies
 
     return () => {
-      galaxies.forEach((g) => scene.remove(g))
+      galaxies.forEach((g) => {
+        scene.remove(g)
+        g.userData.geometry?.dispose()
+        g.userData.material?.dispose()
+      })
       galaxiesRef.current = []
     }
   }, [sceneRef, max, spawnRadius])

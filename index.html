@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="/src/assets/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- The 3D background (incl. these skybox faces) loads via a lazy JS
+         chunk; preloading the images here lets the browser start fetching
+         them immediately, in parallel with that chunk, instead of waiting
+         for it to finish downloading and running first. -->
+    <link rel="preload" as="image" href="/src/assets/Pictures/SkyBox/kurt/space_rt_1024.jpg" />
+    <link rel="preload" as="image" href="/src/assets/Pictures/SkyBox/kurt/space_lf_1024.jpg" />
+    <link rel="preload" as="image" href="/src/assets/Pictures/SkyBox/kurt/space_up_1024.jpg" />
+    <link rel="preload" as="image" href="/src/assets/Pictures/SkyBox/kurt/space_dn_1024.jpg" />
+    <link rel="preload" as="image" href="/src/assets/Pictures/SkyBox/kurt/space_ft_1024.jpg" />
+    <link rel="preload" as="image" href="/src/assets/Pictures/SkyBox/kurt/space_bk_1024.jpg" />
     <script type="text/javascript">
       (function (l) {
         if (l.search[1] === '/') {

@@ -2,12 +2,12 @@
 import { useEffect } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
-import skyBk from '../assets/Pictures/SkyBox/kurt/space_ft_1536.jpg'
-import skyDn from '../assets/Pictures/SkyBox/kurt/space_dn_1536.jpg'
-import skyFt from '../assets/Pictures/SkyBox/kurt/space_bk_1536.jpg'
-import skyLf from '../assets/Pictures/SkyBox/kurt/space_lf_1536.jpg'
-import skyRt from '../assets/Pictures/SkyBox/kurt/space_rt_1536.jpg'
-import skyUp from '../assets/Pictures/SkyBox/kurt/space_up_1536.jpg'
+import skyBk from '../assets/Pictures/SkyBox/kurt/space_ft_1024.jpg'
+import skyDn from '../assets/Pictures/SkyBox/kurt/space_dn_1024.jpg'
+import skyFt from '../assets/Pictures/SkyBox/kurt/space_bk_1024.jpg'
+import skyLf from '../assets/Pictures/SkyBox/kurt/space_lf_1024.jpg'
+import skyRt from '../assets/Pictures/SkyBox/kurt/space_rt_1024.jpg'
+import skyUp from '../assets/Pictures/SkyBox/kurt/space_up_1024.jpg'
 
 function normalizeQuarterTurns(value) {
   const turns = Number.isFinite(value) ? value : 4

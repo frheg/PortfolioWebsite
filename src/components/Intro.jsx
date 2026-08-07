@@ -1,4 +1,4 @@
-import selfPortrait from '../assets/Pictures/SelfPortrait-1400.jpg'
+import selfPortrait from '../assets/Pictures/SelfPortrait-1400.webp'
 import { Link } from 'react-router-dom'
 import profile from '../data/profile.json'
 

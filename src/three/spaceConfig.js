@@ -184,7 +184,6 @@ export const spaceConfig = {
       radiusFactor: 0.4,
       heightFactor: 0.2,
       size: 0.3,
-      segments: 8,
       opacity: 0.6,
       hueVariation: 0.1,
     },
