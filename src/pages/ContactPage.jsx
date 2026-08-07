@@ -22,7 +22,7 @@ export default function ContactPage() {
       <PageHero
         eyebrow="Toolkit and Contact"
         title="Skills, tools, and the best ways to reach me."
-        description="This page keeps the practical part together: what I work with, where I can be reached, and the channels I keep active."
+        description="What I work with, and where to find me."
         actions={[
           { label: 'Skills', href: '#skills' },
           { label: 'Contact', href: '#contact', kind: 'secondary' },
@@ -34,8 +34,7 @@ export default function ContactPage() {
         <SectionCard
           id="skills"
           eyebrow="Toolkit"
-          title="A broad technical range, grouped by how I think about work."
-          description="I like being useful across layers of a system. That usually means understanding the engineering core, the surrounding infrastructure, and the interface people actually touch."
+          title="A technical range, grouped by how I think about work."
         >
           <div className="grid gap-3 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
             {profile.skillGroups.map((group) => (

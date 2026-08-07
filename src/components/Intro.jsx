@@ -9,14 +9,8 @@ export default function Intro() {
     { label: 'Areas', value: profile.skillGroups?.length || 3 },
   ]
 
-  const homeShortcuts = [
-    { label: 'Featured work', href: '#featured-projects' },
-    { label: 'Journey', to: '/journey' },
-    { label: 'Contact', to: '/contact' },
-  ]
-
   return (
-    <section id="welcome" className="relative flex min-h-[100svh] items-start px-4 pb-12 pt-20 sm:min-h-screen sm:px-6 sm:pb-14 sm:pt-24 lg:items-center lg:px-8 lg:pt-28">
+    <section id="welcome" className="relative flex min-h-[100svh] items-start px-4 pb-12 pt-10 sm:min-h-screen sm:px-6 sm:pb-14 sm:pt-14 lg:items-center lg:px-8 lg:pt-16">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />
@@ -51,28 +45,6 @@ export default function Intro() {
             >
               {profile.hero.secondaryCtaLabel}
             </Link>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {homeShortcuts.map((item) =>
-              item.to ? (
-                <Link
-                  key={item.label}
-                  to={item.to}
-                  className="inline-flex items-center justify-center rounded-full border border-white/10 bg-black/15 px-3 py-2 text-[0.7rem] font-medium uppercase tracking-[0.18em] text-cyan-200/88 transition hover:border-cyan-300/30 hover:text-cyan-100"
-                >
-                  {item.label}
-                </Link>
-              ) : (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className="inline-flex items-center justify-center rounded-full border border-white/10 bg-black/15 px-3 py-2 text-[0.7rem] font-medium uppercase tracking-[0.18em] text-cyan-200/88 transition hover:border-cyan-300/30 hover:text-cyan-100"
-                >
-                  {item.label}
-                </a>
-              )
-            )}
           </div>
 
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
@@ -114,26 +86,6 @@ export default function Intro() {
                 loading="eager"
                 className="aspect-[5/6] w-full rounded-[1rem] object-cover sm:aspect-[4/5] sm:rounded-[1.2rem]"
               />
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-black/25 p-3.5 sm:p-4">
-                <p className="text-xs uppercase tracking-[0.28em] text-cyan-300/70">Currently</p>
-                <ul className="mt-2.5 space-y-2 text-sm leading-6 text-slate-200/88 sm:mt-3">
-                  {profile.currently.slice(0, 1).map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-black/25 p-3.5 sm:p-4">
-                <p className="text-xs uppercase tracking-[0.28em] text-cyan-300/70">Interests</p>
-                <ul className="mt-2.5 space-y-2 text-sm leading-6 text-slate-200/88 sm:mt-3">
-                  {profile.interests.slice(0, 2).map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
             </div>
           </div>
 

@@ -1,8 +1,11 @@
 // FloatingNav — the site's only navigation: a compact floating pill-bar
 // anchored to the bottom of the viewport, used on both desktop and mobile.
-// Replaces the old solid top navbar for a simpler, more concise UI.
+// Icon-first on narrow screens (stacked icon + tiny label, like a native tab
+// bar) since there isn't room for six full text labels in one row there;
+// icon + label side by side once there's more width.
 import { NavLink } from 'react-router-dom'
 import { navLinks } from '../content/navLinks'
+import NavIcon from './NavIcon'
 
 export default function FloatingNav() {
   return (
@@ -13,14 +16,15 @@ export default function FloatingNav() {
       <div className="pointer-events-auto mx-auto w-full max-w-xl overflow-visible">
         <div className="overflow-visible rounded-[1.4rem] border border-white/10 bg-slate-950/88 shadow-[0_18px_50px_rgba(8,15,35,0.55)] backdrop-blur-xl">
           <div className="h-px bg-gradient-to-r from-transparent via-cyan-300/45 to-transparent" />
-          <div className="flex flex-wrap items-center justify-center gap-1.5 overflow-visible p-1.5">
-            {navLinks.map(({ to, label, featured, sticker }) => (
+          <div className="flex items-center justify-between gap-1 overflow-visible p-1.5 sm:justify-center sm:gap-1.5">
+            {navLinks.map(({ to, label, icon, featured, sticker }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={to === '/'}
+                aria-label={label}
                 className={({ isActive }) =>
-                  `relative isolate overflow-visible whitespace-nowrap rounded-xl px-2.5 py-2 text-center text-[0.62rem] font-medium uppercase tracking-[0.16em] transition ${
+                  `relative isolate flex flex-1 flex-col items-center gap-0.5 overflow-visible whitespace-nowrap rounded-xl px-1.5 py-1.5 text-center text-[0.58rem] font-medium uppercase tracking-[0.1em] transition sm:flex-none sm:flex-row sm:gap-1.5 sm:px-3 sm:py-2 sm:text-[0.62rem] sm:tracking-[0.16em] ${
                     featured
                       ? isActive
                         ? 'explore-pill-mobile bg-cyan-300/18 text-cyan-50 shadow-[0_0_18px_rgba(103,232,249,0.16)]'
@@ -32,9 +36,10 @@ export default function FloatingNav() {
                 }
               >
                 <span className="relative inline-flex items-center justify-center overflow-visible">
-                  {label}
+                  <NavIcon name={icon} className="h-5 w-5 sm:h-4 sm:w-4" />
                   {featured ? <span className="explore-sticker explore-sticker--mobile">{sticker}</span> : null}
                 </span>
+                <span>{label}</span>
               </NavLink>
             ))}
           </div>

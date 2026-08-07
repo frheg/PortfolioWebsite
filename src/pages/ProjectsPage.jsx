@@ -19,7 +19,7 @@ export default function ProjectsPage() {
       <PageHero
         eyebrow="Build Log"
         title="Projects, experiments, and the things I learn by building."
-        description="The fuller project list: the finished ones, the in-progress ones, and a few side experiments."
+        description="Finished, in-progress, and side experiments."
         actions={[
           { label: 'Featured', href: '#projects' },
           { label: 'Archive', href: '#archive', kind: 'secondary' },
@@ -32,7 +32,6 @@ export default function ProjectsPage() {
           id="projects"
           eyebrow="Featured"
           title="A few projects I'd point to first."
-          description="A mix of software engineering, applied AI, and curiosity-driven builds."
         >
           <div className="grid gap-4 sm:gap-5 xl:grid-cols-3">
             {featuredProjects.map((project, index) => (
@@ -45,7 +44,6 @@ export default function ProjectsPage() {
           id="archive"
           eyebrow="Archive"
           title="More builds and experiments."
-          description="Smaller or more course-driven, but still part of how I like to explore tools and ideas."
         >
           <OrbitDisclosure title="Open project archive" hint="University work, side explorations, and smaller builds" defaultOpen>
             <div className="grid gap-3 sm:gap-4 md:grid-cols-2">

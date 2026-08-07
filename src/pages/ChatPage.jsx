@@ -183,7 +183,7 @@ export default function ChatPage() {
           id="chat"
           eyebrow={modelInfo.eyebrow}
           title="A small model, entirely local."
-          description={`This uses WebLLM to compile and run the model in your browser via WebGPU. The first load downloads ${modelInfo.downloadSize}, which your browser then caches. It's given a compact knowledge base about Fredric, so ask it about his background, work, or projects.`}
+          description={`First load downloads ${modelInfo.downloadSize} and caches it. It knows the basics about Fredric, so ask about his background, work, or projects.`}
         >
           {!supported ? (
             <p className="rounded-[1rem] border border-amber-300/30 bg-amber-300/10 p-4 text-sm text-amber-100">

@@ -1,8 +1,8 @@
 export const navLinks = [
-  { to: '/', label: 'Home' },
-  { to: '/projects', label: 'Projects' },
-  { to: '/journey', label: 'Journey' },
-  { to: '/contact', label: 'Contact' },
-  { to: '/chat', label: 'Chat' },
-  { to: '/explore', label: 'Explore', featured: true, sticker: 'Explore the galaxy' },
+  { to: '/', label: 'Home', icon: 'home' },
+  { to: '/projects', label: 'Projects', icon: 'projects' },
+  { to: '/journey', label: 'Journey', icon: 'journey' },
+  { to: '/contact', label: 'Contact', icon: 'contact' },
+  { to: '/chat', label: 'Chat', icon: 'chat' },
+  { to: '/explore', label: 'Explore', icon: 'explore', featured: true, sticker: 'Explore the galaxy' },
 ]

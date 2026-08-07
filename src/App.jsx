@@ -7,8 +7,6 @@ import { useExploreAudio } from './hooks/useExploreAudio'
 import { RouteProvider } from './context/RouteProvider'
 import ExploreMobileControls from './components/ExploreMobileControls'
 import FloatingNav from './components/FloatingNav'
-import TakeControlButton from './components/TakeControlButton'
-import ReturnToRailroadButton from './components/ReturnToRailroadButton'
 
 const BackgroundCanvas = lazy(() => import('./components/BackgroundCanvas'))
 const HomePage = lazy(() => import('./pages/HomePage'))
@@ -29,7 +27,6 @@ function prefersReducedMotion() {
 export default function App() {
   const location = useLocation()
   const isExploreRoute = location.pathname === '/explore'
-  const isFlythroughRoute = location.pathname === '/'
   useExploreAudio(isExploreRoute)
   const [displayedLocation, setDisplayedLocation] = useState(location)
   const [routeStage, setRouteStage] = useState('idle')
@@ -90,8 +87,6 @@ export default function App() {
       <div className={routeScanClassName} aria-hidden="true" />
       {isExploreRoute ? <ExploreBoostOverlay /> : null}
       {isExploreRoute ? <ExplorePauseOverlay /> : null}
-      {isExploreRoute ? <ReturnToRailroadButton /> : null}
-      {isFlythroughRoute ? <TakeControlButton /> : null}
       <div className={routeStageClassName}>
         <Suspense fallback={<div className="route-loading" />}>
           <Routes location={displayedLocation}>

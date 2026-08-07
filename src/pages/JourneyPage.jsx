@@ -22,7 +22,7 @@ export default function JourneyPage() {
       <PageHero
         eyebrow="Trajectory"
         title="Work, study, and a few responsibilities that shaped how I think."
-        description="This is the background behind the projects: experience, education, and some of the leadership roles that taught me how to work with both systems and people."
+        description="Experience, education, and leadership, in brief."
         actions={[
           { label: 'Experience', href: '#journey' },
           { label: 'Leadership', href: '#leadership', kind: 'secondary' },
@@ -34,8 +34,7 @@ export default function JourneyPage() {
         <SectionCard
           id="journey"
           eyebrow="Professional and Academic"
-          title="A mix of engineering, study, service work, and leadership."
-          description="Different kinds of work, different kinds of problems, here's the background behind it."
+          title="Engineering, study, and leadership."
         >
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             <div className="space-y-3 sm:space-y-4">
@@ -113,7 +112,6 @@ export default function JourneyPage() {
           id="leadership"
           eyebrow="Signals"
           title="Leadership, languages, and continued learning."
-          description="The technical side matters a lot to me, but so does communication, organizing people, and learning beyond the minimum."
         >
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_0.8fr]">
             <div className="space-y-3 sm:space-y-4">

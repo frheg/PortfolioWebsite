@@ -4,7 +4,7 @@
   "hero": {
     "eyebrow": "Software Engineering Student",
     "headline": "I build software, and I'm still learning what makes it good.",
-    "description": "I'm a software engineering master's student working across backend, frontend, and AI. Lately most of my curiosity goes toward applied AI: agentic systems, LLM harnesses, and RAG, and that's a focus I expect to keep expanding as I work with it more.",
+    "description": "Master's student working across backend, frontend, and applied AI: agentic systems, LLM harnesses, and RAG.",
     "primaryCtaLabel": "See my projects",
     "primaryCtaHref": "/projects",
     "secondaryCtaLabel": "Get in touch",
@@ -13,40 +13,39 @@
     "status": "Open to conversations"
   },
   "quickFacts": [
-    "Master's student in Software Engineering",
-    "Works across backend, frontend, and AI",
-    "Increasingly focused on applied AI: agents, harnesses, and RAG"
+    "Software engineering master's student",
+    "Backend, frontend, applied AI",
+    "Agents, harnesses, and RAG"
   ],
   "currently": [
-    "Pursuing a joint Master's in Software Engineering (UiB/HVL)",
-    "Summer interning at TV 2 (Digital), working on applied AI",
-    "Working on an enterprise chatbot and AI workflows at Amitec AS",
-    "Learning applied AI on my own time: agentic systems, LLM harnesses, local inference, and RAG"
+    "MSc Software Engineering, UiB/HVL",
+    "Interning at TV 2 (Digital) on applied AI",
+    "Building an enterprise chatbot at Amitec AS",
+    "Exploring agentic AI and RAG on my own time"
   ],
   "interests": [
-    "Applied AI: agentic systems, LLM harnesses, and RAG",
-    "Neovim as a daily driver, and slowly trying to learn Emacs too",
-    "NixOS and reproducible, declarative system setups",
-    "Cars, engines, and mechanical systems",
-    "Sailing, boats, and aviation",
-    "Low-level computing, terminals, and the Unix philosophy",
-    "New and old technology with practical use"
+    "Applied AI & agents",
+    "Neovim & NixOS",
+    "Unix philosophy",
+    "Cars & engines",
+    "Sailing & aviation",
+    "Low-level computing"
   ],
-  "about": "I studied a Bachelor's in Computer Technology at the University of Bergen and am now continuing with a joint Master's in Software Engineering. I like the mix of big-picture thinking and small details in software: architecture, backend logic, UX, and developer workflow. I'm drawn to the Unix philosophy where it fits: small tools that do one thing well and compose cleanly. Most of my current curiosity goes toward applied AI: agentic systems, LLM harnesses, and retrieval-augmented generation. It's still an area I'm learning, and one I expect to keep expanding into as I use it more. Day to day I work in Neovim on NixOS, and I'm slowly trying to pick up Emacs on the side.",
+  "about": "BSc in Computer Technology from UiB, now doing a joint MSc in Software Engineering. I like systems that are simple, well-architected, and easy to reason about, and lately that curiosity is mostly pointed at applied AI. Daily driver: Neovim on NixOS.",
   "experience": [
     {
       "title": "Summer Intern",
       "company": "TV 2, Digital / Redaksjonell Utvikling",
       "period": "June 2026 - August 2026",
-      "details": "Working on AI and its practical application, on the Redaksjonell Utvikling team within TV 2's Digital department."
+      "details": "Applied AI, on the Redaksjonell Utvikling team within TV 2's Digital department."
     },
     {
       "title": "Student Software Engineer",
       "company": "Amitec AS",
       "period": "November 2024 - Present",
-      "details": "Building an enterprise chatbot across the full stack, including architecture, backend, frontend, networking, security, and databases.; Working with AVEVA PI systems (PI AF, PI Vision, PI SMT) and time-series data for energy sector clients.",
+      "details": "Full-stack work on an enterprise chatbot: architecture, backend, frontend, networking, security, databases.; Time-series data and AVEVA PI systems for energy sector clients.",
       "link": "https://docs.aveva.com/category/pi-system",
-      "linkLabel": "AVEVA PI systems (PI AF, PI Vision, PI SMT)"
+      "linkLabel": "AVEVA PI systems"
     },
     {
       "title": "Sales Co-worker",
@@ -94,11 +93,9 @@
     }
   ],
   "highlights": [
-    "Bachelor's completed, Master's underway in Software Engineering.",
-    "Worked in small teams where the work crosses multiple layers of the stack.",
-    "Some experience with Python, Kotlin, JavaScript/TypeScript, C#/.NET, SQL, NoSQL, Linux, Git, and AI tooling.",
-    "Builds course projects and personal experiments to keep learning by doing.",
-    "Helped organize ITxBergen and the local tech student community."
+    "BSc done, MSc underway in Software Engineering",
+    "Comfortable across the stack in small teams",
+    "ITxBergen board and leadership experience"
   ],
   "projects": [
     {
@@ -113,54 +110,54 @@
     },
     {
       "name": "Enterprise Chatbot",
-      "description": "An enterprise chatbot project where I work across business logic, architecture, networking, databases, and retrieval-augmented AI approaches.",
+      "description": "Business logic, architecture, networking, databases, and retrieval-augmented AI for a production chatbot.",
       "highlight": "Broad systems work with real users and real constraints, still in progress.",
       "type": "Professional",
       "status": "In progress",
       "featured": true,
-      "tech": ["Kotlin", "Python", "Qdrant", "Neo4j", "Docker", "Azure Open AI", "Azure Resources", "More to come..."]
+      "tech": ["Kotlin", "Python", "Qdrant", "Neo4j", "Docker", "Azure OpenAI"]
     },
     {
       "name": "Personal AI Homelab",
-      "description": "A local AI agent running on my own hardware: open-source models, vLLM inference, RAG backed by Qdrant, and tool use for search and utilities. My main space for learning agentic AI and LLM harnesses hands-on.",
+      "description": "A local AI agent on my own hardware: open-source models, vLLM inference, RAG via Qdrant, tool use for search and utilities.",
       "highlight": "Where curiosity turns into tinkering with agents, retrieval, and self-hosted infrastructure.",
       "type": "Personal",
       "status": "Self-hosted",
       "featured": true,
       "repo": "https://github.com/frheg/HomeLab",
-      "tech": ["Python", "Qdrant", "vLLM", "PyTorch", "Numpy", "Embedding models", "More to come..."]
+      "tech": ["Python", "Qdrant", "vLLM", "PyTorch", "Embedding models"]
     },
     {
       "name": "Machine Learning Experimentation",
-      "description": "Experiments around machine learning models, embeddings, quantum computing ideas, and implementing algorithms from scratch to understand them better.",
+      "description": "ML models, embeddings, quantum computing ideas, and algorithms implemented from scratch to understand them.",
       "type": "Exploration",
       "repo": "https://github.com/frheg/MachineLearning",
-      "tech": ["Python", "Qdrant", "Different ML libraries", "Qiskit"]
+      "tech": ["Python", "Qdrant", "Qiskit"]
     },
     {
       "name": "Programming Languages and Low-Level Exploration",
-      "description": "A repository for exploring programming languages and lower-level interests, including RISC-V assembly, x86_64 assembly, C++, Rust, and other systems-oriented experiments.",
+      "description": "RISC-V and x86_64 assembly, C++, Rust, and other systems-level experiments.",
       "type": "Exploration",
       "repo": "https://github.com/frheg/ProgrammingLanguages",
-      "tech": ["RISC-V assembly", "x86_64 assembly", "C++", "Rust", "Systems exploration"]
+      "tech": ["RISC-V assembly", "x86_64 assembly", "C++", "Rust"]
     },
     {
-      "name": "Group Project - Modern Software Development Methods (Kollekt)",
-      "description": "A full-stack application for shared households, aimed at making everyday coordination a bit easier.",
+      "name": "Kollekt (Group Project)",
+      "description": "A full-stack app for shared households, built for a course in modern software development methods.",
       "type": "University",
       "repo": "https://github.com/frheg/DAT251_Kollekt",
-      "tech": ["Kotlin", "React", "Spring Boot", "Docker", "Apache Kafka", "Postgres", "Redis", "NginX", "Supabase"]
+      "tech": ["Kotlin", "React", "Spring Boot", "Docker", "Kafka", "Postgres", "Redis"]
     },
     {
-      "name": "Group Project - Advanced Software Technologies",
-      "description": "A poll application built with several advanced technologies from the course, plus a few extra tools added out of curiosity.",
+      "name": "DAT250 Poll App (Group Project)",
+      "description": "A poll application for a course on advanced software technologies.",
       "type": "University",
       "repo": "https://github.com/Maren24/DAT250-project",
-      "tech": ["Kotlin", "Angular", "Spring Boot", "Docker", "Qdrant", "Redis", "Apache Kafka", "More to come..."]
+      "tech": ["Kotlin", "Angular", "Spring Boot", "Docker", "Qdrant", "Kafka"]
     },
     {
-      "name": "Group Project - System Development",
-      "description": "A group project where we developed a 2D game using LibGDX in Java for a university course, INF112 at UiB.",
+      "name": "CodeMasters (Group Project)",
+      "description": "A 2D game built with LibGDX for INF112, a system development course at UiB.",
       "type": "University",
       "repo": "https://github.com/frheg/CodeMasters",
       "tech": ["Java", "LibGDX"]
@@ -168,7 +165,7 @@
   ],
   "skills": [
     "Python",
-    "Applied AI: agentic systems, LLM harnesses, and RAG, both personal and enterprise",
+    "Applied AI: agentic systems, LLM harnesses, RAG",
     "Networking and architecture",
     "JavaScript/TypeScript",
     "Linux and terminal work",
@@ -208,17 +205,17 @@
     {
       "title": "ITxBergen Leader",
       "period": "January 2024 - February 2026",
-      "details": "Overall responsibility for organizing the annual career day for all IT students in Bergen and other events; administrative decisions and organizational development."
+      "details": "Running the annual career day for IT students in Bergen, plus organizational decisions."
     },
     {
       "title": "ITxBergen Board Member",
       "period": "September 2022 - February 2026",
-      "details": "Organizing and planning the annual career day and other minor events for IT students in Bergen."
+      "details": "Planning the annual career day and smaller events for IT students in Bergen."
     },
     {
       "title": "Vektorprogrammet - Assistant",
       "period": "September 2023 - October 2023",
-      "details": "Tutor in Mathematics 1P-Y at Danielsen Videregående Skole, Bergen."
+      "details": "Math tutor (1P-Y) at Danielsen Videregående Skole, Bergen."
     }
   ],
   "courses": [
