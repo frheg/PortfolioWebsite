@@ -10,13 +10,13 @@ import { chatSystemPrompt } from '../data/chatKnowledge'
 // blows through that budget and hard-crashes the tab rather than erroring —
 // so mobile gets a much smaller model that actually fits.
 const DESKTOP_MODEL_ID = 'gemma-2-2b-it-q4f16_1-MLC'
-// The 4-bit quantized 360M variant needs almost the same VRAM as the plain
-// 135M one (376MB vs 360MB) but has 2.7x the parameters — clearly more
-// capable for essentially the same mobile memory budget.
-const MOBILE_MODEL_ID = 'SmolLM2-360M-Instruct-q4f16_1-MLC'
+// Gemma 3 1B: ~3x the parameters of SmolLM2 360M for still-safe mobile VRAM
+// (711MB vs 376MB), and doesn't require the shader-f16 feature the smaller
+// SmolLM2/Qwen variants need — a plus for mobile GPU compatibility too.
+const MOBILE_MODEL_ID = 'gemma3-1b-it-q4f16_1-MLC'
 const MODEL_LABELS = {
   [DESKTOP_MODEL_ID]: { name: 'Gemma 2 2B', eyebrow: 'Gemma 2 · 2B · WebGPU', downloadSize: 'roughly 1.5 GB' },
-  [MOBILE_MODEL_ID]: { name: 'SmolLM2 360M', eyebrow: 'SmolLM2 · 360M · WebGPU', downloadSize: 'a few hundred MB' },
+  [MOBILE_MODEL_ID]: { name: 'Gemma 3 1B', eyebrow: 'Gemma 3 · 1B · WebGPU', downloadSize: 'roughly 700 MB' },
 }
 
 function isMobileDevice() {
@@ -183,7 +183,7 @@ export default function ChatPage() {
           id="chat"
           eyebrow={modelInfo.eyebrow}
           title="A small model, entirely local."
-          description={`This uses WebLLM to compile and run the model in your browser via WebGPU. The first load downloads ${modelInfo.downloadSize}, which your browser then caches. It's given a compact knowledge base about Fredric and the site's solar system, so ask it about either.`}
+          description={`This uses WebLLM to compile and run the model in your browser via WebGPU. The first load downloads ${modelInfo.downloadSize}, which your browser then caches. It's given a compact knowledge base about Fredric, so ask it about his background, work, or projects.`}
         >
           {!supported ? (
             <p className="rounded-[1rem] border border-amber-300/30 bg-amber-300/10 p-4 text-sm text-amber-100">
