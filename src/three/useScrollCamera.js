@@ -581,11 +581,16 @@ export function useScrollCamera(cameraRef, routePath) {
     } else {
       const segment = getPageSegment(routeRef.current)
 
+      // Keep self-correcting, not just right after a route change — on a
+      // fresh/direct load there's no transition to trigger a remeasure, so
+      // the very first (pre-layout) guess would otherwise stick for the
+      // whole visit while images/fonts/lazy content still grow the page.
+      pageScrollRangeRef.current = Math.max(pageScrollRangeRef.current, measureScrollRange())
+
       if (settleFramesRef.current > 0) {
         settleFramesRef.current -= 1
         jumpToTop()
         displayProgressRef.current = 0
-        pageScrollRangeRef.current = Math.max(pageScrollRangeRef.current, measureScrollRange())
       } else {
         const scrollRange = pageScrollRangeRef.current
         const targetProgress = scrollRange > 0 ? clamp01((window.scrollY || 0) / scrollRange) : 0
