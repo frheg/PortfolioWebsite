@@ -4,7 +4,26 @@ import SectionCard from '../components/ui/SectionCard'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { chatSystemPrompt } from '../data/chatKnowledge'
 
-const MODEL_ID = 'gemma-2-2b-it-q4f16_1-MLC'
+// Mobile browsers enforce a much stricter per-tab memory ceiling than desktop
+// regardless of the device's actual RAM (iOS Safari in particular kills tabs
+// around ~1.5-2GB). Gemma 2 2B's weights alone are ~1.9GB, which reliably
+// blows through that budget and hard-crashes the tab rather than erroring —
+// so mobile gets a much smaller model that actually fits.
+const DESKTOP_MODEL_ID = 'gemma-2-2b-it-q4f16_1-MLC'
+// The 4-bit quantized 360M variant needs almost the same VRAM as the plain
+// 135M one (376MB vs 360MB) but has 2.7x the parameters — clearly more
+// capable for essentially the same mobile memory budget.
+const MOBILE_MODEL_ID = 'SmolLM2-360M-Instruct-q4f16_1-MLC'
+const MODEL_LABELS = {
+  [DESKTOP_MODEL_ID]: { name: 'Gemma 2 2B', eyebrow: 'Gemma 2 · 2B · WebGPU', downloadSize: 'roughly 1.5 GB' },
+  [MOBILE_MODEL_ID]: { name: 'SmolLM2 360M', eyebrow: 'SmolLM2 · 360M · WebGPU', downloadSize: 'a few hundred MB' },
+}
+
+function isMobileDevice() {
+  if (typeof navigator === 'undefined') return false
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 2
+}
+
 // The model runs with a 4k-token context window. The system prompt + knowledge
 // base already use a good chunk of that, so cap how much back-and-forth we
 // resend each turn rather than let a long conversation overflow it.
@@ -25,9 +44,12 @@ function isLikelyImmatureWebGpu(message) {
 }
 
 export default function ChatPage() {
+  const modelId = isMobileDevice() ? MOBILE_MODEL_ID : DESKTOP_MODEL_ID
+  const modelInfo = MODEL_LABELS[modelId]
+
   usePageMeta({
     title: 'Fredric Hegland | Local Chat',
-    description: 'Chat with Gemma 2 2B running entirely inside your browser via WebGPU.',
+    description: `Chat with ${modelInfo.name} running entirely inside your browser via WebGPU.`,
   })
 
   const [supported, setSupported] = useState(true)
@@ -93,7 +115,7 @@ export default function ChatPage() {
     setError('')
     try {
       const webllm = await import('@mlc-ai/web-llm')
-      const engine = await webllm.CreateMLCEngine(MODEL_ID, {
+      const engine = await webllm.CreateMLCEngine(modelId, {
         initProgressCallback: (report) => setProgress(report.text),
       })
       engineRef.current = engine
@@ -152,16 +174,16 @@ export default function ChatPage() {
     <>
       <PageHero
         eyebrow="Local Inference"
-        title="Chat with Gemma 2 2B, running entirely in your browser."
+        title={`Chat with ${modelInfo.name}, running entirely in your browser.`}
         description="No server, no API keys, no data leaving your machine. The model downloads once via WebGPU and runs client-side from then on."
       />
 
       <div className="relative mx-auto w-full max-w-4xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
           id="chat"
-          eyebrow="Gemma 2 · 2B · WebGPU"
+          eyebrow={modelInfo.eyebrow}
           title="A small model, entirely local."
-          description="This uses WebLLM to compile and run the model in your browser via WebGPU. The first load downloads roughly 1.5 GB, which your browser then caches. It's given a compact knowledge base about Fredric and the site's solar system, so ask it about either."
+          description={`This uses WebLLM to compile and run the model in your browser via WebGPU. The first load downloads ${modelInfo.downloadSize}, which your browser then caches. It's given a compact knowledge base about Fredric and the site's solar system, so ask it about either.`}
         >
           {!supported ? (
             <p className="rounded-[1rem] border border-amber-300/30 bg-amber-300/10 p-4 text-sm text-amber-100">
