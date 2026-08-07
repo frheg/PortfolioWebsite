@@ -10,7 +10,6 @@ import { useComets } from '../three/useComets'
 import { useScrollCamera } from '../three/useScrollCamera'
 import { useRoutePath } from '../context/RouteContext'
 import PlanetLabels from './PlanetLabels'
-import FlythroughCards from './FlythroughCards'
 
 export default function BackgroundCanvas() {
   const canvasRef = useRef(null)
@@ -73,9 +72,6 @@ export default function BackgroundCanvas() {
         rendererRef={rendererRef}
         isExplore={routePath === '/explore'}
       />
-      {/* Plates stay mounted on every route so they're visible in explore/take-control
-          mode too, not just on the flythrough page itself. */}
-      <FlythroughCards cameraRef={cameraRef} rendererRef={rendererRef} active />
     </>
   )
 }

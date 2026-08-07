@@ -236,55 +236,5 @@
     "website": "https://fredrichegland.no/",
     "location": "Based in Bergen, Norway",
     "note": "Happy to talk about software engineering, applied AI, or any interesting technical problem."
-  },
-  "flythroughCards": [
-    {
-      "path": "/about",
-      "title": "About",
-      "cta": "Full bio",
-      "sections": [
-        { "heading": "Who", "lines": ["Fredric Hegland, Bergen, Norway", "MSc Software Engineering, UiB/HVL", "BSc Computer Technology, UiB"] },
-        { "heading": "Currently", "lines": ["Interning at TV 2 (Digital) on applied AI", "Amitec AS: enterprise chatbot + AI workflows", "Tinkering with a personal AI homelab"] },
-        { "heading": "How I work", "lines": ["Simple tools, clear architecture", "Drawn to the Unix philosophy where it fits", "Understand the whole system, not one layer"] },
-        { "heading": "Off-screen", "lines": ["Neovim on NixOS, learning Emacs", "Cars, sailing, aviation"] }
-      ]
-    },
-    {
-      "path": "/projects",
-      "title": "Projects",
-      "cta": "See projects",
-      "sections": [
-        { "heading": "Featured", "lines": ["Portfolio Website: React, Three.js", "Enterprise Chatbot: Kotlin, Qdrant, Azure", "AI Homelab: vLLM, RAG, self-hosted"] },
-        { "heading": "More", "lines": ["ML experiments & quantum computing ideas", "Low-level/systems exploration (Rust, ASM)", "3 university group projects"] }
-      ]
-    },
-    {
-      "path": "/journey",
-      "title": "Journey",
-      "cta": "Full journey",
-      "sections": [
-        { "heading": "Experience", "lines": ["Summer Intern, TV 2 (Digital), Jun–Aug 2026", "Student SW Engineer, Amitec AS, Nov 2024–present", "Retail & food service roles, 2021–2025"] },
-        { "heading": "Education", "lines": ["MSc Software Eng, UiB/HVL, 2025–2027", "BSc Computer Technology, UiB, 2022–2025"] },
-        { "heading": "Leadership", "lines": ["ITxBergen Leader, 2024–2026", "ITxBergen Board Member, 2022–2026"] }
-      ]
-    },
-    {
-      "path": "/contact",
-      "title": "Contact",
-      "cta": "More",
-      "sections": [
-        { "heading": "Reach me", "lines": ["fredric.hegland@gmail.com", "github.com/frheg", "linkedin.com/in/fredric-hegland"] },
-        { "heading": "Skills", "lines": ["Python, Kotlin, JS/TS, React", "Applied AI, RAG, Qdrant", "Linux, NixOS, Docker, CI/CD"] }
-      ]
-    },
-    {
-      "path": "/chat",
-      "title": "Local Chat",
-      "cta": "Try it",
-      "sections": [
-        { "heading": "What it is", "lines": ["Gemma 2 2B running via WebGPU", "No server, no API keys, nothing leaves your machine"] },
-        { "heading": "What it knows", "lines": ["A condensed knowledge base about Fredric", "Solar system trivia from this site's background"] }
-      ]
-    }
-  ]
+  }
 }

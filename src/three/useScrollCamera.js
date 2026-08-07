@@ -18,7 +18,6 @@ import {
   setExplorePaused,
 } from './exploreState'
 import { setCameraSpeed } from './cameraRuntime'
-import { setActiveStopPath } from './railroadState'
 
 const {
   orbit,
@@ -171,19 +170,6 @@ function shortestAngleDelta(from, to) {
   return Math.atan2(Math.sin(to - from), Math.cos(to - from))
 }
 
-function nearestStopPath(angle) {
-  let bestPath = pageStops[0]?.path ?? fallbackPath
-  let bestDelta = Infinity
-  pageStops.forEach((stop) => {
-    const delta = Math.abs(shortestAngleDelta(angle, stop.angle))
-    if (delta < bestDelta) {
-      bestDelta = delta
-      bestPath = stop.path
-    }
-  })
-  return bestPath
-}
-
 function stepToward(current, target, maxDelta) {
   if (current < target) return Math.min(current + maxDelta, target)
   if (current > target) return Math.max(current - maxDelta, target)
@@ -248,7 +234,6 @@ export function useScrollCamera(cameraRef, routePath) {
   const displayProgressRef = useRef(0)
   const pageScrollRangeRef = useRef(typeof window === 'undefined' ? 1 : Math.max(measureScrollRange(), 1))
   const railroadAngleRef = useRef(pageStops[0]?.angle ?? 0)
-  const railroadVelocityRef = useRef(0)
 
   const routeRef = useRef(routePath)
   const transFromRef = useRef(null)
@@ -435,55 +420,6 @@ export function useScrollCamera(cameraRef, routePath) {
     }
   }, [routePath])
 
-  useEffect(() => {
-    if (!isFlythroughRoute(routePath)) return undefined
-
-    let lastTouchY = null
-
-    const onWheel = (event) => {
-      event.preventDefault()
-      railroadVelocityRef.current = clamp(
-        railroadVelocityRef.current + event.deltaY * flythroughConfig.scrollSensitivity,
-        -flythroughConfig.maxNudge,
-        flythroughConfig.maxNudge
-      )
-    }
-
-    const onTouchStart = (event) => {
-      lastTouchY = event.touches[0]?.clientY ?? null
-    }
-
-    const onTouchMove = (event) => {
-      if (lastTouchY === null || event.touches.length === 0) return
-      const touchY = event.touches[0].clientY
-      const dy = lastTouchY - touchY
-      lastTouchY = touchY
-      railroadVelocityRef.current = clamp(
-        railroadVelocityRef.current + dy * flythroughConfig.touchScrollSensitivity,
-        -flythroughConfig.maxNudge,
-        flythroughConfig.maxNudge
-      )
-    }
-
-    const onTouchEnd = () => {
-      lastTouchY = null
-    }
-
-    window.addEventListener('wheel', onWheel, { passive: false })
-    window.addEventListener('touchstart', onTouchStart, { passive: true })
-    window.addEventListener('touchmove', onTouchMove, { passive: true })
-    window.addEventListener('touchend', onTouchEnd)
-    window.addEventListener('touchcancel', onTouchEnd)
-
-    return () => {
-      window.removeEventListener('wheel', onWheel)
-      window.removeEventListener('touchstart', onTouchStart)
-      window.removeEventListener('touchmove', onTouchMove)
-      window.removeEventListener('touchend', onTouchEnd)
-      window.removeEventListener('touchcancel', onTouchEnd)
-    }
-  }, [routePath])
-
   if (routePath !== routeRef.current) {
     const camera = cameraRef.current
     const currentIsExplore = isExploreRoute(routeRef.current)
@@ -512,7 +448,6 @@ export function useScrollCamera(cameraRef, routePath) {
           ? findNearestLoopAngle(transFromRef.current)
           : pageStops[0]?.angle ?? 0
         railroadAngleRef.current = targetAngle
-        railroadVelocityRef.current = 0
         transToRef.current = poseForLoopAngle(targetAngle)
       } else {
         const nextSegment = getPageSegment(routePath)
@@ -803,14 +738,14 @@ export function useScrollCamera(cameraRef, routePath) {
         settleFramesRef.current -= 1
         jumpToTop()
       } else {
-        railroadVelocityRef.current += (0 - railroadVelocityRef.current) * flythroughConfig.nudgeDecay
-        railroadAngleRef.current -=
-          (flythroughConfig.autoplaySpeed + railroadVelocityRef.current) * deltaSeconds
+        // Purely a background effect now — no scroll/touch nudge, since "/"
+        // has real scrollable page content in front of it again and capturing
+        // wheel input here would fight that content's own scrolling.
+        railroadAngleRef.current -= flythroughConfig.autoplaySpeed * deltaSeconds
       }
 
       const pose = poseForLoopAngle(railroadAngleRef.current)
       camera.position.set(pose.x, pose.y, pose.z)
-      setActiveStopPath(nearestStopPath(railroadAngleRef.current))
     }
 
     const dx = orbit.center.x - camera.position.x
