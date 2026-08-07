@@ -12,13 +12,13 @@ export default function NotFoundPage() {
   return (
     <>
       <PageHero
-        eyebrow="Lost in Space"
-        title="That page drifted out of orbit."
-        description="The route exists in neither this galaxy nor the next, but the rest of the site is still intact."
+        eyebrow="404"
+        title="Page not found."
+        description="This route doesn't exist. The rest of the site is still here."
       />
 
       <div className="relative mx-auto w-full max-w-6xl px-4 pb-20 text-left sm:px-6 lg:px-8">
-        <SectionCard title="Return to base" description="The easiest way back is to head to the home page and continue from there.">
+        <SectionCard title="Go back home" description="Head back to the home page and continue from there.">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-300/18"

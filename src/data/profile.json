@@ -3,8 +3,8 @@
   "location": "Bergen, Norway",
   "hero": {
     "eyebrow": "Software Engineering Student",
-    "headline": "I build software, and I'm still learning what makes it good.",
-    "description": "Master's student working across backend, frontend, and applied AI: agentic systems, LLM harnesses, and RAG.",
+    "headline": "I work across backend, frontend, and applied AI.",
+    "description": "Master's student in Software Engineering, currently focused on agentic systems, LLM harnesses, and RAG.",
     "primaryCtaLabel": "See my projects",
     "primaryCtaHref": "/projects",
     "secondaryCtaLabel": "Get in touch",
@@ -101,7 +101,7 @@
     {
       "name": "Portfolio Website",
       "description": "This site, built with React, Vite, and a custom Three.js background with starfields, galaxies, comets, and scroll-driven camera motion.",
-      "highlight": "An ongoing excuse to keep tinkering with the details.",
+      "highlight": "Actively maintained, updated as the site changes.",
       "type": "Personal",
       "status": "Live",
       "featured": true,
@@ -111,7 +111,7 @@
     {
       "name": "Enterprise Chatbot",
       "description": "Business logic, architecture, networking, databases, and retrieval-augmented AI for a production chatbot.",
-      "highlight": "Broad systems work with real users and real constraints, still in progress.",
+      "highlight": "Full-stack work on a production system, still in progress.",
       "type": "Professional",
       "status": "In progress",
       "featured": true,
@@ -120,7 +120,7 @@
     {
       "name": "Personal AI Homelab",
       "description": "A local AI agent on my own hardware: open-source models, vLLM inference, RAG via Qdrant, tool use for search and utilities.",
-      "highlight": "Where curiosity turns into tinkering with agents, retrieval, and self-hosted infrastructure.",
+      "highlight": "Hands-on practice with agents, retrieval, and self-hosted infrastructure.",
       "type": "Personal",
       "status": "Self-hosted",
       "featured": true,

@@ -21,7 +21,7 @@ export default function HomePage() {
         <SectionCard
           id="about"
           eyebrow="About"
-          title="A quick read on what I do and where I'm headed."
+          title="A quick overview of what I do."
         >
           <div className="space-y-4 sm:space-y-6">
             <p className="text-base leading-7 text-slate-100/88 sm:text-lg sm:leading-8">{profile.about}</p>

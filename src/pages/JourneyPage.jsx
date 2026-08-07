@@ -21,7 +21,7 @@ export default function JourneyPage() {
     <>
       <PageHero
         eyebrow="Trajectory"
-        title="Work, study, and a few responsibilities that shaped how I think."
+        title="Work, study, and leadership roles."
         description="Experience, education, and leadership, in brief."
         actions={[
           { label: 'Experience', href: '#journey' },

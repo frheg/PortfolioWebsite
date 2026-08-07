@@ -24,13 +24,11 @@ const {
   pageStops,
   scroll: scrollConfig,
   explore: exploreConfig,
-  flythrough: flythroughConfig,
   transitionLerp,
 } = spaceConfig.camera
 const TWO_PI = Math.PI * 2
 const fallbackPath = pageStops[0]?.path || '/'
 const EXPLORE_PATH = '/explore'
-const FLYTHROUGH_PATH = '/'
 
 function buildPageSegments(stops) {
   const segments = new Map()
@@ -56,81 +54,13 @@ function buildPageSegments(stops) {
 }
 
 const pageSegments = buildPageSegments(pageStops)
-// The stops now tile the whole ellipse continuously, so chaining every segment
-// in stop order gives one seamless loop for the flythrough to travel along.
-const loopSegments = Array.from(pageSegments.values())
-const loopTopAngle = loopSegments[0]?.startAngle ?? 0
 
 function isExploreRoute(pathname) {
   return pathname === EXPLORE_PATH
 }
 
-function isFlythroughRoute(pathname) {
-  return pathname === FLYTHROUGH_PATH
-}
-
 function getPageSegment(pathname) {
   return pageSegments.get(pathname) || pageSegments.get(fallbackPath)
-}
-
-function poseForLoopAngle(rawAngle) {
-  let normalized = rawAngle
-  while (normalized > loopTopAngle) normalized -= TWO_PI
-  while (normalized <= loopTopAngle - TWO_PI) normalized += TWO_PI
-
-  for (const segment of loopSegments) {
-    if (normalized <= segment.startAngle && normalized >= segment.endAngle) {
-      const span = segment.startAngle - segment.endAngle
-      const t = span > 0 ? (segment.startAngle - normalized) / span : 0
-      return poseForSegment(segment, t)
-    }
-  }
-
-  return poseForSegment(loopSegments[0], 0)
-}
-
-// "Return to railroad" needs the closest point on the loop to wherever
-// free-flight left off. The ellipse's angle isn't evenly spaced in arc
-// length, so this samples the loop coarsely, then refines around the best
-// sample — cheap, and only ever runs once per explore→flythrough transition.
-const NEAREST_ANGLE_SAMPLES = 360
-
-function findNearestLoopAngle(position) {
-  let bestAngle = loopTopAngle
-  let bestDistSq = Infinity
-
-  for (let i = 0; i < NEAREST_ANGLE_SAMPLES; i += 1) {
-    const angle = loopTopAngle - (TWO_PI * i) / NEAREST_ANGLE_SAMPLES
-    const pose = poseForLoopAngle(angle)
-    const dx = pose.x - position.x
-    const dy = pose.y - position.y
-    const dz = pose.z - position.z
-    const distSq = dx * dx + dy * dy + dz * dz
-    if (distSq < bestDistSq) {
-      bestDistSq = distSq
-      bestAngle = angle
-    }
-  }
-
-  const refineStep = TWO_PI / NEAREST_ANGLE_SAMPLES / 10
-  let refinedAngle = bestAngle
-  let refinedDistSq = bestDistSq
-
-  for (let i = -9; i <= 9; i += 1) {
-    if (i === 0) continue
-    const angle = bestAngle + refineStep * i
-    const pose = poseForLoopAngle(angle)
-    const dx = pose.x - position.x
-    const dy = pose.y - position.y
-    const dz = pose.z - position.z
-    const distSq = dx * dx + dy * dy + dz * dz
-    if (distSq < refinedDistSq) {
-      refinedDistSq = distSq
-      refinedAngle = angle
-    }
-  }
-
-  return refinedAngle
 }
 
 function clamp(value, min, max) {
@@ -233,7 +163,6 @@ export function useScrollCamera(cameraRef, routePath) {
   const currentRollRef = useRef(0)
   const displayProgressRef = useRef(0)
   const pageScrollRangeRef = useRef(typeof window === 'undefined' ? 1 : Math.max(measureScrollRange(), 1))
-  const railroadAngleRef = useRef(pageStops[0]?.angle ?? 0)
 
   const routeRef = useRef(routePath)
   const transFromRef = useRef(null)
@@ -441,18 +370,8 @@ export function useScrollCamera(cameraRef, routePath) {
       routeRef.current = routePath
       if (!currentIsExplore) resetExploreInput()
     } else {
-      if (isFlythroughRoute(routePath)) {
-        // Returning from free-flight resumes at the nearest point on the
-        // loop; arriving from any other route resumes at Home.
-        const targetAngle = currentIsExplore
-          ? findNearestLoopAngle(transFromRef.current)
-          : pageStops[0]?.angle ?? 0
-        railroadAngleRef.current = targetAngle
-        transToRef.current = poseForLoopAngle(targetAngle)
-      } else {
-        const nextSegment = getPageSegment(routePath)
-        transToRef.current = poseForSegment(nextSegment, 0)
-      }
+      const nextSegment = getPageSegment(routePath)
+      transToRef.current = poseForSegment(nextSegment, 0)
       transTRef.current = 0
       settleFramesRef.current = 0
       displayProgressRef.current = 0
@@ -706,70 +625,6 @@ export function useScrollCamera(cameraRef, routePath) {
     camera.rotation.z = currentRollRef.current
   }
 
-  // Same transition-in easing and sun-facing orientation as updateScrollRoute,
-  // but once settled the camera drifts continuously around the full loop
-  // (autoplay + scroll/touch nudge) instead of following one page's segment.
-  const updateFlythrough = (camera, deltaSeconds) => {
-    if (Math.abs(camera.fov - baseFovRef.current) > 0.01) {
-      camera.fov += (baseFovRef.current - camera.fov) * Math.max(exploreConfig.fovLerp, 0.1)
-      camera.updateProjectionMatrix()
-    }
-
-    if (transTRef.current < 1) {
-      jumpToTop()
-      displayProgressRef.current = 0
-      transTRef.current = Math.min(transTRef.current + transitionLerp, 1)
-
-      const t = transTRef.current
-      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
-      const pose = lerp(transFromRef.current, transToRef.current, ease)
-
-      camera.position.set(pose.x, pose.y, pose.z)
-
-      if (transTRef.current >= 1) {
-        camera.position.set(transToRef.current.x, transToRef.current.y, transToRef.current.z)
-        settleFramesRef.current = scrollConfig.lockFrames
-        // railroadAngleRef is already set to the resume angle by the route
-        // transition above (nearest point when returning from explore, or
-        // Home when arriving fresh).
-      }
-    } else {
-      if (settleFramesRef.current > 0) {
-        settleFramesRef.current -= 1
-        jumpToTop()
-      } else {
-        // Purely a background effect now — no scroll/touch nudge, since "/"
-        // has real scrollable page content in front of it again and capturing
-        // wheel input here would fight that content's own scrolling.
-        railroadAngleRef.current -= flythroughConfig.autoplaySpeed * deltaSeconds
-      }
-
-      const pose = poseForLoopAngle(railroadAngleRef.current)
-      camera.position.set(pose.x, pose.y, pose.z)
-    }
-
-    const dx = orbit.center.x - camera.position.x
-    const dz = orbit.center.z - camera.position.z
-    const yawDesired = Math.atan2(-dx, -dz)
-    const shouldSnapYaw = transTRef.current < 1 || settleFramesRef.current > 0
-
-    currentPitchRef.current = transTRef.current < 1
-      ? currentPitchRef.current + (0 - currentPitchRef.current) * 0.12
-      : 0
-    currentRollRef.current += (0 - currentRollRef.current) * 0.14
-
-    if (shouldSnapYaw) {
-      currentYawRef.current = yawDesired
-    } else {
-      currentYawRef.current +=
-        shortestAngleDelta(currentYawRef.current, yawDesired) * scrollConfig.rotLerp
-    }
-
-    camera.rotation.x = currentPitchRef.current
-    camera.rotation.y = currentYawRef.current
-    camera.rotation.z = currentRollRef.current
-  }
-
   const update = (deltaSeconds = 1 / 60) => {
     const camera = cameraRef.current
     if (!camera) return
@@ -788,12 +643,6 @@ export function useScrollCamera(cameraRef, routePath) {
 
     boostTimeRef.current = 0
     setCameraSpeed(0) // not in explore — reset so audio returns to idle
-
-    if (isFlythroughRoute(routeRef.current)) {
-      updateFlythrough(camera, deltaSeconds)
-      return
-    }
-
     updateScrollRoute(camera)
   }
 

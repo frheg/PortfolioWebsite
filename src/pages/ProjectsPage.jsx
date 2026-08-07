@@ -18,7 +18,7 @@ export default function ProjectsPage() {
     <>
       <PageHero
         eyebrow="Build Log"
-        title="Projects, experiments, and the things I learn by building."
+        title="Projects, experiments, and course work."
         description="Finished, in-progress, and side experiments."
         actions={[
           { label: 'Featured', href: '#projects' },

@@ -37,9 +37,6 @@ export const spaceConfig = {
       snapThreshold: 0.001,
       lockFrames: 8,
     },
-    flythrough: {
-      autoplaySpeed: 0.05, // rad/sec constant drift around the loop (background effect only)
-    },
     explore: {
       moveSpeed: 38,
       boostMultiplier: 3.8,
