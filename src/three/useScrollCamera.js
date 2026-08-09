@@ -1,8 +1,11 @@
-// Map content routes to a fixed orbit segment and switch to free-flight on /explore.
+// Drives the camera along a continuous orbit path as the user scrolls the
+// merged long page, and switches to free-flight on /explore.
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { getSolarCollisionBodies } from './solarSystemRuntime'
+import { getChapterOffsets } from './scrollChapters'
+import { setScrollVelocity } from './scrollVelocity'
 import {
   addExploreLook,
   consumeExploreLook,
@@ -26,41 +29,30 @@ const {
   explore: exploreConfig,
   transitionLerp,
 } = spaceConfig.camera
-const TWO_PI = Math.PI * 2
-const fallbackPath = pageStops[0]?.path || '/'
 const EXPLORE_PATH = '/explore'
 
-function buildPageSegments(stops) {
-  const segments = new Map()
-
-  for (let index = 0; index < stops.length; index += 1) {
+// N-1 segments across pageStops in document order — no wraparound. The
+// last chapter (chat) has no segment starting at it; scroll past its
+// offset just clamps at t=1 of the final segment (see findChapterPose).
+function buildChapterSegments(stops) {
+  const segments = []
+  for (let index = 0; index < stops.length - 1; index += 1) {
     const stop = stops[index]
-    const nextStop = stops[(index + 1) % stops.length]
-    let endAngle = nextStop.angle
-
-    while (endAngle >= stop.angle) {
-      endAngle -= TWO_PI
-    }
-
-    segments.set(stop.path, {
+    const nextStop = stops[index + 1]
+    segments.push({
       startAngle: stop.angle,
-      endAngle,
+      endAngle: nextStop.angle,
       startHeightOffset: stop.heightOffset,
       endHeightOffset: nextStop.heightOffset,
     })
   }
-
   return segments
 }
 
-const pageSegments = buildPageSegments(pageStops)
+const chapterSegments = buildChapterSegments(pageStops)
 
 function isExploreRoute(pathname) {
   return pathname === EXPLORE_PATH
-}
-
-function getPageSegment(pathname) {
-  return pageSegments.get(pathname) || pageSegments.get(fallbackPath)
 }
 
 function clamp(value, min, max) {
@@ -88,6 +80,47 @@ function poseForSegment(segment, progress) {
   return orbitPos(angle, heightOffset)
 }
 
+// Pose for a chapter's own stop (t=0 of the segment starting there, or the
+// end pose of the final segment for the last chapter). Used for transition
+// targets/fallbacks — not used in the per-frame scroll-driven steady state.
+function poseForChapterPath(path) {
+  const index = pageStops.findIndex((stop) => stop.path === path)
+  if (index < 0) return orbitPos(pageStops[0].angle, pageStops[0].heightOffset)
+  if (index >= chapterSegments.length) {
+    return poseForSegment(chapterSegments[chapterSegments.length - 1], 1)
+  }
+  return poseForSegment(chapterSegments[index], 0)
+}
+
+// Steady-state pose: find which pair of measured chapter offsets scrollY
+// falls between, then interpolate within that segment. Falls back to the
+// first chapter's start pose if offsets haven't been measured/published yet.
+function findChapterPose(chapterOffsets, scrollY) {
+  if (chapterOffsets.length < chapterSegments.length + 1) {
+    return poseForSegment(chapterSegments[0], 0)
+  }
+
+  let index = 0
+  for (let i = 1; i < chapterOffsets.length - 1; i += 1) {
+    if (scrollY >= chapterOffsets[i]) index = i
+  }
+
+  const segment = chapterSegments[index]
+  const segStart = chapterOffsets[index]
+  const segEnd = chapterOffsets[index + 1]
+  const span = Math.max(segEnd - segStart, 1)
+  const t = clamp01((scrollY - segStart) / span)
+
+  return poseForSegment(segment, t)
+}
+
+function chapterOffsetForPath(path) {
+  const offsets = getChapterOffsets()
+  const index = pageStops.findIndex((stop) => stop.path === path)
+  if (index < 0 || index >= offsets.length) return 0
+  return offsets[index]
+}
+
 function lerp(a, b, t) {
   return {
     x: a.x + (b.x - a.x) * t,
@@ -113,7 +146,10 @@ function measureScrollRange() {
   return Math.max(fullHeight - window.innerHeight, 0)
 }
 
-function jumpToTop() {
+// Pins document scroll at a given offset (used only while easing the
+// camera between /explore and the merged page — during that window scroll
+// is not driving the camera, so it's held steady at the target chapter).
+function pinScrollToChapter(offsetY) {
   const doc = document.documentElement
   const body = document.body
   const prevDocBehavior = doc.style.scrollBehavior
@@ -121,7 +157,7 @@ function jumpToTop() {
 
   doc.style.scrollBehavior = 'auto'
   body.style.scrollBehavior = 'auto'
-  window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  window.scrollTo({ top: offsetY, left: 0, behavior: 'auto' })
   doc.style.scrollBehavior = prevDocBehavior
   body.style.scrollBehavior = prevBodyBehavior
 }
@@ -161,8 +197,9 @@ export function useScrollCamera(cameraRef, routePath) {
   const currentYawRef = useRef(0)
   const currentPitchRef = useRef(0)
   const currentRollRef = useRef(0)
-  const displayProgressRef = useRef(0)
   const pageScrollRangeRef = useRef(typeof window === 'undefined' ? 1 : Math.max(measureScrollRange(), 1))
+  const lastScrollYRef = useRef(typeof window === 'undefined' ? 0 : window.scrollY || 0)
+  const scrollVelocityBlendRef = useRef(0)
 
   const routeRef = useRef(routePath)
   const transFromRef = useRef(null)
@@ -349,15 +386,18 @@ export function useScrollCamera(cameraRef, routePath) {
     }
   }, [routePath])
 
-  if (routePath !== routeRef.current) {
+  // Only a genuine explore-mode boundary crossing triggers the hard
+  // snap/settle transition below. Navigating between the 5 merged-page
+  // routes changes routePath (e.g. via useActiveSection's scroll-sync
+  // replace()) without one of these firing — scroll position keeps driving
+  // the camera continuously across chapters instead.
+  if (isExploreRoute(routePath) !== isExploreRoute(routeRef.current)) {
     const camera = cameraRef.current
-    const currentIsExplore = isExploreRoute(routeRef.current)
     const nextIsExplore = isExploreRoute(routePath)
-    const previousSegment = getPageSegment(routeRef.current)
 
     transFromRef.current = camera
       ? { x: camera.position.x, y: camera.position.y, z: camera.position.z }
-      : poseForSegment(previousSegment, displayProgressRef.current)
+      : poseForChapterPath(routeRef.current)
 
     if (nextIsExplore) {
       currentYawRef.current = camera?.rotation.y ?? currentYawRef.current
@@ -369,20 +409,21 @@ export function useScrollCamera(cameraRef, routePath) {
       settleFramesRef.current = 0
       routeRef.current = routePath
       baseFovRef.current = exploreConfig.baseFov ?? spaceConfig.renderer.fov
-      if (!currentIsExplore) resetExploreInput()
+      resetExploreInput()
+      scrollVelocityBlendRef.current = 0
+      setScrollVelocity(0)
     } else {
-      const nextSegment = getPageSegment(routePath)
-      transToRef.current = poseForSegment(nextSegment, 0)
+      transToRef.current = poseForChapterPath(routePath)
       transTRef.current = 0
       settleFramesRef.current = 0
-      displayProgressRef.current = 0
-      pageScrollRangeRef.current = 1
       velocityRef.current.set(0, 0, 0)
       targetVelocityRef.current.set(0, 0, 0)
       routeRef.current = routePath
       baseFovRef.current = spaceConfig.renderer.fov
       resetExploreInput()
     }
+  } else {
+    routeRef.current = routePath
   }
 
   const clampExplorePosition = (position) => {
@@ -559,15 +600,15 @@ export function useScrollCamera(cameraRef, routePath) {
     return boostActive && velocityRef.current.lengthSq() > 0.05
   }
 
-  const updateScrollRoute = (camera) => {
+  const updateScrollRoute = (camera, deltaSeconds) => {
     if (Math.abs(camera.fov - baseFovRef.current) > 0.01) {
       camera.fov += (baseFovRef.current - camera.fov) * Math.max(exploreConfig.fovLerp, 0.1)
       camera.updateProjectionMatrix()
     }
 
     if (transTRef.current < 1) {
-      jumpToTop()
-      displayProgressRef.current = 0
+      pinScrollToChapter(chapterOffsetForPath(routeRef.current))
+      lastScrollYRef.current = window.scrollY || 0
       transTRef.current = Math.min(transTRef.current + transitionLerp, 1)
 
       const t = transTRef.current
@@ -581,9 +622,7 @@ export function useScrollCamera(cameraRef, routePath) {
         settleFramesRef.current = scrollConfig.lockFrames
       }
     } else {
-      const segment = getPageSegment(routeRef.current)
-
-      // Keep self-correcting, not just right after a route change — on a
+      // Keep self-correcting, not just right after a transition — on a
       // fresh/direct load there's no transition to trigger a remeasure, so
       // the very first (pre-layout) guess would otherwise stick for the
       // whole visit while images/fonts/lazy content still grow the page.
@@ -591,23 +630,20 @@ export function useScrollCamera(cameraRef, routePath) {
 
       if (settleFramesRef.current > 0) {
         settleFramesRef.current -= 1
-        jumpToTop()
-        displayProgressRef.current = 0
+        pinScrollToChapter(chapterOffsetForPath(routeRef.current))
+        lastScrollYRef.current = window.scrollY || 0
       } else {
-        const scrollRange = pageScrollRangeRef.current
-        const targetProgress = scrollRange > 0 ? clamp01((window.scrollY || 0) / scrollRange) : 0
+        const scrollY = window.scrollY || 0
+        const pose = findChapterPose(getChapterOffsets(), scrollY)
+        camera.position.set(pose.x, pose.y, pose.z)
 
-        if (targetProgress <= scrollConfig.snapThreshold) {
-          displayProgressRef.current = 0
-        } else if (targetProgress >= 1 - scrollConfig.snapThreshold) {
-          displayProgressRef.current = 1
-        } else {
-          displayProgressRef.current = targetProgress
-        }
+        const scrollRange = pageScrollRangeRef.current || 1
+        const rawVelocity = Math.abs(scrollY - lastScrollYRef.current) / scrollRange / Math.max(deltaSeconds, 1 / 120)
+        lastScrollYRef.current = scrollY
+        const velocityTarget = clamp01(rawVelocity / scrollConfig.velocityBoostThreshold)
+        scrollVelocityBlendRef.current += (velocityTarget - scrollVelocityBlendRef.current) * scrollConfig.velocityLerp
+        setScrollVelocity(scrollVelocityBlendRef.current)
       }
-
-      const pose = poseForSegment(segment, displayProgressRef.current)
-      camera.position.set(pose.x, pose.y, pose.z)
     }
 
     const dx = orbit.center.x - camera.position.x
@@ -650,7 +686,7 @@ export function useScrollCamera(cameraRef, routePath) {
 
     boostTimeRef.current = 0
     setCameraSpeed(0) // not in explore — reset so audio returns to idle
-    updateScrollRoute(camera)
+    updateScrollRoute(camera, deltaSeconds)
   }
 
   return { update }

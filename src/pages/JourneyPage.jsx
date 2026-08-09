@@ -1,7 +1,6 @@
-import PageHero from '../components/PageHero'
+import ChapterIntro from '../components/ui/ChapterIntro'
 import SectionCard from '../components/ui/SectionCard'
 import OrbitDisclosure from '../components/ui/OrbitDisclosure'
-import { usePageMeta } from '../hooks/usePageMeta'
 import profile from '../data/profile.json'
 
 function splitDetails(text) {
@@ -12,14 +11,9 @@ function splitDetails(text) {
 }
 
 export default function JourneyPage() {
-  usePageMeta({
-    title: 'Fredric Hegland | Journey',
-    description: 'Experience, education, leadership, and learning journey for Fredric Hegland.',
-  })
-
   return (
     <>
-      <PageHero
+      <ChapterIntro
         eyebrow="Trajectory"
         title="Work, study, and leadership roles."
         description="Experience, education, and leadership, in brief."

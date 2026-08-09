@@ -10,21 +10,23 @@ import { useExploreAudio } from './hooks/useExploreAudio'
 import { RouteProvider } from './context/RouteProvider'
 import ExploreMobileControls from './components/ExploreMobileControls'
 import FloatingNav from './components/FloatingNav'
+import { chapterOrder } from './content/chapterMeta'
+import { prefersReducedMotion } from './utils/motion'
 
 const BackgroundCanvas = lazy(() => import('./components/BackgroundCanvas'))
-const HomePage = lazy(() => import('./pages/HomePage'))
-const ProjectsPage = lazy(() => import('./pages/ProjectsPage'))
-const JourneyPage = lazy(() => import('./pages/JourneyPage'))
-const ContactPage = lazy(() => import('./pages/ContactPage'))
+// One reference, reused across all 5 merged-page routes below — React
+// Router reconciles by element type + tree position with no per-route key,
+// so navigating between these routes does not remount LongPage, as long as
+// it's this same lazy() reference every time.
+const LongPage = lazy(() => import('./pages/LongPage'))
 const ExplorePage = lazy(() => import('./pages/ExplorePage'))
-const ChatPage = lazy(() => import('./pages/ChatPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 const ROUTE_EXIT_MS = 220
 const ROUTE_ENTER_MS = 420
 
-function prefersReducedMotion() {
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+function isMergedPath(pathname) {
+  return chapterOrder.includes(pathname)
 }
 
 export default function App() {
@@ -43,7 +45,11 @@ export default function App() {
   useEffect(() => {
     if (location.pathname === displayedPathRef.current) return undefined
 
-    if (prefersReducedMotion()) {
+    const skipTransition =
+      prefersReducedMotion() ||
+      (isMergedPath(displayedPathRef.current) && isMergedPath(location.pathname))
+
+    if (skipTransition) {
       setDisplayedLocation(latestLocationRef.current)
       displayedPathRef.current = latestLocationRef.current.pathname
       setRouteStage('idle')
@@ -96,12 +102,12 @@ export default function App() {
       <div className={routeStageClassName}>
         <Suspense fallback={<div className="route-loading" />}>
           <Routes location={displayedLocation}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/journey" element={<JourneyPage />} />
-            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/" element={<LongPage />} />
+            <Route path="/projects" element={<LongPage />} />
+            <Route path="/journey" element={<LongPage />} />
+            <Route path="/contact" element={<LongPage />} />
+            <Route path="/chat" element={<LongPage />} />
             <Route path="/explore" element={<ExplorePage />} />
-            <Route path="/chat" element={<ChatPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

@@ -1,3 +1,7 @@
+import { useEffect, useRef } from 'react'
+import { loadGsap } from '../../utils/gsapLoader'
+import { prefersReducedMotion } from '../../utils/motion'
+
 export default function SectionCard({
   id,
   eyebrow,
@@ -7,8 +11,38 @@ export default function SectionCard({
   className = '',
   contentClassName = '',
 }) {
+  const sectionRef = useRef(null)
+
+  useEffect(() => {
+    if (prefersReducedMotion()) return undefined
+    let scrollTrigger
+    let cancelled = false
+
+    loadGsap().then(({ gsap }) => {
+      if (cancelled || !sectionRef.current) return
+      const tween = gsap.from(sectionRef.current, {
+        autoAlpha: 0,
+        y: 40,
+        duration: 0.7,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 85%',
+          toggleActions: 'play none none none',
+        },
+      })
+      scrollTrigger = tween.scrollTrigger
+    })
+
+    return () => {
+      cancelled = true
+      scrollTrigger?.kill()
+    }
+  }, [])
+
   return (
     <section
+      ref={sectionRef}
       id={id}
       className={`relative z-10 my-16 scroll-mt-6 overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4 shadow-[0_30px_80px_rgba(8,15,35,0.45)] backdrop-blur-xl sm:my-20 sm:rounded-[2rem] sm:p-6 md:my-28 md:p-8 ${className}`}
       aria-labelledby={title ? `${id}-title` : undefined}

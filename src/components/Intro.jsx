@@ -1,10 +1,69 @@
+import { useEffect, useRef } from 'react'
 import selfPortrait from '../assets/Pictures/SelfPortrait-1400.webp'
 import { Link } from 'react-router-dom'
 import profile from '../data/profile.json'
+import { loadGsap } from '../utils/gsapLoader'
+import { prefersReducedMotion } from '../utils/motion'
 
 export default function Intro() {
+  const sectionRef = useRef(null)
+  const eyebrowRef = useRef(null)
+  const headlineRef = useRef(null)
+  const ctaRef = useRef(null)
+  const factsRef = useRef(null)
+  const panelRef = useRef(null)
+
+  useEffect(() => {
+    if (prefersReducedMotion()) return undefined
+    let scrollTrigger
+    let cancelled = false
+
+    loadGsap().then(({ gsap }) => {
+      if (cancelled || !sectionRef.current) return
+
+      // Entrance: plays once on mount, not scroll-triggered — this is the
+      // first thing a visitor sees.
+      gsap.from(
+        [eyebrowRef.current, headlineRef.current, ctaRef.current, factsRef.current, panelRef.current],
+        {
+          autoAlpha: 0,
+          y: 28,
+          duration: 0.8,
+          ease: 'power2.out',
+          stagger: 0.12,
+        }
+      )
+
+      // Brief pinned settle before handing off to the About section beneath
+      // — a subtle scale/fade so the release feels intentional rather than
+      // an abrupt cut.
+      const pinTimeline = gsap.timeline({
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top top',
+          end: '+=45%',
+          scrub: 0.6,
+          pin: true,
+          pinSpacing: true,
+        },
+      })
+      pinTimeline.to(sectionRef.current, { scale: 0.97, autoAlpha: 0.6, ease: 'power1.inOut' })
+
+      scrollTrigger = pinTimeline.scrollTrigger
+    })
+
+    return () => {
+      cancelled = true
+      scrollTrigger?.kill()
+    }
+  }, [])
+
   return (
-    <section id="welcome" className="relative flex min-h-[100svh] items-start px-4 pb-12 pt-10 sm:min-h-screen sm:px-6 sm:pb-14 sm:pt-14 lg:items-center lg:px-8 lg:pt-16">
+    <section
+      ref={sectionRef}
+      id="welcome"
+      className="relative flex min-h-[100svh] items-start px-4 pb-12 pt-10 sm:min-h-screen sm:px-6 sm:pb-14 sm:pt-14 lg:items-center lg:px-8 lg:pt-16"
+    >
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="hero-glow hero-glow-one" />
         <div className="hero-glow hero-glow-two" />
@@ -12,11 +71,14 @@ export default function Intro() {
 
       <div className="relative z-10 mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-12">
         <div className="space-y-5 sm:space-y-6 lg:space-y-8">
-          <div className="inline-flex max-w-full items-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.24em] text-cyan-100 shadow-[0_0_30px_rgba(103,232,249,0.12)] sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.32em]">
+          <div
+            ref={eyebrowRef}
+            className="inline-flex max-w-full items-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.24em] text-cyan-100 shadow-[0_0_30px_rgba(103,232,249,0.12)] sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.32em]"
+          >
             {profile.hero.eyebrow}
           </div>
 
-          <div className="space-y-4 sm:space-y-5">
+          <div ref={headlineRef} className="space-y-4 sm:space-y-5">
             <p className="text-[0.72rem] uppercase tracking-[0.24em] text-cyan-300/70 sm:text-sm sm:tracking-[0.4em]">{profile.location}</p>
             <h1 className="max-w-4xl font-display text-[2rem] font-semibold leading-[1.05] tracking-[0.02em] text-white sm:text-5xl lg:text-7xl">
               {profile.hero.headline}
@@ -26,7 +88,7 @@ export default function Intro() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-3">
+          <div ref={ctaRef} className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:gap-3">
             <Link
               to={profile.hero.primaryCtaHref}
               className="inline-flex min-h-12 items-center justify-center rounded-full border border-cyan-300/50 bg-cyan-300/15 px-6 py-3 text-sm font-semibold text-cyan-50 transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-300/25 sm:min-h-0"
@@ -41,7 +103,7 @@ export default function Intro() {
             </Link>
           </div>
 
-          <div className="flex flex-wrap gap-2 sm:gap-3">
+          <div ref={factsRef} className="flex flex-wrap gap-2 sm:gap-3">
             {profile.quickFacts.map((fact) => (
               <span key={fact} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[0.78rem] text-slate-100/90 backdrop-blur-sm sm:px-4 sm:py-2 sm:text-sm">
                 {fact}
@@ -50,7 +112,7 @@ export default function Intro() {
           </div>
         </div>
 
-        <div className="relative mx-auto w-full max-w-md lg:max-w-none">
+        <div ref={panelRef} className="relative mx-auto w-full max-w-md lg:max-w-none">
           <div className="absolute -inset-8 rounded-full bg-cyan-400/10 blur-3xl" aria-hidden="true" />
           <div className="relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-slate-950/45 p-4 shadow-[0_30px_80px_rgba(8,15,35,0.55)] backdrop-blur-xl sm:rounded-[2rem] sm:p-5">
             <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />

@@ -1,6 +1,5 @@
-import PageHero from '../components/PageHero'
+import ChapterIntro from '../components/ui/ChapterIntro'
 import SectionCard from '../components/ui/SectionCard'
-import { usePageMeta } from '../hooks/usePageMeta'
 import profile from '../data/profile.json'
 
 function formatLastUpdated() {
@@ -12,14 +11,9 @@ function formatLastUpdated() {
 }
 
 export default function ContactPage() {
-  usePageMeta({
-    title: 'Fredric Hegland | Contact',
-    description: 'Contact Fredric Hegland and browse skills, tools, and ways to connect.',
-  })
-
   return (
     <>
-      <PageHero
+      <ChapterIntro
         eyebrow="Toolkit and Contact"
         title="Skills, tools, and the best ways to reach me."
         description="What I work with, and where to find me."

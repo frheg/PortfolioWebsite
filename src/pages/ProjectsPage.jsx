@@ -1,22 +1,16 @@
 import SectionCard from '../components/ui/SectionCard'
 import OrbitDisclosure from '../components/ui/OrbitDisclosure'
-import PageHero from '../components/PageHero'
+import ChapterIntro from '../components/ui/ChapterIntro'
 import ProjectCard from '../components/projects/ProjectCard'
-import { usePageMeta } from '../hooks/usePageMeta'
 import profile from '../data/profile.json'
 
 export default function ProjectsPage() {
-  usePageMeta({
-    title: 'Fredric Hegland | Projects',
-    description: 'Projects by Fredric Hegland across software engineering, AI systems, personal experiments, and university work.',
-  })
-
   const featuredProjects = profile.projects.filter((project) => project.featured)
   const otherProjects = profile.projects.filter((project) => !project.featured)
 
   return (
     <>
-      <PageHero
+      <ChapterIntro
         eyebrow="Build Log"
         title="Projects, experiments, and course work."
         description="Finished, in-progress, and side experiments."

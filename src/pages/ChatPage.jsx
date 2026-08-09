@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import PageHero from '../components/PageHero'
+import ChapterIntro from '../components/ui/ChapterIntro'
 import SectionCard from '../components/ui/SectionCard'
-import { usePageMeta } from '../hooks/usePageMeta'
 import { chatSystemPrompt } from '../data/chatKnowledge'
 
 // A range of sizes so visitors can pick whichever actually fits their
@@ -65,11 +64,6 @@ function isLikelyImmatureWebGpu(message) {
 }
 
 export default function ChatPage() {
-  usePageMeta({
-    title: 'Fredric Hegland | Local Chat',
-    description: 'Chat with a small local AI model running entirely inside your browser via WebGPU — pick a size that fits your device.',
-  })
-
   const [modelId, setModelId] = useState(defaultModelId)
   const modelInfo = MODEL_OPTIONS.find((option) => option.id === modelId) ?? MODEL_OPTIONS[0]
 
@@ -209,7 +203,7 @@ export default function ChatPage() {
 
   return (
     <>
-      <PageHero
+      <ChapterIntro
         eyebrow="Local Inference"
         title="Chat with a small AI model, running entirely in your browser."
         description="No server, no API keys, no data leaving your machine. Pick a model sized to fit your device below."

@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { getExploreMovement } from './exploreControls'
+import { getScrollVelocity } from './scrollVelocity'
 import { spaceConfig } from './spaceConfig'
 
 function createCircleSpriteTexture() {
@@ -182,8 +183,12 @@ export function useStarField(
 
     timeRef.current += spaceConfig.starfield.twinkle.timeStep
     const time = timeRef.current
+    // Explore's boost key and fast scrolling on the merged page both read
+    // as the same visual "warp" cue — explore's own boost is exclusive to
+    // /explore (getScrollVelocity() is reset to 0 there), so this is never
+    // double-counted.
     const boosting = getExploreMovement().boost
-    const boostTarget = boosting ? 1 : 0
+    const boostTarget = Math.max(boosting ? 1 : 0, getScrollVelocity())
     boostBlendRef.current += (boostTarget - boostBlendRef.current) * spaceConfig.starfield.boost.lerp
     const boostBlend = boostBlendRef.current
     const {

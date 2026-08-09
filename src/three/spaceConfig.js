@@ -36,6 +36,10 @@ export const spaceConfig = {
       rotLerp: 0.08,
       snapThreshold: 0.001,
       lockFrames: 8,
+      // Scroll speed (in fractions of total page height per second) that
+      // reaches full galaxy "boost" visual, and how fast that blend eases.
+      velocityBoostThreshold: 2.2,
+      velocityLerp: 0.08,
     },
     explore: {
       // Narrower than the site-wide 75° (renderer.fov) and slower movement,
@@ -69,6 +73,10 @@ export const spaceConfig = {
       ry: 28,
       rz: 152,
     },
+    // Order must match chapterOrder in src/content/chapterMeta.js — that's
+    // the DOM order LongPage renders these chapters in, and useScrollCamera
+    // measures/interpolates scroll-driven camera position against these
+    // same path strings in this same order.
     pageStops: [
       { path: '/', angle: 3.4, heightOffset: 8 },
       { path: '/projects', angle: 1.9, heightOffset: -10 },

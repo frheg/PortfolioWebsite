@@ -2,15 +2,9 @@ import { Link } from 'react-router-dom'
 import Intro from '../components/Intro'
 import ProjectCard from '../components/projects/ProjectCard'
 import SectionCard from '../components/ui/SectionCard'
-import { usePageMeta } from '../hooks/usePageMeta'
 import profile from '../data/profile.json'
 
 export default function HomePage() {
-  usePageMeta({
-    title: 'Fredric Hegland | Home',
-    description: 'Home page for Fredric Hegland: software engineering, projects, interests, and current focus.',
-  })
-
   const featuredProjects = profile.projects.filter((project) => project.featured)
 
   return (
