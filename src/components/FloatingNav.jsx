@@ -13,7 +13,7 @@ export default function FloatingNav() {
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)]"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
-      <div className="pointer-events-auto mx-auto w-full max-w-xl overflow-visible">
+      <div className="pointer-events-auto mx-auto w-full overflow-visible sm:w-fit sm:max-w-2xl">
         <div className="overflow-visible rounded-[1.4rem] border border-white/10 bg-slate-950/88 shadow-[0_18px_50px_rgba(8,15,35,0.55)] backdrop-blur-xl">
           <div className="h-px bg-gradient-to-r from-transparent via-cyan-300/45 to-transparent" />
           <div className="flex items-center justify-between gap-1 overflow-visible p-1.5 sm:justify-center sm:gap-1.5">

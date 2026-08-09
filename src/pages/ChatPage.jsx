@@ -4,24 +4,45 @@ import SectionCard from '../components/ui/SectionCard'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { chatSystemPrompt } from '../data/chatKnowledge'
 
-// Mobile browsers enforce a much stricter per-tab memory ceiling than desktop
-// regardless of the device's actual RAM (iOS Safari in particular kills tabs
-// around ~1.5-2GB). Gemma 2 2B's weights alone are ~1.9GB, which reliably
-// blows through that budget and hard-crashes the tab rather than erroring —
-// so mobile gets a much smaller model that actually fits.
-const DESKTOP_MODEL_ID = 'gemma-2-2b-it-q4f16_1-MLC'
-// SmolLM2 360M (q4f16_1): 376MB, the only mobile-tier option confirmed to
-// actually load without crashing. Everything else with meaningfully more
-// capability in WebLLM's prebuilt catalog jumps to 650MB+.
-const MOBILE_MODEL_ID = 'SmolLM2-360M-Instruct-q4f16_1-MLC'
-const MODEL_LABELS = {
-  [DESKTOP_MODEL_ID]: { name: 'Gemma 2 2B', eyebrow: 'Gemma 2 · 2B · WebGPU', downloadSize: 'roughly 1.5 GB' },
-  [MOBILE_MODEL_ID]: { name: 'SmolLM2 360M', eyebrow: 'SmolLM2 · 360M · WebGPU', downloadSize: 'a few hundred MB' },
-}
+// A range of sizes so visitors can pick whichever actually fits their
+// browser/device — mobile browsers in particular enforce a much stricter
+// per-tab memory ceiling than desktop regardless of the device's actual RAM
+// (iOS Safari in particular kills tabs around ~1.5-2GB), and that ceiling
+// varies enough by device that no single automatic guess is reliable.
+const MODEL_OPTIONS = [
+  {
+    id: 'SmolLM2-135M-Instruct-q0f16-MLC',
+    name: 'SmolLM2 135M',
+    downloadSize: '~360 MB',
+    note: "Smallest, most likely to load anywhere. Least capable — good if nothing else will run.",
+  },
+  {
+    id: 'SmolLM2-360M-Instruct-q4f16_1-MLC',
+    name: 'SmolLM2 360M',
+    downloadSize: '~380 MB',
+    note: 'Same footprint as the 135M option, meaningfully more capable. Good default for phones.',
+  },
+  {
+    id: 'gemma3-1b-it-q4f16_1-MLC',
+    name: 'Gemma 3 1B',
+    downloadSize: '~710 MB',
+    note: 'Noticeably more capable. Usually fine on desktop, borderline on some phones.',
+  },
+  {
+    id: 'gemma-2-2b-it-q4f16_1-MLC',
+    name: 'Gemma 2 2B',
+    downloadSize: '~1.9 GB',
+    note: 'Most capable of the four. Desktop only — will crash most mobile browsers.',
+  },
+]
 
 function isMobileDevice() {
   if (typeof navigator === 'undefined') return false
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 2
+}
+
+function defaultModelId() {
+  return isMobileDevice() ? MODEL_OPTIONS[1].id : MODEL_OPTIONS[3].id
 }
 
 // The model runs with a 4k-token context window. The system prompt + knowledge
@@ -44,13 +65,13 @@ function isLikelyImmatureWebGpu(message) {
 }
 
 export default function ChatPage() {
-  const modelId = isMobileDevice() ? MOBILE_MODEL_ID : DESKTOP_MODEL_ID
-  const modelInfo = MODEL_LABELS[modelId]
-
   usePageMeta({
     title: 'Fredric Hegland | Local Chat',
-    description: `Chat with ${modelInfo.name} running entirely inside your browser via WebGPU.`,
+    description: 'Chat with a small local AI model running entirely inside your browser via WebGPU — pick a size that fits your device.',
   })
+
+  const [modelId, setModelId] = useState(defaultModelId)
+  const modelInfo = MODEL_OPTIONS.find((option) => option.id === modelId) ?? MODEL_OPTIONS[0]
 
   const [supported, setSupported] = useState(true)
   const [unsupportedReason, setUnsupportedReason] = useState('')
@@ -113,6 +134,7 @@ export default function ChatPage() {
   async function loadModel() {
     setStatus('loading')
     setError('')
+    setProgress('')
     try {
       const webllm = await import('@mlc-ai/web-llm')
       const engine = await webllm.CreateMLCEngine(modelId, {
@@ -126,13 +148,28 @@ export default function ChatPage() {
       if (isLikelyImmatureWebGpu(message)) {
         setError(
           'Your browser reports lower GPU limits than this model needs. This is common on Firefox-based browsers ' +
-            '(including Zen), whose WebGPU support is still incomplete. Try this page in Chrome, Edge, or Safari instead.'
+            '(including Zen), whose WebGPU support is still incomplete. Try Chrome, Edge, or Safari — or pick a smaller model below.'
         )
       } else {
         setError(message)
       }
       setStatus('error')
     }
+  }
+
+  async function changeModel() {
+    if (engineRef.current) {
+      try {
+        await engineRef.current.unload()
+      } catch (err) {
+        console.error(err)
+      }
+      engineRef.current = null
+    }
+    setMessages([])
+    setProgress('')
+    setError('')
+    setStatus('idle')
   }
 
   async function sendMessage(event) {
@@ -174,35 +211,78 @@ export default function ChatPage() {
     <>
       <PageHero
         eyebrow="Local Inference"
-        title={`Chat with ${modelInfo.name}, running entirely in your browser.`}
-        description="No server, no API keys, no data leaving your machine. The model downloads once via WebGPU and runs client-side from then on."
+        title="Chat with a small AI model, running entirely in your browser."
+        description="No server, no API keys, no data leaving your machine. Pick a model sized to fit your device below."
       />
 
       <div className="relative mx-auto w-full max-w-4xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
           id="chat"
-          eyebrow={modelInfo.eyebrow}
-          title="A small model, entirely local."
-          description={`First load downloads ${modelInfo.downloadSize} and caches it. It knows the basics about Fredric, so ask about his background, work, or projects.`}
+          eyebrow={`${modelInfo.name} · WebGPU`}
+          title="Pick a model, then load it."
+          description="Every option runs fully client-side. If one won't load or crashes the tab, come back and try a smaller one — that's what this picker is for."
         >
           {!supported ? (
             <p className="rounded-[1rem] border border-amber-300/30 bg-amber-300/10 p-4 text-sm text-amber-100">
               {unsupportedReason || 'Your browser does not appear to support WebGPU, which this page needs to run the model locally.'}
             </p>
           ) : status === 'idle' ? (
-            <button
-              type="button"
-              onClick={loadModel}
-              className="inline-flex items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-300/18"
-            >
-              Load model
-            </button>
+            <div className="space-y-4">
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                {MODEL_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setModelId(option.id)}
+                    aria-pressed={option.id === modelId}
+                    className={`rounded-[1rem] border p-3.5 text-left transition ${
+                      option.id === modelId
+                        ? 'border-cyan-300/50 bg-cyan-300/10'
+                        : 'border-white/10 bg-black/20 hover:border-cyan-300/25'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-cyan-100">{option.name}</span>
+                      <span className="text-xs text-cyan-300/70">{option.downloadSize}</span>
+                    </div>
+                    <p className="mt-1.5 text-xs leading-5 text-slate-200/70">{option.note}</p>
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={loadModel}
+                className="inline-flex items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-300/18"
+              >
+                Load {modelInfo.name}
+              </button>
+            </div>
           ) : status === 'loading' ? (
-            <p className="text-sm text-slate-200/84">{progress || 'Loading model…'}</p>
+            <p className="text-sm text-slate-200/84">{progress || `Loading ${modelInfo.name}…`}</p>
           ) : status === 'error' ? (
-            <p className="rounded-[1rem] border border-red-300/30 bg-red-300/10 p-4 text-sm text-red-100">{error}</p>
+            <div className="space-y-3">
+              <p className="rounded-[1rem] border border-red-300/30 bg-red-300/10 p-4 text-sm text-red-100">{error}</p>
+              <button
+                type="button"
+                onClick={changeModel}
+                className="inline-flex items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-300/18"
+              >
+                Try a different model
+              </button>
+            </div>
           ) : (
             <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs uppercase tracking-[0.2em] text-cyan-300/70">{modelInfo.name}</p>
+                <button
+                  type="button"
+                  onClick={changeModel}
+                  className="text-xs font-semibold text-cyan-200 transition hover:text-cyan-100"
+                >
+                  Change model
+                </button>
+              </div>
+
               <div
                 ref={scrollRef}
                 className="flex h-[28rem] flex-col gap-3 overflow-y-auto rounded-[1.2rem] border border-white/10 bg-black/20 p-4"

@@ -3,12 +3,6 @@ import { Link } from 'react-router-dom'
 import profile from '../data/profile.json'
 
 export default function Intro() {
-  const stats = [
-    { label: 'Builds', value: profile.projects.length },
-    { label: 'Roles', value: profile.experience.length },
-    { label: 'Areas', value: profile.skillGroups?.length || 3 },
-  ]
-
   return (
     <section id="welcome" className="relative flex min-h-[100svh] items-start px-4 pb-12 pt-10 sm:min-h-screen sm:px-6 sm:pb-14 sm:pt-14 lg:items-center lg:px-8 lg:pt-16">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -45,15 +39,6 @@ export default function Intro() {
             >
               {profile.hero.secondaryCtaLabel}
             </Link>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            {stats.map((stat) => (
-              <div key={stat.label} className="rounded-3xl border border-white/10 bg-slate-950/35 p-3 backdrop-blur-md sm:p-4">
-                <div className="text-xl font-semibold text-white sm:text-3xl">{stat.value}</div>
-                <div className="mt-1 text-[0.65rem] uppercase tracking-[0.24em] text-cyan-300/70 sm:text-xs sm:tracking-[0.3em]">{stat.label}</div>
-              </div>
-            ))}
           </div>
 
           <div className="flex flex-wrap gap-2 sm:gap-3">
