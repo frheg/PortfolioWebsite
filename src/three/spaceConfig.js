@@ -38,13 +38,17 @@ export const spaceConfig = {
       lockFrames: 8,
     },
     explore: {
-      moveSpeed: 38,
-      boostMultiplier: 3.8,
+      // Narrower than the site-wide 75° (renderer.fov) and slower movement,
+      // explore-mode only — makes the universe read as larger without
+      // actually resizing anything. Scroll-driven pages are unaffected.
+      baseFov: 40,
+      moveSpeed: 16,
+      boostMultiplier: 2.8,
       acceleration: 2.2,
       coastDamping: 0.55,     // low = long space-like glide after releasing keys
       brakeAcceleration: 10.5,
-      keyTurnSpeed: 1.0,
-      keyPitchSpeed: 0.8,
+      keyTurnSpeed: 0.55,
+      keyPitchSpeed: 0.45,
       boostFovIncrease: 16,
       fovLerp: 0.12,
       boostShakeAmplitude: 0.18,
@@ -54,7 +58,7 @@ export const spaceConfig = {
       touchLookSensitivity: 0.003,
       worldMargin: 18,
       moveFieldRadiusFactor: 1.20,
-      planetClearance: 4,
+      planetClearance: 0.1, // camera can approach almost flush with the visual surface
       maxPitch: 1.35,
       bankAngle: 0.1,
       bankLerp: 0.12,
@@ -136,26 +140,32 @@ export const spaceConfig = {
 
   solarSystem: {
     center: { x: 0, y: 0, z: 0 },
-    // Slowed down ~3× from original so orbits feel stately
-    timeScale: 0.055,
+    // A single time-dilation knob applied uniformly to both orbital motion
+    // AND axial rotation (see useSolarSystem.js's update()), so slowing it
+    // down keeps every body's orbit-to-rotation ratio — and every body's
+    // speed relative to every other body's — exactly as tuned. The
+    // rotationSpeed values below were renormalized ×(1/0.055) when this
+    // became a shared knob, so at the old 0.055 they'd look identical to
+    // before; the actual value here is the new, slower pace.
+    timeScale: 0.032,
     textureAnisotropy: 4,
     segments: { width: 32, height: 32 },
     bodyCollisionPadding: 1,
     bodies: [
       // All radii and orbitRadii scaled ×0.625 so Pluto (orbit 800) fits
       // comfortably within the ~960-unit explore movement area.
-      { key: 'sun',     radius: 19,  orbitRadius: 0,   orbitSpeed: 0,     rotationSpeed: 0.00075, axialTilt: 0.12, texture: 'sun',     emissive: true },
-      { key: 'mercury', radius: 2.0, orbitRadius: 56,  orbitSpeed: 0.95,  rotationSpeed: 0.00150, axialTilt: 0.03, texture: 'mercury' },
-      { key: 'venus',   radius: 3.5, orbitRadius: 92,  orbitSpeed: 0.74,  rotationSpeed: -0.0005, axialTilt: 3.09, texture: 'venus'   },
-      { key: 'earth',   radius: 3.9, orbitRadius: 128, orbitSpeed: 0.62,  rotationSpeed: 0.00250, axialTilt: 0.41, texture: 'earth'   },
+      { key: 'sun',     radius: 19,  orbitRadius: 0,   orbitSpeed: 0,     rotationSpeed: 0.01364, axialTilt: 0.12, texture: 'sun',     emissive: true },
+      { key: 'mercury', radius: 2.0, orbitRadius: 56,  orbitSpeed: 0.95,  rotationSpeed: 0.02727, axialTilt: 0.03, texture: 'mercury' },
+      { key: 'venus',   radius: 3.5, orbitRadius: 92,  orbitSpeed: 0.74,  rotationSpeed: -0.00909, axialTilt: 3.09, texture: 'venus'   },
+      { key: 'earth',   radius: 3.9, orbitRadius: 128, orbitSpeed: 0.62,  rotationSpeed: 0.04545, axialTilt: 0.41, texture: 'earth'   },
       // tidallyLocked: moon rotation tracks its orbital angle so the near side always faces Earth
-      { key: 'moon',    radius: 1.2, orbitRadius: 13,  orbitSpeed: 2.60,  rotationSpeed: 0.00075, axialTilt: 0.09, texture: 'moon',   parent: 'earth', tidallyLocked: true },
-      { key: 'mars',    radius: 2.9, orbitRadius: 181, orbitSpeed: 0.50,  rotationSpeed: 0.00250, axialTilt: 0.44, texture: 'mars'    },
-      { key: 'jupiter', radius: 9.1, orbitRadius: 300, orbitSpeed: 0.28,  rotationSpeed: 0.00550, axialTilt: 0.05, texture: 'jupiter' },
-      { key: 'saturn',  radius: 7.8, orbitRadius: 412, orbitSpeed: 0.20,  rotationSpeed: 0.00475, axialTilt: 0.47, texture: 'saturn',  ringTexture: 'saturnRing', ringInner: 9.4,  ringOuter: 21,   ringOpacity: 0.72 },
-      { key: 'uranus',  radius: 5.8, orbitRadius: 512, orbitSpeed: 0.15,  rotationSpeed: 0.00375, axialTilt: 1.71, texture: 'uranus',  ringTexture: 'uranusRing', ringInner: 7.8,  ringOuter: 10.6, ringOpacity: 0.48 },
-      { key: 'neptune', radius: 5.6, orbitRadius: 612, orbitSpeed: 0.11,  rotationSpeed: 0.00325, axialTilt: 0.49, texture: 'neptune' },
-      { key: 'pluto',   radius: 1.4, orbitRadius: 800, orbitSpeed: 0.073, rotationSpeed: 0.00039, axialTilt: 2.13, texture: 'pluto'   },
+      { key: 'moon',    radius: 1.2, orbitRadius: 13,  orbitSpeed: 2.60,  rotationSpeed: 0.01364, axialTilt: 0.09, texture: 'moon',   parent: 'earth', tidallyLocked: true },
+      { key: 'mars',    radius: 2.9, orbitRadius: 181, orbitSpeed: 0.50,  rotationSpeed: 0.04545, axialTilt: 0.44, texture: 'mars'    },
+      { key: 'jupiter', radius: 9.1, orbitRadius: 300, orbitSpeed: 0.28,  rotationSpeed: 0.1,     axialTilt: 0.05, texture: 'jupiter' },
+      { key: 'saturn',  radius: 7.8, orbitRadius: 412, orbitSpeed: 0.20,  rotationSpeed: 0.08636, axialTilt: 0.47, texture: 'saturn',  ringTexture: 'saturnRing', ringInner: 9.4,  ringOuter: 21,   ringOpacity: 0.72 },
+      { key: 'uranus',  radius: 5.8, orbitRadius: 512, orbitSpeed: 0.15,  rotationSpeed: 0.06818, axialTilt: 1.71, texture: 'uranus',  ringTexture: 'uranusRing', ringInner: 7.8,  ringOuter: 10.6, ringOpacity: 0.48 },
+      { key: 'neptune', radius: 5.6, orbitRadius: 612, orbitSpeed: 0.11,  rotationSpeed: 0.05909, axialTilt: 0.49, texture: 'neptune' },
+      { key: 'pluto',   radius: 1.4, orbitRadius: 800, orbitSpeed: 0.073, rotationSpeed: 0.00709, axialTilt: 2.13, texture: 'pluto'   },
     ],
     ufo: {
       count: 3,

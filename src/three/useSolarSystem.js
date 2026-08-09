@@ -2,6 +2,16 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { setSolarCollisionBodies } from './solarSystemRuntime'
+import {
+  daysSinceJ2000,
+  dateMsFromDaysSinceJ2000,
+  heliocentricPositionAU,
+  hasEphemeris,
+  baseSemiMajorAxisAU,
+  ROTATION_PERIOD_DAYS,
+  MOON_SIDEREAL_ORBIT_DAYS,
+} from './ephemeris'
+import { getSpeedMultiplier, setSimulatedDateMs } from './ephemerisTime'
 
 import sunTexUrl from '../assets/Models/solar/sun/sol/sun.webp'
 import mercuryTexUrl from '../assets/Models/solar/mercury/mercury.webp'
@@ -32,6 +42,19 @@ const textureUrls = {
   neptune: neptuneTexUrl,
   pluto: plutoTexUrl,
 }
+
+// ─── Real-ephemeris scale ────────────────────────────────────────────────────
+// The scene's orbitRadius values are already hand-compressed (outer planets
+// pulled in much more than a true linear AU scale would) so the whole system
+// stays flyable. Deriving a per-body AU→scene-units factor from each body's
+// own existing orbitRadius keeps that layout, while still giving each body
+// its true elliptical shape, eccentricity and orbital phase relative to
+// itself — only the distance unit is rescaled, not the orbit's geometry.
+const AU_SCALE = Object.fromEntries(
+  spaceConfig.solarSystem.bodies
+    .filter((def) => hasEphemeris(def.key))
+    .map((def) => [def.key, def.orbitRadius / baseSemiMajorAxisAU(def.key)])
+)
 
 // ─── Singleton glow texture cache ────────────────────────────────────────────
 // Canvas textures are created exactly once per page load and reused across all
@@ -317,13 +340,17 @@ function addUfoGlow(anchor) {
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
-export function useSolarSystem(sceneRef) {
+export function useSolarSystem(sceneRef, isExplore = false) {
   const systemRef = useRef(null)
   const timeRef = useRef(0)
   const bodyMapRef = useRef(new Map())
   const collisionBodiesRef = useRef([])
   const ufosRef = useRef([])
   const sunGlowRef = useRef(null)
+  const isExploreRef = useRef(isExplore)
+  const wasExploreRef = useRef(isExplore)
+  const simDaysRef = useRef(daysSinceJ2000())
+  isExploreRef.current = isExplore
 
   useEffect(() => {
     const scene = sceneRef.current
@@ -442,8 +469,23 @@ export function useSolarSystem(sceneRef) {
     const bodyMap = bodyMapRef.current
     if (!bodyMap.size) return
 
+    const explore = isExploreRef.current
+    if (explore && !wasExploreRef.current) {
+      // Re-sync to the real "right now" each time Explore mode is entered,
+      // rather than resuming from wherever a previous visit left off.
+      simDaysRef.current = daysSinceJ2000()
+    }
+    wasExploreRef.current = explore
+
     timeRef.current += deltaSeconds * spaceConfig.solarSystem.timeScale
     const time = timeRef.current
+
+    if (explore) {
+      simDaysRef.current += (deltaSeconds * getSpeedMultiplier()) / 86400
+      setSimulatedDateMs(dateMsFromDaysSinceJ2000(simDaysRef.current))
+    }
+    const simDays = simDaysRef.current
+
     const collisions = []
 
     bodyMap.forEach((body) => {
@@ -452,9 +494,23 @@ export function useSolarSystem(sceneRef) {
       let y = spaceConfig.solarSystem.center.y
       let z = spaceConfig.solarSystem.center.z
 
-      if (def.parent) {
+      const useRealOrbit = explore && hasEphemeris(def.key)
+
+      if (useRealOrbit) {
+        // Ephemeris "z" is ecliptic-north; map it to the scene's up axis.
+        const auPos = heliocentricPositionAU(def.key, simDays)
+        const scale = AU_SCALE[def.key]
+        x = auPos.x * scale
+        y = auPos.z * scale
+        z = auPos.y * scale
+      } else if (def.parent) {
         const parent = bodyMap.get(def.parent)
-        const theta = time * def.orbitSpeed + def.phase
+        const theta =
+          explore && def.key === 'moon'
+            // Simplified real circular orbit at the Moon's true sidereal
+            // period — full lunar perturbation theory is overkill here.
+            ? (simDays / MOON_SIDEREAL_ORBIT_DAYS) * Math.PI * 2 + def.phase
+            : time * def.orbitSpeed + def.phase
         x = parent.anchor.position.x + Math.cos(theta) * def.orbitRadius
         y = parent.anchor.position.y + Math.sin(theta * 1.7) * 1.5
         z = parent.anchor.position.z + Math.sin(theta) * def.orbitRadius
@@ -470,11 +526,20 @@ export function useSolarSystem(sceneRef) {
       if (def.tidallyLocked && def.parent) {
         // Tidally locked: rotation tracks the orbital angle so the same face
         // always points toward the parent body (like Earth's Moon in reality).
-        // θ is already computed above for child bodies; recompute for clarity.
-        const lockTheta = time * def.orbitSpeed + def.phase
+        const lockTheta =
+          explore
+            ? (simDays / MOON_SIDEREAL_ORBIT_DAYS) * Math.PI * 2 + def.phase
+            : time * def.orbitSpeed + def.phase
         mesh.rotation.y = Math.PI / 2 + lockTheta
+      } else if (explore && ROTATION_PERIOD_DAYS[def.key]) {
+        // Real sidereal rotation rate. Direction reuses the existing
+        // rotationSpeed's sign — the site's already-tuned retrograde
+        // convention (see spaceConfig's axialTilt for Venus/Uranus/Pluto) —
+        // rather than introducing a second, possibly inconsistent encoding.
+        const direction = Math.sign(def.rotationSpeed) || 1
+        mesh.rotation.y = direction * (simDays / ROTATION_PERIOD_DAYS[def.key]) * Math.PI * 2
       } else {
-        mesh.rotation.y += def.rotationSpeed * deltaSeconds * 60
+        mesh.rotation.y += def.rotationSpeed * deltaSeconds * spaceConfig.solarSystem.timeScale * 60
       }
 
       collisions.push({

@@ -368,6 +368,7 @@ export function useScrollCamera(cameraRef, routePath) {
       transTRef.current = 1
       settleFramesRef.current = 0
       routeRef.current = routePath
+      baseFovRef.current = exploreConfig.baseFov ?? spaceConfig.renderer.fov
       if (!currentIsExplore) resetExploreInput()
     } else {
       const nextSegment = getPageSegment(routePath)
@@ -379,6 +380,7 @@ export function useScrollCamera(cameraRef, routePath) {
       velocityRef.current.set(0, 0, 0)
       targetVelocityRef.current.set(0, 0, 0)
       routeRef.current = routePath
+      baseFovRef.current = spaceConfig.renderer.fov
       resetExploreInput()
     }
   }

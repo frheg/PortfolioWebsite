@@ -4,6 +4,9 @@ import {
   subscribeExplorePause,
   resumeExplore,
 } from '../three/exploreState'
+import ExploreDateReadout from './ExploreDateReadout'
+import ExploreTimeControl from './ExploreTimeControl'
+import ExplorePauseNav from './ExplorePauseNav'
 
 export default function ExplorePauseOverlay() {
   const paused = useSyncExternalStore(
@@ -22,12 +25,13 @@ export default function ExplorePauseOverlay() {
       aria-label="Explore mode paused"
     >
       <div
-        className="pointer-events-auto mx-4 w-full max-w-sm rounded-2xl border border-white/10 bg-slate-950/88 px-8 py-8 text-center shadow-[0_24px_64px_rgba(0,0,0,0.7)] backdrop-blur-xl"
+        className="pointer-events-auto mx-4 max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-2xl border border-white/10 bg-slate-950/88 px-8 py-8 text-center shadow-[0_24px_64px_rgba(0,0,0,0.7)] backdrop-blur-xl"
       >
         <p className="text-[0.6rem] uppercase tracking-[0.35em] text-cyan-400/70">Explore Mode</p>
         <h2 className="mt-1 text-2xl font-light uppercase tracking-[0.25em] text-cyan-100">
           Paused
         </h2>
+        <ExploreDateReadout className="mt-2 block text-[0.62rem] uppercase tracking-[0.14em] text-cyan-100/55" />
 
         <div className="my-6 h-px bg-white/8" />
 
@@ -38,6 +42,15 @@ export default function ExplorePauseOverlay() {
           <p>Tilt &nbsp;·&nbsp; E / Q &nbsp;&nbsp;&nbsp; Boost &nbsp;·&nbsp; Space</p>
           <p className="mt-2 text-cyan-400/50">Pause &nbsp;·&nbsp; P &nbsp;or&nbsp; Esc</p>
         </div>
+
+        <div className="my-6 h-px bg-white/8" />
+
+        <ExploreTimeControl />
+
+        <div className="my-6 h-px bg-white/8" />
+
+        <p className="mb-3 text-[0.6rem] uppercase tracking-[0.28em] text-cyan-100/50">Go to</p>
+        <ExplorePauseNav />
 
         <div className="my-6 h-px bg-white/8" />
 

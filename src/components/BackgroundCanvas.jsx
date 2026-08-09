@@ -21,7 +21,7 @@ export default function BackgroundCanvas() {
   useLights(sceneRef)
   // Independent background systems
   const stars = useStarField(sceneRef)
-  const solarSystem = useSolarSystem(sceneRef)
+  const solarSystem = useSolarSystem(sceneRef, routePath === '/explore')
   const galaxies = useGalaxies(sceneRef)
   const comets = useComets(sceneRef)
   const scrollCam = useScrollCamera(cameraRef, routePath)
