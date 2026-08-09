@@ -41,8 +41,8 @@ export default function ProjectsPage() {
         >
           <OrbitDisclosure title="Open project archive" hint="University work, side explorations, and smaller builds" defaultOpen>
             <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
-              {otherProjects.map((project) => (
-                <ProjectCard key={project.name} project={project} />
+              {otherProjects.map((project, index) => (
+                <ProjectCard key={project.name} project={project} index={index} />
               ))}
             </div>
           </OrbitDisclosure>

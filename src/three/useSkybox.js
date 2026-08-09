@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
+import { sceneLoadingManager } from './sceneLoadingManager'
 import skyBk from '../assets/Pictures/SkyBox/kurt/space_ft_1024.jpg'
 import skyDn from '../assets/Pictures/SkyBox/kurt/space_dn_1024.jpg'
 import skyFt from '../assets/Pictures/SkyBox/kurt/space_bk_1024.jpg'
@@ -108,7 +109,7 @@ export function useSkybox(sceneRef) {
 
     const load = async () => {
       try {
-        const loader = new THREE.ImageLoader()
+        const loader = new THREE.ImageLoader(sceneLoadingManager)
         const [rt, lf, up, dn, ft, bk] = await Promise.all([
           loader.loadAsync(skyRt),
           loader.loadAsync(skyLf),

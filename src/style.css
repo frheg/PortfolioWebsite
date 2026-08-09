@@ -529,6 +529,93 @@ summary {
   }
 }
 
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  background: radial-gradient(circle at 50% 40%, rgba(8, 20, 45, 0.96), rgba(2, 6, 23, 0.99) 70%);
+  transition: opacity 600ms cubic-bezier(0.35, 0, 0.65, 1), filter 600ms cubic-bezier(0.35, 0, 0.65, 1);
+}
+
+.loading-screen--exit {
+  opacity: 0;
+  filter: blur(12px);
+  pointer-events: none;
+}
+
+.loading-screen-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(103, 232, 249, 0.14), transparent 45%);
+  animation: loading-glow-pulse 3.2s ease-in-out infinite;
+}
+
+.loading-orbit {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+  animation: loading-orbit-spin 1.8s linear infinite;
+}
+
+.loading-orbit-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px dashed rgba(103, 232, 249, 0.28);
+}
+
+.loading-orbit-dot {
+  position: absolute;
+  top: -0.275rem;
+  left: 50%;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-left: -0.275rem;
+  border-radius: 9999px;
+  background: rgb(103, 232, 249);
+  box-shadow: 0 0 16px rgba(103, 232, 249, 0.75), 0 0 30px rgba(168, 85, 247, 0.4);
+}
+
+.loading-screen-label {
+  position: relative;
+  font-family: 'Avenir Next', 'Avenir', 'Trebuchet MS', 'Segoe UI', 'Century Gothic', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(240, 249, 255, 0.85);
+}
+
+.loading-screen-percent {
+  position: relative;
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  color: rgba(103, 232, 249, 0.75);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes loading-orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loading-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -539,7 +626,9 @@ summary {
   .route-scan,
   .explore-boost,
   .hero-glow,
-  .scroll-indicator {
+  .scroll-indicator,
+  .loading-orbit,
+  .loading-screen-glow {
     animation: none !important;
   }
 }

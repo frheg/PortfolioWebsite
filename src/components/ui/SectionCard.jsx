@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { loadGsap } from '../../utils/gsapLoader'
-import { prefersReducedMotion } from '../../utils/motion'
+import { useRef } from 'react'
+import { useScrollReveal } from '../../hooks/useScrollReveal'
 
 export default function SectionCard({
   id,
@@ -12,33 +11,7 @@ export default function SectionCard({
   contentClassName = '',
 }) {
   const sectionRef = useRef(null)
-
-  useEffect(() => {
-    if (prefersReducedMotion()) return undefined
-    let scrollTrigger
-    let cancelled = false
-
-    loadGsap().then(({ gsap }) => {
-      if (cancelled || !sectionRef.current) return
-      const tween = gsap.from(sectionRef.current, {
-        autoAlpha: 0,
-        y: 40,
-        duration: 0.7,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 85%',
-          toggleActions: 'play none none none',
-        },
-      })
-      scrollTrigger = tween.scrollTrigger
-    })
-
-    return () => {
-      cancelled = true
-      scrollTrigger?.kill()
-    }
-  }, [])
+  useScrollReveal(sectionRef, { variant: 'up', start: 'top 85%' })
 
   return (
     <section

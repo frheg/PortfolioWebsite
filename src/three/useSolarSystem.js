@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { setSolarCollisionBodies } from './solarSystemRuntime'
+import { sceneLoadingManager } from './sceneLoadingManager'
 import {
   daysSinceJ2000,
   dateMsFromDaysSinceJ2000,
@@ -358,7 +359,7 @@ export function useSolarSystem(sceneRef, isExplore = false) {
 
     const disposables = []
 
-    const textureLoader = new THREE.TextureLoader()
+    const textureLoader = new THREE.TextureLoader(sceneLoadingManager)
     const textures = Object.fromEntries(
       Object.entries(textureUrls).map(([key, url]) => {
         const texture = textureLoader.load(url)

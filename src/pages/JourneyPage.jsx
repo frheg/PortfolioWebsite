@@ -1,6 +1,7 @@
 import ChapterIntro from '../components/ui/ChapterIntro'
 import SectionCard from '../components/ui/SectionCard'
 import OrbitDisclosure from '../components/ui/OrbitDisclosure'
+import Reveal from '../components/ui/Reveal'
 import profile from '../data/profile.json'
 
 function splitDetails(text) {
@@ -36,8 +37,14 @@ export default function JourneyPage() {
                 <h3 className="font-display text-2xl font-semibold text-white">Experience</h3>
                 <span className="pt-1 text-right text-xs uppercase leading-none tracking-[0.28em] text-cyan-300/70">Professional</span>
               </div>
-              {profile.experience.map((job) => (
-                <article key={`${job.company}-${job.title}`} className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
+              {profile.experience.map((job, index) => (
+                <Reveal
+                  key={`${job.company}-${job.title}`}
+                  as="article"
+                  variant="left"
+                  delay={Math.min(index * 0.08, 0.32)}
+                  className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6"
+                >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <h4 className="font-display text-lg font-semibold text-white">{job.title}</h4>
@@ -65,7 +72,7 @@ export default function JourneyPage() {
                       {job.linkLabel || 'Learn more'}
                     </a>
                   ) : null}
-                </article>
+                </Reveal>
               ))}
             </div>
 
@@ -74,8 +81,14 @@ export default function JourneyPage() {
                 <h3 className="font-display text-2xl font-semibold text-white">Education</h3>
                 <span className="pt-1 text-right text-xs uppercase leading-none tracking-[0.28em] text-cyan-300/70">Academic</span>
               </div>
-              {profile.education.map((ed) => (
-                <article key={`${ed.school}-${ed.program}`} className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
+              {profile.education.map((ed, index) => (
+                <Reveal
+                  key={`${ed.school}-${ed.program}`}
+                  as="article"
+                  variant="right"
+                  delay={Math.min(index * 0.08, 0.32)}
+                  className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6"
+                >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-sm uppercase tracking-[0.26em] text-cyan-300/70">{ed.school}</p>
@@ -96,7 +109,7 @@ export default function JourneyPage() {
                       {ed.period}
                     </span>
                   </div>
-                </article>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -110,8 +123,14 @@ export default function JourneyPage() {
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_0.8fr]">
             <div className="space-y-3 sm:space-y-4">
               <h3 className="font-display text-2xl font-semibold text-white">Leadership and volunteer work</h3>
-              {profile.boardPositions.map((position) => (
-                <article key={`${position.title}-${position.period}`} className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
+              {profile.boardPositions.map((position, index) => (
+                <Reveal
+                  key={`${position.title}-${position.period}`}
+                  as="article"
+                  variant="tilt"
+                  delay={Math.min(index * 0.08, 0.32)}
+                  className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6"
+                >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <h4 className="font-display text-lg font-semibold text-white">{position.title}</h4>
                     <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.24em] text-slate-200/72">
@@ -119,24 +138,29 @@ export default function JourneyPage() {
                     </span>
                   </div>
                   <p className="mt-4 text-sm leading-7 text-slate-200/82">{position.details}</p>
-                </article>
+                </Reveal>
               ))}
             </div>
 
             <div className="space-y-4 sm:space-y-6">
-              <div className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
+              <Reveal variant="scale" className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
                 <h3 className="font-display text-2xl font-semibold text-white">Languages</h3>
                 <div className="mt-5 grid gap-3">
-                  {profile.languages.map((language) => (
-                    <div key={language.name} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100/88">
+                  {profile.languages.map((language, index) => (
+                    <Reveal
+                      key={language.name}
+                      variant={index % 2 === 0 ? 'left' : 'right'}
+                      delay={Math.min(index * 0.06, 0.24)}
+                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-100/88"
+                    >
                       <span>{language.name}</span>
                       <span className="text-cyan-200/75">{language.level}</span>
-                    </div>
+                    </Reveal>
                   ))}
                 </div>
-              </div>
+              </Reveal>
 
-              <div className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
+              <Reveal variant="scale" delay={0.1} className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
                 <h3 className="font-display text-2xl font-semibold text-white">Courses and certificates</h3>
                 <div className="mt-5">
                   <OrbitDisclosure title="Open course list" hint="Relevant certificates and short courses">
@@ -151,7 +175,7 @@ export default function JourneyPage() {
                     </div>
                   </OrbitDisclosure>
                 </div>
-              </div>
+              </Reveal>
             </div>
           </div>
         </SectionCard>

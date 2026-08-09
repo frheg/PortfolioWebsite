@@ -1,3 +1,6 @@
+import { useRef } from 'react'
+import { pickRevealVariant, useScrollReveal } from '../../hooks/useScrollReveal'
+
 function ActionLink({ href, label }) {
   return (
     <a
@@ -11,10 +14,13 @@ function ActionLink({ href, label }) {
   )
 }
 
-export default function ProjectCard({ project, index, featured = false }) {
+export default function ProjectCard({ project, index = 0, featured = false }) {
+  const cardRef = useRef(null)
+  useScrollReveal(cardRef, { variant: pickRevealVariant(index), delay: Math.min(index * 0.06, 0.3) })
+
   if (featured) {
     return (
-      <article className="group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-white/10 bg-gradient-to-b from-cyan-300/12 via-slate-950/78 to-slate-950/95 p-4 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_24px_50px_rgba(6,182,212,0.12)] sm:rounded-[1.8rem] sm:p-6">
+      <article ref={cardRef} className="group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-white/10 bg-gradient-to-b from-cyan-300/12 via-slate-950/78 to-slate-950/95 p-4 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_24px_50px_rgba(6,182,212,0.12)] sm:rounded-[1.8rem] sm:p-6">
         <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
         <div className="pointer-events-none absolute right-0 top-0 h-28 w-28 rounded-full bg-cyan-300/10 blur-3xl transition duration-300 group-hover:bg-cyan-300/16" />
         <div className="flex items-start justify-between gap-4">
@@ -56,7 +62,7 @@ export default function ProjectCard({ project, index, featured = false }) {
   }
 
   return (
-    <article className="flex h-full flex-col rounded-[1rem] border border-white/10 bg-black/20 p-4 transition duration-300 hover:border-cyan-300/20 hover:bg-black/25 sm:rounded-[1.4rem] sm:p-5">
+    <article ref={cardRef} className="flex h-full flex-col rounded-[1rem] border border-white/10 bg-black/20 p-4 transition duration-300 hover:border-cyan-300/20 hover:bg-black/25 sm:rounded-[1.4rem] sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <h3 className="max-w-[18rem] font-display text-lg font-semibold leading-tight tracking-[0.03em] text-white sm:max-w-none">
           {project.name}

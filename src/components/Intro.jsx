@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import profile from '../data/profile.json'
 import { loadGsap } from '../utils/gsapLoader'
 import { prefersReducedMotion } from '../utils/motion'
+import { scheduleScrollTriggerRefresh } from '../utils/scrollTriggerRefresh'
 
 export default function Intro() {
   const sectionRef = useRef(null)
@@ -18,7 +19,7 @@ export default function Intro() {
     let scrollTrigger
     let cancelled = false
 
-    loadGsap().then(({ gsap }) => {
+    loadGsap().then(({ gsap, ScrollTrigger }) => {
       if (cancelled || !sectionRef.current) return
 
       // Entrance: plays once on mount, not scroll-triggered — this is the
@@ -34,22 +35,26 @@ export default function Intro() {
         }
       )
 
-      // Brief pinned settle before handing off to the About section beneath
-      // — a subtle scale/fade so the release feels intentional rather than
-      // an abrupt cut.
-      const pinTimeline = gsap.timeline({
+      // Settle as the hero scrolls past — a subtle scale/fade so the
+      // handoff to the About section beneath feels intentional rather than
+      // an abrupt cut. Deliberately NOT pinned: pinning here fought with
+      // this site's own scroll-driven camera system (which also measures
+      // and re-scrolls the page), and that conflict was the actual source
+      // of the animation glitches, not a tuning issue. A plain scrub — the
+      // hero scrolls at the normal rate while also fading/scaling — gets a
+      // similar "dissolving away" feel with none of that risk.
+      const settleTimeline = gsap.timeline({
         scrollTrigger: {
           trigger: sectionRef.current,
           start: 'top top',
-          end: '+=45%',
-          scrub: 0.6,
-          pin: true,
-          pinSpacing: true,
+          end: 'bottom top',
+          scrub: 0.4,
         },
       })
-      pinTimeline.to(sectionRef.current, { scale: 0.97, autoAlpha: 0.6, ease: 'power1.inOut' })
+      settleTimeline.to(sectionRef.current, { scale: 0.96, autoAlpha: 0.5, ease: 'power1.inOut' })
 
-      scrollTrigger = pinTimeline.scrollTrigger
+      scrollTrigger = settleTimeline.scrollTrigger
+      scheduleScrollTriggerRefresh(ScrollTrigger)
     })
 
     return () => {

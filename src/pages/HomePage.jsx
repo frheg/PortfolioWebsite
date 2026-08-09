@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import Intro from '../components/Intro'
 import ProjectCard from '../components/projects/ProjectCard'
 import SectionCard from '../components/ui/SectionCard'
+import Reveal from '../components/ui/Reveal'
 import profile from '../data/profile.json'
 
 export default function HomePage() {
@@ -21,16 +22,16 @@ export default function HomePage() {
             <p className="text-base leading-7 text-slate-100/88 sm:text-lg sm:leading-8">{profile.about}</p>
 
             <div className="grid gap-3 sm:gap-4 sm:grid-cols-3">
-              <div className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
+              <Reveal variant="left" className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
                 <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/75">Currently</p>
                 <ul className="mt-4 space-y-2.5 text-sm leading-6 text-slate-200/84">
                   {profile.currently.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
-              </div>
+              </Reveal>
 
-              <div className="rounded-[1.2rem] border border-cyan-300/20 bg-cyan-300/10 p-4 sm:rounded-[1.6rem] sm:p-6">
+              <Reveal variant="scale" delay={0.08} className="rounded-[1.2rem] border border-cyan-300/20 bg-cyan-300/10 p-4 sm:rounded-[1.6rem] sm:p-6">
                 <p className="text-xs uppercase tracking-[0.3em] text-cyan-100/90">Interests</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {profile.interests.map((item) => (
@@ -39,9 +40,9 @@ export default function HomePage() {
                     </span>
                   ))}
                 </div>
-              </div>
+              </Reveal>
 
-              <div className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
+              <Reveal variant="right" delay={0.16} className="rounded-[1.2rem] border border-white/10 bg-black/20 p-4 sm:rounded-[1.6rem] sm:p-6">
                 <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/75">Highlights</p>
                 <ul className="mt-4 space-y-2.5 text-sm leading-6 text-slate-200/84">
                   {profile.highlights.map((item) => (
@@ -51,7 +52,7 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </Reveal>
             </div>
           </div>
         </SectionCard>

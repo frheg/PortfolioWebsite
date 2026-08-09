@@ -10,6 +10,7 @@ import { useExploreAudio } from './hooks/useExploreAudio'
 import { RouteProvider } from './context/RouteProvider'
 import ExploreMobileControls from './components/ExploreMobileControls'
 import FloatingNav from './components/FloatingNav'
+import LoadingScreen from './components/LoadingScreen'
 import { chapterOrder } from './content/chapterMeta'
 import { prefersReducedMotion } from './utils/motion'
 
@@ -87,6 +88,7 @@ export default function App() {
 
   return (
     <main className="relative isolate overflow-x-clip">
+      <LoadingScreen />
       <RouteProvider>
         <Suspense fallback={null}>
           <BackgroundCanvas />

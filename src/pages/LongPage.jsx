@@ -10,6 +10,8 @@ import { usePageMeta } from '../hooks/usePageMeta'
 import { useActiveSection } from '../hooks/useActiveSection'
 import { chapterOrder, chapterMeta } from '../content/chapterMeta'
 import { setChapterOffsets } from '../three/scrollChapters'
+import { loadGsap } from '../utils/gsapLoader'
+import { scheduleScrollTriggerRefresh } from '../utils/scrollTriggerRefresh'
 
 const CHAPTER_COMPONENTS = {
   '/': HomePage,
@@ -45,6 +47,12 @@ export default function LongPage() {
   const measureAndPublish = () => {
     const offsets = chapterRefs.current.map((el) => (el ? el.offsetTop : 0))
     setChapterOffsets(offsets)
+    // Same signal that keeps the camera's chapter breakpoints correct as
+    // late-loading images/content shift the page also needs to re-sync
+    // every GSAP ScrollTrigger's cached pin/trigger positions — otherwise a
+    // one-time refresh early on drifts again as soon as anything below it
+    // changes height.
+    loadGsap().then(({ ScrollTrigger }) => scheduleScrollTriggerRefresh(ScrollTrigger))
     return offsets
   }
 
