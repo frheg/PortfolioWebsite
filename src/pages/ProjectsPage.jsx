@@ -1,6 +1,5 @@
 import SectionCard from '../components/ui/SectionCard'
 import OrbitDisclosure from '../components/ui/OrbitDisclosure'
-import ChapterIntro from '../components/ui/ChapterIntro'
 import ProjectCard from '../components/projects/ProjectCard'
 import profile from '../data/profile.json'
 
@@ -10,22 +9,11 @@ export default function ProjectsPage() {
 
   return (
     <>
-      <ChapterIntro
-        eyebrow="Build Log"
-        title="Projects, experiments, and course work."
-        description="Finished, in-progress, and side experiments."
-        actions={[
-          { label: 'Featured', href: '#projects' },
-          { label: 'Archive', href: '#archive', kind: 'secondary' },
-          { label: 'Contact', to: '/contact', kind: 'secondary' },
-        ]}
-      />
-
       <div className="relative mx-auto w-full max-w-6xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
           id="projects"
           eyebrow="Featured"
-          title="A few projects I'd point to first."
+          title="Featured projects."
         >
           <div className="grid gap-4 sm:gap-5 xl:grid-cols-3">
             {featuredProjects.map((project, index) => (

@@ -1,4 +1,3 @@
-import ChapterIntro from '../components/ui/ChapterIntro'
 import SectionCard from '../components/ui/SectionCard'
 import Reveal from '../components/ui/Reveal'
 import { pickRevealVariant } from '../hooks/useScrollReveal'
@@ -15,22 +14,11 @@ function formatLastUpdated() {
 export default function ContactPage() {
   return (
     <>
-      <ChapterIntro
-        eyebrow="Toolkit and Contact"
-        title="Skills, tools, and the best ways to reach me."
-        description="What I work with, and where to find me."
-        actions={[
-          { label: 'Skills', href: '#skills' },
-          { label: 'Contact', href: '#contact', kind: 'secondary' },
-          { label: 'Projects', to: '/projects', kind: 'secondary' },
-        ]}
-      />
-
       <div className="relative mx-auto w-full max-w-6xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
           id="skills"
           eyebrow="Toolkit"
-          title="A technical range, grouped by how I think about work."
+          title="What I work with, grouped by area."
         >
           <div className="grid gap-3 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
             {profile.skillGroups.map((group, index) => (

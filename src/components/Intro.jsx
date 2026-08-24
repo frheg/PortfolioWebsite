@@ -85,10 +85,7 @@ export default function Intro() {
 
           <div ref={headlineRef} className="space-y-4 sm:space-y-5">
             <p className="text-[0.72rem] uppercase tracking-[0.24em] text-cyan-300/70 sm:text-sm sm:tracking-[0.4em]">{profile.location}</p>
-            <h1 className="max-w-4xl font-display text-[2rem] font-semibold leading-[1.05] tracking-[0.02em] text-white sm:text-5xl lg:text-7xl">
-              {profile.hero.headline}
-            </h1>
-            <p className="max-w-2xl text-[0.95rem] leading-6 text-slate-200/88 sm:text-xl sm:leading-8">
+            <p className="max-w-2xl text-[1.1rem] leading-7 text-slate-100/90 sm:text-2xl sm:leading-9 lg:text-3xl">
               {profile.hero.description}
             </p>
           </div>
@@ -121,15 +118,6 @@ export default function Intro() {
           <div className="absolute -inset-8 rounded-full bg-cyan-400/10 blur-3xl" aria-hidden="true" />
           <div className="relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-slate-950/45 p-4 shadow-[0_30px_80px_rgba(8,15,35,0.55)] backdrop-blur-xl sm:rounded-[2rem] sm:p-5">
             <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
-            <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200/90 sm:mb-5 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-display font-semibold tracking-[0.08em] text-white">{profile.name}</p>
-                <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/75">{profile.hero.panelLabel}</p>
-              </div>
-              <span className="inline-flex max-w-full items-center self-start rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-[0.65rem] uppercase tracking-[0.18em] text-emerald-200 sm:self-auto sm:text-xs sm:tracking-[0.24em]">
-                {profile.hero.status}
-              </span>
-            </div>
 
             <div className="overflow-hidden rounded-[1.35rem] border border-cyan-300/20 bg-gradient-to-br from-cyan-300/12 via-transparent to-fuchsia-400/10 p-2.5 sm:rounded-[1.6rem] sm:p-3">
               <img
@@ -140,6 +128,8 @@ export default function Intro() {
               />
             </div>
           </div>
+
+          <p className="mt-4 font-display text-base font-semibold text-white sm:text-lg">{profile.name}</p>
 
           <div className="mt-4 hidden items-center gap-3 text-sm text-cyan-200/80 sm:flex lg:mt-6">
             <span className="scroll-indicator" aria-hidden="true" />

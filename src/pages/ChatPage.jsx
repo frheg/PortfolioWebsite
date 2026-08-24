@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import ChapterIntro from '../components/ui/ChapterIntro'
 import SectionCard from '../components/ui/SectionCard'
 import { chatSystemPrompt } from '../data/chatKnowledge'
 
@@ -13,7 +12,7 @@ const MODEL_OPTIONS = [
     id: 'SmolLM2-135M-Instruct-q0f16-MLC',
     name: 'SmolLM2 135M',
     downloadSize: '~360 MB',
-    note: "Smallest, most likely to load anywhere. Least capable — good if nothing else will run.",
+    note: "Smallest, most likely to load anywhere. Least capable. Good if nothing else will run.",
   },
   {
     id: 'SmolLM2-360M-Instruct-q4f16_1-MLC',
@@ -31,7 +30,7 @@ const MODEL_OPTIONS = [
     id: 'gemma-2-2b-it-q4f16_1-MLC',
     name: 'Gemma 2 2B',
     downloadSize: '~1.9 GB',
-    note: 'Most capable of the four. Desktop only — will crash most mobile browsers.',
+    note: 'Most capable of the four. Desktop only. Will crash most mobile browsers.',
   },
 ]
 
@@ -142,7 +141,7 @@ export default function ChatPage() {
       if (isLikelyImmatureWebGpu(message)) {
         setError(
           'Your browser reports lower GPU limits than this model needs. This is common on Firefox-based browsers ' +
-            '(including Zen), whose WebGPU support is still incomplete. Try Chrome, Edge, or Safari — or pick a smaller model below.'
+            '(including Zen), whose WebGPU support is still incomplete. Try Chrome, Edge, or Safari, or pick a smaller model below.'
         )
       } else {
         setError(message)
@@ -203,18 +202,12 @@ export default function ChatPage() {
 
   return (
     <>
-      <ChapterIntro
-        eyebrow="Local Inference"
-        title="Chat with a small AI model, running entirely in your browser."
-        description="No server, no API keys, no data leaving your machine. Pick a model sized to fit your device below."
-      />
-
       <div className="relative mx-auto w-full max-w-4xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
           id="chat"
           eyebrow={`${modelInfo.name} · WebGPU`}
-          title="Pick a model, then load it."
-          description="Every option runs fully client-side. If one won't load or crashes the tab, come back and try a smaller one — that's what this picker is for."
+          title="Chat with a small AI model, running entirely in your browser."
+          description="No server, no API keys, no data leaving your machine. Every model here runs fully client-side, pick one sized to fit your device. If it won't load or crashes the tab, try a smaller one."
         >
           {!supported ? (
             <p className="rounded-[1rem] border border-amber-300/30 bg-amber-300/10 p-4 text-sm text-amber-100">

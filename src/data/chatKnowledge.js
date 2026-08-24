@@ -7,7 +7,7 @@ import profile from './profile.json'
 // Kept to Fredric only (no solar-system trivia) to leave more of that budget
 // free for actual conversation.
 function buildProfileSummary() {
-  const currentJob = profile.experience[0]
+  const currentJob = profile.experience.find((job) => job.period.includes('Present')) || profile.experience[0]
   const currentEducation = profile.education[0]
   const lines = [
     `${profile.name}, ${profile.location}.`,

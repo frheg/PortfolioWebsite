@@ -3,25 +3,21 @@
   "location": "Bergen, Norway",
   "hero": {
     "eyebrow": "Software Engineering Student",
-    "headline": "I work across backend, frontend, and applied AI.",
-    "description": "Master's student in Software Engineering, currently focused on agentic systems, LLM harnesses, and RAG.",
+    "description": "Master's student in Software Engineering. Right now I mostly work on applied AI: agentic systems, local models, and keeping up with what's new in AI and ML.",
     "primaryCtaLabel": "See my projects",
     "primaryCtaHref": "/projects",
     "secondaryCtaLabel": "Get in touch",
-    "secondaryCtaHref": "/contact",
-    "panelLabel": "Profile",
-    "status": "Open to conversations"
+    "secondaryCtaHref": "/contact"
   },
   "quickFacts": [
     "Software engineering master's student",
     "Backend, frontend, applied AI",
-    "Agents, harnesses, and RAG"
+    "Agentic AI, LLM harnesses, local models"
   ],
   "currently": [
     "MSc Software Engineering, UiB/HVL",
-    "Interning at TV 2 (Digital) on applied AI",
     "Building an enterprise chatbot at Amitec AS",
-    "Exploring agentic AI and RAG on my own time"
+    "Exploring agentic AI and local model setups on my own time"
   ],
   "interests": [
     "Applied AI & agents",
@@ -31,19 +27,22 @@
     "Sailing & aviation",
     "Low-level computing"
   ],
-  "about": "BSc in Computer Technology from UiB, now doing a joint MSc in Software Engineering. I like systems that are simple, well-architected, and easy to reason about, and lately that curiosity is mostly pointed at applied AI. Daily driver: Neovim on NixOS.",
+  "about": "BSc in Computer Technology from UiB, now doing a joint MSc in Software Engineering. I like systems that are simple and easy to reason about. Right now I mostly work on applied AI. Daily driver: Neovim on NixOS.",
   "experience": [
     {
       "title": "Summer Intern",
       "company": "TV 2, Digital / Redaksjonell Utvikling",
       "period": "June 2026 - August 2026",
-      "details": "Applied AI, on the Redaksjonell Utvikling team within TV 2's Digital department."
+      "details": ["Applied AI, on the Redaksjonell Utvikling team within TV 2's Digital department."]
     },
     {
       "title": "Student Software Engineer",
       "company": "Amitec AS",
       "period": "November 2024 - Present",
-      "details": "Full-stack work on an enterprise chatbot: architecture, backend, frontend, networking, security, databases.; Time-series data and AVEVA PI systems for energy sector clients.",
+      "details": [
+        "Full-stack work on an enterprise chatbot: architecture, backend, frontend, networking, security, databases.",
+        "Time-series data and AVEVA PI systems for energy sector clients."
+      ],
       "link": "https://docs.aveva.com/category/pi-system",
       "linkLabel": "AVEVA PI systems"
     },
@@ -51,19 +50,19 @@
       "title": "Sales Co-worker",
       "company": "IKEA Leangen/Åsane, Trondheim/Bergen",
       "period": "May 2022 - February 2025",
-      "details": "Warehouse and sales department: customer service, stock management and sales."
+      "details": ["Warehouse and sales department: customer service, stock management and sales."]
     },
     {
       "title": "Co-worker",
       "company": "McDonalds Nidarvoll, Trondheim",
       "period": "January 2022 - April 2022",
-      "details": "Prepping food as a line-cook."
+      "details": ["Prepping food as a line-cook."]
     },
     {
       "title": "Driver and storage-worker",
       "company": "Rosenborg Bakeri, Trondheim",
       "period": "September 2021 - January 2022",
-      "details": "Delivered bread and pastries to private customers and bakeries."
+      "details": ["Delivered bread and pastries to private customers and bakeries."]
     }
   ],
   "education": [
@@ -110,7 +109,7 @@
     },
     {
       "name": "Enterprise Chatbot",
-      "description": "Business logic, architecture, networking, databases, and retrieval-augmented AI for a production chatbot.",
+      "description": "Architecture, backend, networking, databases, and retrieval-augmented AI for a production chatbot.",
       "highlight": "Full-stack work on a production system, still in progress.",
       "type": "Professional",
       "status": "In progress",
@@ -119,13 +118,13 @@
     },
     {
       "name": "Personal AI Homelab",
-      "description": "A local AI agent on my own hardware: open-source models, vLLM inference, RAG via Qdrant, tool use for search and utilities.",
-      "highlight": "Hands-on practice with agents, retrieval, and self-hosted infrastructure.",
+      "description": "A local AI agent on my own hardware. Runs open models through llama.cpp, with its own tools it can call on its own, web search, Wikipedia, weather, file access, and a small Qdrant-backed knowledge base.",
+      "highlight": "Hands-on practice with agentic workflows and running my own AI infrastructure.",
       "type": "Personal",
       "status": "Self-hosted",
       "featured": true,
       "repo": "https://github.com/frheg/HomeLab",
-      "tech": ["Python", "Qdrant", "vLLM", "PyTorch", "Embedding models"]
+      "tech": ["Python", "llama.cpp", "Qdrant", "FastAPI", "Docker"]
     },
     {
       "name": "Machine Learning Experimentation",
@@ -146,14 +145,16 @@
       "description": "A full-stack app for shared households, built for a course in modern software development methods.",
       "type": "University",
       "repo": "https://github.com/frheg/DAT251_Kollekt",
-      "tech": ["Kotlin", "React", "Spring Boot", "Docker", "Kafka", "Postgres", "Redis"]
+      "link": "https://apps.apple.com/no/app/kollekt/id6788522377?l=nb",
+      "linkLabel": "App Store",
+      "tech": ["Kotlin", "React", "Spring Boot", "PostgreSQL", "Docker", "Capacitor"]
     },
     {
       "name": "DAT250 Poll App (Group Project)",
       "description": "A poll application for a course on advanced software technologies.",
       "type": "University",
       "repo": "https://github.com/Maren24/DAT250-project",
-      "tech": ["Kotlin", "Angular", "Spring Boot", "Docker", "Qdrant", "Kafka"]
+      "tech": ["Kotlin", "Angular", "Spring Boot", "Python", "Docker", "Qdrant", "Kafka"]
     },
     {
       "name": "CodeMasters (Group Project)",
@@ -165,15 +166,13 @@
   ],
   "skills": [
     "Python",
-    "Applied AI: agentic systems, LLM harnesses, RAG",
+    "Applied AI: agentic systems, LLM harnesses, local inference",
     "Networking and architecture",
     "JavaScript/TypeScript",
     "Linux and terminal work",
     "Server hosting and administration",
     "React",
-    "Angular",
     "Three.js",
-    "C#/.NET",
     "Java",
     "Message brokers",
     "SQL and NoSQL databases",
@@ -184,47 +183,16 @@
   "skillGroups": [
     {
       "title": "Application Engineering",
-      "items": ["Python", "Kotlin", "Java", "React", "Angular", "C#/.NET"]
+      "items": ["Python", "Kotlin", "Java", "React"]
     },
     {
       "title": "AI and Data Systems",
-      "items": ["Agentic AI", "LLM harnesses", "RAG workflows", "Embedding models", "SQL", "NoSQL databases", "Qdrant"]
+      "items": ["Agentic AI", "LLM harnesses", "Local model inference", "Embedding models", "SQL", "NoSQL databases", "Qdrant"]
     },
     {
       "title": "Infrastructure and Workflow",
       "items": ["Linux", "NixOS", "Neovim", "Terminal work", "Networking", "Architecture", "Docker", "Git & CI/CD"]
     }
-  ],
-  "languages": [
-    { "name": "Norwegian", "level": "Fluent" },
-    { "name": "English", "level": "Fluent" },
-    { "name": "Spanish", "level": "Basic (ongoing learning)" },
-    { "name": "German", "level": "Basic" }
-  ],
-  "boardPositions": [
-    {
-      "title": "ITxBergen Leader",
-      "period": "January 2024 - February 2026",
-      "details": "Running the annual career day for IT students in Bergen, plus organizational decisions."
-    },
-    {
-      "title": "ITxBergen Board Member",
-      "period": "September 2022 - February 2026",
-      "details": "Planning the annual career day and smaller events for IT students in Bergen."
-    },
-    {
-      "title": "Vektorprogrammet - Assistant",
-      "period": "September 2023 - October 2023",
-      "details": "Math tutor (1P-Y) at Danielsen Videregående Skole, Bergen."
-    }
-  ],
-  "courses": [
-    { "name": "NSM grunnprinsipper for IKT-sikkerhet", "date": "October 2022", "id": "E320-Sikkerhetsmåned2022" },
-    { "name": "PI System Basics", "date": "November 2024", "id": "AV092191wmbm" },
-    { "name": "Asset Framework: Basics", "date": "November 2024", "id": "AVuxtcnkzynu" },
-    { "name": "Troubleshooting Basics for Administrators", "date": "December 2024", "id": "AV40acuigpxh" },
-    { "name": "PI Vision Basics", "date": "December 2024", "id": "AVaali88a7ox" },
-    { "name": "PI System Administration: Basics", "date": "December 2024", "id": "AVnmbjtyj47n" }
   ],
   "contact": {
     "email": "fredric.hegland@gmail.com",

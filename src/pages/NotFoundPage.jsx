@@ -18,7 +18,7 @@ export default function NotFoundPage() {
       />
 
       <div className="relative mx-auto w-full max-w-6xl px-4 pb-20 text-left sm:px-6 lg:px-8">
-        <SectionCard title="Go back home" description="Head back to the home page and continue from there.">
+        <SectionCard title="Go back home" description="Back to the home page.">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-300/18"
