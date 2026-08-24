@@ -86,17 +86,37 @@ export const spaceConfig = {
     ],
   },
 
-  skybox: {
-    seamBlendPx: 32,
-    // Quarter-turns per face: 1=90deg, 2=180deg, 3=270deg, 4=360deg/no-op.
-    rotations: {
-      rt: 4,
-      lf: 4,
-      up: 3,
-      dn: 1,
-      ft: 2,
-      bk: 4,
-    },
+  nebula: {
+    seed: 1337,
+    // Noise grid computed at this size, then upscaled onto textureSize —
+    // nebulae are inherently soft, so the upscale reads as detail rather
+    // than blur, and it keeps generation fast even at a large final size.
+    gridSize: isDev ? 96 : 224,
+    textureSize: isDev ? 768 : 3072,
+    // Star radii below were tuned at this texture size; useSkybox scales
+    // them by (actual size / this) so stars keep their apparent size —
+    // and just get smoother edges — as textureSize changes.
+    referenceTextureSize: 2048,
+    mobileTextureSize: 2048,
+    cloudScale: 1.6,
+    detailScale: 4.5,
+    octaves: 4,
+    detailOctaves: 3,
+    densityPower: 2.4,
+    densityFloor: 0.05,
+    // Matches the site's own palette: slate-950 background, cyan-300 and
+    // fuchsia-400 accents (the same two hues used in the hero panel glow
+    // and card borders), rather than an independent color scheme.
+    baseColor: { r: 2, g: 6, b: 23 },
+    colorStops: [
+      { h: 0.52, s: 0.7, l: 0.42 },
+      { h: 0.66, s: 0.5, l: 0.38 },
+      { h: 0.81, s: 0.62, l: 0.46 },
+    ],
+    starCount: isDev ? 500 : 2200,
+    starMinRadius: 0.15,
+    starMaxRadius: 0.55,
+    starGlowMultiplier: 2.4,
   },
 
   lights: {
