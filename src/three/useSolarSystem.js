@@ -44,6 +44,115 @@ const textureUrls = {
   pluto: plutoTexUrl,
 }
 
+// Ring-texture tints, keyed by the same textureUrls key used below — chosen
+// to pair with each planet's own hue-shift target rather than repeating the
+// UI's lavender/mauve accents everywhere.
+const RING_TINTS = {
+  saturnRing: 0xfab387, // peach
+  uranusRing: 0x89dceb, // sky
+}
+
+// The source ring photos paint the gaps between rings (e.g. the Cassini
+// division) as a flat dark color rather than as actual transparency, so at
+// any uniform material opacity those gaps render as a hard, opaque-looking
+// band instead of a see-through gap — that's the "harsh" line you get across
+// the ring. This redraws each ring as a flat tint whose alpha comes from the
+// source pixel's own luminance, so dark bands become genuinely transparent
+// (letting space show through) while bright bands stay solid, and recolors
+// the whole thing to match the site's palette instead of the source photo's
+// warm grey-brown.
+function processRingTexture(image, tintHex) {
+  const canvas = document.createElement('canvas')
+  canvas.width = image.width
+  canvas.height = image.height
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(image, 0, 0)
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const data = imageData.data
+  const tint = new THREE.Color(tintHex)
+  const tintR = Math.round(tint.r * 255)
+  const tintG = Math.round(tint.g * 255)
+  const tintB = Math.round(tint.b * 255)
+
+  for (let i = 0; i < data.length; i += 4) {
+    const luminance = (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255
+    data[i] = tintR
+    data[i + 1] = tintG
+    data[i + 2] = tintB
+    data[i + 3] = Math.round(Math.pow(Math.min(1, Math.max(0, luminance)), 1.4) * 255)
+  }
+
+  ctx.putImageData(imageData, 0, 0)
+  return canvas
+}
+
+// Per-planet hue-shift target, keyed by textureUrls key. The source photos
+// are realistic NASA imagery, which reads as an odd mismatch against a
+// stylized, hand-tinted scene — this recolors each one toward a distinct
+// Catppuccin color deliberately spread across the palette (not just
+// lavender/mauve, which the UI chrome already leans on heavily) so each
+// planet reads as its own color rather than a variation on the same hue.
+const PLANET_HUE_TARGETS = {
+  sun: { hex: 0xfab387, strength: 0.6 }, // peach — matches its own glow sprites, pushed harder since the source photo's natural color was already close to the old gentle target
+  mercury: { hex: 0x9399b2, strength: 0.55 }, // overlay2
+  venus: { hex: 0xfab387, strength: 0.55 }, // peach
+  earth: { hex: 0x94e2d5, strength: 0.5 }, // teal
+  moon: { hex: 0xa6adc8, strength: 0.5 }, // subtext0
+  mars: { hex: 0xeba0ac, strength: 0.55 }, // maroon
+  jupiter: { hex: 0xf9e2af, strength: 0.5 }, // yellow
+  saturn: { hex: 0xf5e0dc, strength: 0.5 }, // rosewater
+  uranus: { hex: 0x89dceb, strength: 0.55 }, // sky
+  neptune: { hex: 0x74c7ec, strength: 0.55 }, // sapphire
+  pluto: { hex: 0xf2cdcd, strength: 0.5 }, // flamingo
+}
+
+// Shortest-path lerp around the hue circle (0..1), so e.g. going from 0.95
+// to 0.05 shifts +0.1 through the wrap point rather than the long way round
+// through 0.5.
+function lerpHue(a, b, t) {
+  let diff = b - a
+  if (diff > 0.5) diff -= 1
+  if (diff < -0.5) diff += 1
+  let result = a + diff * t
+  if (result < 0) result += 1
+  if (result >= 1) result -= 1
+  return result
+}
+
+// Recolors a texture toward targetHex while keeping each pixel's original
+// lightness — that's where all the photographic detail (craters, cloud
+// bands, terrain shading) actually lives, so preserving it keeps the planet
+// recognizable while the hue/saturation shift makes it match the palette.
+function applyHueShift(image, targetHex, strength) {
+  const canvas = document.createElement('canvas')
+  canvas.width = image.width
+  canvas.height = image.height
+  const ctx = canvas.getContext('2d')
+  ctx.drawImage(image, 0, 0)
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const data = imageData.data
+  const target = new THREE.Color(targetHex)
+  const targetHsl = target.getHSL({})
+  const pixel = new THREE.Color()
+  const hsl = {}
+
+  for (let i = 0; i < data.length; i += 4) {
+    pixel.setRGB(data[i] / 255, data[i + 1] / 255, data[i + 2] / 255)
+    pixel.getHSL(hsl)
+    const h = lerpHue(hsl.h, targetHsl.h, strength)
+    const s = hsl.s + (targetHsl.s - hsl.s) * strength
+    pixel.setHSL(h, s, hsl.l)
+    data[i] = Math.round(pixel.r * 255)
+    data[i + 1] = Math.round(pixel.g * 255)
+    data[i + 2] = Math.round(pixel.b * 255)
+  }
+
+  ctx.putImageData(imageData, 0, 0)
+  return canvas
+}
+
 // ─── Real-ephemeris scale ────────────────────────────────────────────────────
 // The scene's orbitRadius values are already hand-compressed (outer planets
 // pulled in much more than a true linear AU scale would) so the whole system
@@ -111,11 +220,11 @@ function buildSunHaloTexture() {
 
   // Soft background radial gradient
   const bg = ctx.createRadialGradient(cx, cx, 0, cx, cx, r)
-  bg.addColorStop(0.00, 'rgba(255, 252, 210, 0.65)')
-  bg.addColorStop(0.07, 'rgba(255, 230, 120, 0.40)')
-  bg.addColorStop(0.22, 'rgba(255, 170,  40, 0.18)')
-  bg.addColorStop(0.50, 'rgba(255, 100,  10, 0.06)')
-  bg.addColorStop(1.00, 'rgba(255,  60,   0, 0.00)')
+  bg.addColorStop(0.00, 'rgba(245, 224, 220, 0.65)') // rosewater
+  bg.addColorStop(0.07, 'rgba(249, 226, 175, 0.40)') // yellow
+  bg.addColorStop(0.22, 'rgba(250, 179, 135, 0.18)') // peach
+  bg.addColorStop(0.50, 'rgba(235, 160, 172, 0.06)') // maroon
+  bg.addColorStop(1.00, 'rgba(243, 139, 168, 0.00)') // red
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, S, S)
 
@@ -135,18 +244,18 @@ function buildSunHaloTexture() {
       const endX = dir * r * len
 
       const sg = ctx.createLinearGradient(0, 0, endX, 0)
-      sg.addColorStop(0.0, `rgba(255, 240, 180, ${op * 0.40})`)
-      sg.addColorStop(0.2, `rgba(255, 210, 100, ${op * 0.20})`)
-      sg.addColorStop(0.6, `rgba(255, 160,  50, ${op * 0.06})`)
-      sg.addColorStop(1.0, 'rgba(255, 100, 0, 0)')
+      sg.addColorStop(0.0, `rgba(249, 226, 175, ${op * 0.40})`) // yellow
+      sg.addColorStop(0.2, `rgba(250, 179, 135, ${op * 0.20})`) // peach
+      sg.addColorStop(0.6, `rgba(235, 160, 172, ${op * 0.06})`) // maroon
+      sg.addColorStop(1.0, 'rgba(243, 139, 168, 0)') // red
       ctx.fillStyle = sg
       ctx.fillRect(dir > 0 ? 0 : endX, -softW / 2, Math.abs(endX), softW)
 
       const cg = ctx.createLinearGradient(0, 0, endX, 0)
-      cg.addColorStop(0.00, `rgba(255, 252, 220, ${op})`)
-      cg.addColorStop(0.15, `rgba(255, 235, 160, ${op * 0.70})`)
-      cg.addColorStop(0.45, `rgba(255, 190,  80, ${op * 0.20})`)
-      cg.addColorStop(1.00, 'rgba(255, 140, 30, 0)')
+      cg.addColorStop(0.00, `rgba(245, 224, 220, ${op})`) // rosewater
+      cg.addColorStop(0.15, `rgba(249, 226, 175, ${op * 0.70})`) // yellow
+      cg.addColorStop(0.45, `rgba(250, 179, 135, ${op * 0.20})`) // peach
+      cg.addColorStop(1.00, 'rgba(235, 160, 172, 0)') // maroon
       ctx.fillStyle = cg
       ctx.fillRect(dir > 0 ? 0 : endX, -coreW / 2, Math.abs(endX), coreW)
     }
@@ -167,9 +276,10 @@ function buildSunHaloTexture() {
  *
  *  Canvas %   →  world distance (radius=30 example)
  *   0 %        →   0  (sun centre, fully transparent)
- *  50 %        →  30  (sun surface — glow starts)
- *  55 %        →  33  (peak brightness, just outside sun)
- *  75 %        →  45  (mostly faded)
+ *  44 %        →  26  (just inside the surface — glow starts blooming in)
+ *  50 %        →  30  (sun surface)
+ *  58 %        →  35  (peak brightness, just outside sun)
+ *  82 %        →  49  (mostly faded)
  * 100 %        →  60  (transparent edge)
  */
 function buildSunRimGlowTexture() {
@@ -180,15 +290,17 @@ function buildSunRimGlowTexture() {
   const ctx = canvas.getContext('2d')
   const cx = S / 2
 
+  // Wide, gradual ramp rather than mostly-flat-then-a-spike — that shape is
+  // what read as a hard ring right at the sun's edge instead of a soft bloom.
   const grd = ctx.createRadialGradient(cx, cx, 0, cx, cx, cx)
-  grd.addColorStop(0.00, 'rgba(255, 255, 210, 0.00)') // fully transparent — sun texture shows
-  grd.addColorStop(0.43, 'rgba(255, 252, 195, 0.00)') // still inside sun body
-  grd.addColorStop(0.48, 'rgba(255, 244, 165, 0.12)') // approaching surface
-  grd.addColorStop(0.53, 'rgba(255, 228, 110, 0.82)') // peak: warm rim at/just outside surface
-  grd.addColorStop(0.60, 'rgba(255, 200,  65, 0.48)') // quick outer fade
-  grd.addColorStop(0.70, 'rgba(255, 162,  32, 0.16)')
-  grd.addColorStop(0.84, 'rgba(255, 115,  10, 0.04)')
-  grd.addColorStop(1.00, 'rgba(255,  75,   0, 0.00)')
+  grd.addColorStop(0.00, 'rgba(245, 224, 220, 0.00)') // rosewater — fully transparent, sun texture shows
+  grd.addColorStop(0.32, 'rgba(245, 224, 220, 0.00)') // still inside sun body
+  grd.addColorStop(0.44, 'rgba(249, 226, 175, 0.18)') // yellow — first hint of glow, before the surface
+  grd.addColorStop(0.50, 'rgba(250, 179, 135, 0.55)') // peach — at the surface, a bright limb rather than a hard edge
+  grd.addColorStop(0.58, 'rgba(250, 179, 135, 0.85)') // peach — peak, just outside the surface
+  grd.addColorStop(0.68, 'rgba(235, 160, 172, 0.42)') // maroon
+  grd.addColorStop(0.82, 'rgba(243, 139, 168, 0.10)') // red
+  grd.addColorStop(1.00, 'rgba(243, 139, 168, 0.00)')
   ctx.fillStyle = grd
   ctx.fillRect(0, 0, S, S)
 
@@ -203,23 +315,30 @@ function buildSunRimGlowTexture() {
 function buildSunGlowEffect(radius, anchor) {
   const glowSprites = []
 
-  // Layer 0: rim glow (transparent centre, peak at sun surface)
+  // Layer 0: rim glow (transparent centre, peak at sun surface). Scale is
+  // fixed at radius * 4.0 — that's load-bearing for buildSunRimGlowTexture's
+  // gradient stops to land where the doc comment above it says they do,
+  // shrink the corona/halo layers below instead for a smaller glow overall.
   const rimTex = cachedGlowTex('sun-rim', buildSunRimGlowTexture)
   const rimSprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: rimTex, transparent: true, opacity: 0.88, blending: THREE.AdditiveBlending, depthWrite: false })
+    new THREE.SpriteMaterial({ map: rimTex, transparent: true, opacity: 0.78, blending: THREE.AdditiveBlending, depthWrite: false })
   )
   rimSprite.scale.setScalar(radius * 4.0)
-  rimSprite.userData.baseOpacity = 0.88
+  rimSprite.userData.baseOpacity = 0.78
   rimSprite.userData.baseSize    = radius * 4.0
   anchor.add(rimSprite)
   glowSprites.push(rimSprite)
 
-  // Layers 1–4: wide soft-gradient corona
+  // Layers 1–4: wide soft-gradient corona. Opacities stay short of the
+  // original values — these layers overlap heavily near the surface, and
+  // with additive blending even pastel Catppuccin colors sum toward white
+  // fast once several of them stack, which is what read as a plain white
+  // halo originally.
   const coronaLayers = [
-    { size: radius *  3.0, baseOpacity: 0.50, rgb: [255, 252, 225] },
-    { size: radius *  6.5, baseOpacity: 0.42, rgb: [255, 220, 120] },
-    { size: radius * 12.0, baseOpacity: 0.20, rgb: [255, 165,  50] },
-    { size: radius * 22.0, baseOpacity: 0.09, rgb: [255, 100,  15] },
+    { size: radius *  2.8, baseOpacity: 0.38, rgb: [245, 224, 220] }, // rosewater
+    { size: radius *  5.5, baseOpacity: 0.32, rgb: [249, 226, 175] }, // yellow
+    { size: radius * 10.0, baseOpacity: 0.18, rgb: [250, 179, 135] }, // peach
+    { size: radius * 17.0, baseOpacity: 0.09, rgb: [235, 160, 172] }, // maroon
   ]
 
   coronaLayers.forEach(({ size, baseOpacity, rgb }) => {
@@ -236,9 +355,9 @@ function buildSunGlowEffect(radius, anchor) {
 
   // Outer halo + diffraction spike sprite
   const haloTex = cachedGlowTex('sun-halo', buildSunHaloTexture)
-  const haloSize = radius * 26
+  const haloSize = radius * 22
   const haloSprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: haloTex, transparent: true, opacity: 0.80, blending: THREE.AdditiveBlending, depthWrite: false })
+    new THREE.SpriteMaterial({ map: haloTex, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending, depthWrite: false })
   )
   haloSprite.scale.setScalar(haloSize)
   haloSprite.userData.baseScale = haloSize
@@ -260,7 +379,7 @@ function buildSaucer(anchor) {
   const hullGeo = new THREE.CylinderGeometry(5.2, 6.8, 1.2, 24, 1)
   const hull = new THREE.Mesh(
     hullGeo,
-    new THREE.MeshStandardMaterial({ color: 0x8899aa, metalness: 0.88, roughness: 0.15 })
+    new THREE.MeshStandardMaterial({ color: 0x9399b2, metalness: 0.88, roughness: 0.15 }) // overlay2
   )
 
   // Flat underside plate
@@ -268,10 +387,10 @@ function buildSaucer(anchor) {
   const plate = new THREE.Mesh(
     plateGeo,
     new THREE.MeshStandardMaterial({
-      color: 0x556677,
+      color: 0x585b70, // surface2
       metalness: 0.92,
       roughness: 0.10,
-      emissive: new THREE.Color(0x002211),
+      emissive: new THREE.Color(0x140d1c), // dark mauve
       emissiveIntensity: 0.4,
     })
   )
@@ -282,7 +401,7 @@ function buildSaucer(anchor) {
   const dome = new THREE.Mesh(
     domeGeo,
     new THREE.MeshStandardMaterial({
-      color: 0xccffee, transparent: true, opacity: 0.42, roughness: 0.03, metalness: 0.10,
+      color: 0xcbd2fb, transparent: true, opacity: 0.42, roughness: 0.03, metalness: 0.10, // light sky
     })
   )
   dome.position.y = 0.50
@@ -292,7 +411,7 @@ function buildSaucer(anchor) {
   const band = new THREE.Mesh(
     bandGeo,
     new THREE.MeshBasicMaterial({
-      color: 0x44ffcc,
+      color: 0x94e2d5,
       transparent: true,
       opacity: 0.55,
       side: THREE.DoubleSide,
@@ -335,7 +454,7 @@ function addUfoGlow(anchor) {
 
   // Dim cyan PointLight: illuminates the saucer body and nearby space
   // decay=2 (quadratic), intensity tuned so lit side shows at ~5–15 anchor units
-  const light = new THREE.PointLight(0x44ffcc, 500, 0, 2)
+  const light = new THREE.PointLight(0x94e2d5, 500, 0, 2)
   anchor.add(light)
 }
 
@@ -362,7 +481,20 @@ export function useSolarSystem(sceneRef, isExplore = false) {
     const textureLoader = new THREE.TextureLoader(sceneLoadingManager)
     const textures = Object.fromEntries(
       Object.entries(textureUrls).map(([key, url]) => {
-        const texture = textureLoader.load(url)
+        const ringTint = RING_TINTS[key]
+        const hueTarget = PLANET_HUE_TARGETS[key]
+        const onLoad = ringTint
+          ? (loaded) => {
+              loaded.image = processRingTexture(loaded.image, ringTint)
+              loaded.needsUpdate = true
+            }
+          : hueTarget
+          ? (loaded) => {
+              loaded.image = applyHueShift(loaded.image, hueTarget.hex, hueTarget.strength)
+              loaded.needsUpdate = true
+            }
+          : undefined
+        const texture = textureLoader.load(url, onLoad)
         texture.anisotropy = spaceConfig.solarSystem.textureAnisotropy
         texture.colorSpace = THREE.SRGBColorSpace
         return [key, texture]

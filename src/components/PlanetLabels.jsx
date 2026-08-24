@@ -120,7 +120,7 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
             className="whitespace-nowrap text-center text-[0.58rem] font-semibold uppercase tracking-[0.32em] text-cyan-200"
             style={{
               textShadow:
-                '0 0 6px rgba(103,232,249,1), 0 0 18px rgba(103,232,249,0.6), 0 0 32px rgba(103,232,249,0.25)',
+                '0 0 6px rgba(148,162,249,1), 0 0 18px rgba(148,162,249,0.6), 0 0 32px rgba(148,162,249,0.25)',
             }}
           >
             · {planet.name} ·

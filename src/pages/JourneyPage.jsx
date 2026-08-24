@@ -15,7 +15,7 @@ export default function JourneyPage() {
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <h3 className="font-display text-2xl font-semibold text-white">Experience</h3>
-                <span className="pt-1 text-right text-xs uppercase leading-none tracking-[0.28em] text-cyan-300/70">Professional</span>
+                <span className="pt-1 text-right text-xs uppercase leading-none tracking-[0.28em] text-sky-300/80">Professional</span>
               </div>
               {profile.experience.map((job, index) => (
                 <Reveal
@@ -59,7 +59,7 @@ export default function JourneyPage() {
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <h3 className="font-display text-2xl font-semibold text-white">Education</h3>
-                <span className="pt-1 text-right text-xs uppercase leading-none tracking-[0.28em] text-cyan-300/70">Academic</span>
+                <span className="pt-1 text-right text-xs uppercase leading-none tracking-[0.28em] text-pink-300/80">Academic</span>
               </div>
               {profile.education.map((ed, index) => (
                 <Reveal

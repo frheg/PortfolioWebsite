@@ -15,7 +15,7 @@ function HeroAction({ item }) {
 export default function PageHero({ eyebrow, title, description, actions = [] }) {
   return (
     <section className="mx-auto w-full max-w-6xl px-4 pt-10 sm:px-6 sm:pt-14 lg:px-8 lg:pt-16">
-      <div className="relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-slate-950/45 p-5 shadow-[0_30px_80px_rgba(8,15,35,0.4)] backdrop-blur-xl sm:rounded-[2rem] sm:p-6 md:p-8">
+      <div className="relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-slate-950/45 p-5 shadow-[0_30px_80px_rgba(17,17,27,0.4)] backdrop-blur-xl sm:rounded-[2rem] sm:p-6 md:p-8">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
         <div className="pointer-events-none absolute right-0 top-0 h-32 w-32 rounded-full bg-cyan-300/10 blur-3xl" />
         <p className="mb-3 text-[0.7rem] font-medium uppercase tracking-[0.24em] text-cyan-300/75 sm:text-xs sm:tracking-[0.34em]">{eyebrow}</p>

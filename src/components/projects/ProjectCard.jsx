@@ -1,6 +1,20 @@
 import { useRef } from 'react'
 import { pickRevealVariant, useScrollReveal } from '../../hooks/useScrollReveal'
 
+// Color-codes project type/status by value instead of reusing the same
+// accent everywhere, so the project grid reads with some actual variety.
+const TYPE_COLORS = {
+  Personal: 'text-teal-300/80',
+  Professional: 'text-sky-300/80',
+  Exploration: 'text-yellow-300/80',
+  University: 'text-pink-300/80',
+}
+const STATUS_COLORS = {
+  Live: 'text-green-300/90',
+  'In progress': 'text-amber-300/90',
+  'Self-hosted': 'text-teal-300/90',
+}
+
 function ActionLink({ href, label }) {
   return (
     <a
@@ -20,17 +34,17 @@ export default function ProjectCard({ project, index = 0, featured = false }) {
 
   if (featured) {
     return (
-      <article ref={cardRef} className="group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-white/10 bg-gradient-to-b from-cyan-300/12 via-slate-950/78 to-slate-950/95 p-4 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_24px_50px_rgba(6,182,212,0.12)] sm:rounded-[1.8rem] sm:p-6">
+      <article ref={cardRef} className="group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-white/10 bg-gradient-to-b from-cyan-300/12 via-slate-950/78 to-slate-950/95 p-4 transition duration-300 hover:-translate-y-1 hover:border-cyan-300/35 hover:shadow-[0_24px_50px_rgba(148,162,249,0.12)] sm:rounded-[1.8rem] sm:p-6">
         <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
         <div className="pointer-events-none absolute right-0 top-0 h-28 w-28 rounded-full bg-cyan-300/10 blur-3xl transition duration-300 group-hover:bg-cyan-300/16" />
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/70">{project.type}</p>
+            <p className={`text-xs uppercase tracking-[0.3em] ${TYPE_COLORS[project.type] || 'text-cyan-300/70'}`}>{project.type}</p>
             <span className="inline-flex rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.24em] text-slate-100/75">
               0{index + 1}
             </span>
           </div>
-          <span className="inline-flex min-h-9 min-w-[7.75rem] shrink-0 items-center justify-center rounded-full border border-cyan-300/20 bg-black/20 px-3 py-1 text-center text-xs uppercase tracking-[0.24em] text-cyan-100/85">
+          <span className={`inline-flex min-h-9 min-w-[7.75rem] shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1 text-center text-xs uppercase tracking-[0.24em] ${STATUS_COLORS[project.status] || 'text-cyan-100/85'}`}>
             {project.status}
           </span>
         </div>
@@ -67,7 +81,7 @@ export default function ProjectCard({ project, index = 0, featured = false }) {
         <h3 className="max-w-[18rem] font-display text-lg font-semibold leading-tight tracking-[0.03em] text-white sm:max-w-none">
           {project.name}
         </h3>
-        <span className="shrink-0 pt-0.5 text-right text-xs uppercase leading-none tracking-[0.28em] text-cyan-300/65">{project.type}</span>
+        <span className={`shrink-0 pt-0.5 text-right text-xs uppercase leading-none tracking-[0.28em] ${TYPE_COLORS[project.type] || 'text-cyan-300/65'}`}>{project.type}</span>
       </div>
       <p className="mt-3 flex-1 text-sm leading-7 text-slate-200/80">{project.description}</p>
       <div className="mt-4 flex flex-wrap items-start gap-2">

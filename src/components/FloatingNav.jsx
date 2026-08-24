@@ -14,7 +14,7 @@ export default function FloatingNav() {
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="pointer-events-auto mx-auto w-full overflow-visible sm:w-fit sm:max-w-2xl">
-        <div className="overflow-visible rounded-[1.4rem] border border-white/10 bg-slate-950/88 shadow-[0_18px_50px_rgba(8,15,35,0.55)] backdrop-blur-xl">
+        <div className="overflow-visible rounded-[1.4rem] border border-white/10 bg-slate-950/88 shadow-[0_18px_50px_rgba(17,17,27,0.55)] backdrop-blur-xl">
           <div className="h-px bg-gradient-to-r from-transparent via-cyan-300/45 to-transparent" />
           <div className="flex items-center justify-between gap-1 overflow-visible p-1.5 sm:justify-center sm:gap-1.5">
             {navLinks.map(({ to, label, icon, featured, sticker }) => (
@@ -27,10 +27,10 @@ export default function FloatingNav() {
                   `relative isolate flex flex-1 flex-col items-center gap-0.5 overflow-visible whitespace-nowrap rounded-xl px-1.5 py-1.5 text-center text-[0.58rem] font-medium uppercase tracking-[0.1em] transition sm:flex-none sm:flex-row sm:gap-1.5 sm:px-3 sm:py-2 sm:text-[0.62rem] sm:tracking-[0.16em] ${
                     featured
                       ? isActive
-                        ? 'explore-pill-mobile bg-cyan-300/18 text-cyan-50 shadow-[0_0_18px_rgba(103,232,249,0.16)]'
-                        : 'explore-pill-mobile text-cyan-100 shadow-[0_0_16px_rgba(103,232,249,0.12)] hover:bg-cyan-300/12 hover:text-cyan-50'
+                        ? 'explore-pill-mobile bg-cyan-300/18 text-cyan-50 shadow-[0_0_18px_rgba(148,162,249,0.16)]'
+                        : 'explore-pill-mobile text-cyan-100 shadow-[0_0_16px_rgba(148,162,249,0.12)] hover:bg-cyan-300/12 hover:text-cyan-50'
                       : isActive
-                        ? 'bg-cyan-300/15 text-cyan-100 shadow-[0_0_14px_rgba(103,232,249,0.12)]'
+                        ? 'bg-cyan-300/15 text-cyan-100 shadow-[0_0_14px_rgba(148,162,249,0.12)]'
                         : 'text-cyan-300/78 hover:bg-white/5 hover:text-cyan-100'
                   }`
                 }

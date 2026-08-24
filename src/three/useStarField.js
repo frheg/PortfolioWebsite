@@ -38,27 +38,27 @@ function createWarpSpriteTexture() {
   const center = size / 2
   const lineHeight = size * 0.12
   const horizontal = context.createLinearGradient(0, center, size, center)
-  horizontal.addColorStop(0, 'rgba(255,255,255,0)')
-  horizontal.addColorStop(0.2, 'rgba(125,211,252,0.18)')
-  horizontal.addColorStop(0.5, 'rgba(255,255,255,0.95)')
-  horizontal.addColorStop(0.8, 'rgba(192,132,252,0.18)')
-  horizontal.addColorStop(1, 'rgba(255,255,255,0)')
+  horizontal.addColorStop(0, 'rgba(205,214,244,0)')
+  horizontal.addColorStop(0.2, 'rgba(180,190,254,0.18)')
+  horizontal.addColorStop(0.5, 'rgba(205,214,244,0.95)')
+  horizontal.addColorStop(0.8, 'rgba(203,166,247,0.18)')
+  horizontal.addColorStop(1, 'rgba(205,214,244,0)')
   context.fillStyle = horizontal
   context.fillRect(0, center - lineHeight / 2, size, lineHeight)
 
   const vertical = context.createLinearGradient(center, 0, center, size)
-  vertical.addColorStop(0, 'rgba(255,255,255,0)')
-  vertical.addColorStop(0.35, 'rgba(125,211,252,0.08)')
-  vertical.addColorStop(0.5, 'rgba(255,255,255,0.35)')
-  vertical.addColorStop(0.65, 'rgba(192,132,252,0.08)')
-  vertical.addColorStop(1, 'rgba(255,255,255,0)')
+  vertical.addColorStop(0, 'rgba(205,214,244,0)')
+  vertical.addColorStop(0.35, 'rgba(180,190,254,0.08)')
+  vertical.addColorStop(0.5, 'rgba(205,214,244,0.35)')
+  vertical.addColorStop(0.65, 'rgba(203,166,247,0.08)')
+  vertical.addColorStop(1, 'rgba(205,214,244,0)')
   context.fillStyle = vertical
   context.fillRect(center - lineHeight * 0.35, 0, lineHeight * 0.7, size)
 
   const core = context.createRadialGradient(center, center, 0, center, center, size * 0.18)
-  core.addColorStop(0, 'rgba(255,255,255,1)')
-  core.addColorStop(0.35, 'rgba(255,255,255,0.92)')
-  core.addColorStop(1, 'rgba(255,255,255,0)')
+  core.addColorStop(0, 'rgba(205,214,244,1)')
+  core.addColorStop(0.35, 'rgba(205,214,244,0.92)')
+  core.addColorStop(1, 'rgba(205,214,244,0)')
   context.fillStyle = core
   context.fillRect(0, 0, size, size)
 

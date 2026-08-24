@@ -17,7 +17,7 @@ export default function ExplorePauseButton() {
       data-explore-control="true"
       aria-label="Pause"
       onClick={pauseExplore}
-      className="pointer-events-auto fixed right-4 top-4 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-slate-950/70 text-cyan-100 shadow-[0_10px_30px_rgba(8,15,35,0.5)] backdrop-blur-xl transition hover:border-cyan-300/40 hover:text-cyan-50 active:scale-95 sm:top-5 md:hidden"
+      className="pointer-events-auto fixed right-4 top-4 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-slate-950/70 text-cyan-100 shadow-[0_10px_30px_rgba(17,17,27,0.5)] backdrop-blur-xl transition hover:border-cyan-300/40 hover:text-cyan-50 active:scale-95 sm:top-5 md:hidden"
     >
       <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
         <rect x="6" y="5" width="4" height="14" rx="1" />

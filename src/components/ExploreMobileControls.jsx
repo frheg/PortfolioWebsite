@@ -37,8 +37,8 @@ function ExploreButton({ direction, label, children, enableBoostDrag = false, sm
   const sizeClass = small ? 'h-11 w-11' : 'h-14 w-14'
   const boostClass =
     enableBoostDrag && boostActive
-      ? 'explore-forward-boost border-cyan-200/70 bg-cyan-300/18 text-cyan-50 shadow-[0_0_30px_rgba(103,232,249,0.45)]'
-      : 'border-cyan-300/25 bg-slate-950/82 text-cyan-100 shadow-[0_14px_40px_rgba(8,15,35,0.55)]'
+      ? 'explore-forward-boost border-cyan-200/70 bg-cyan-300/18 text-cyan-50 shadow-[0_0_30px_rgba(148,162,249,0.45)]'
+      : 'border-cyan-300/25 bg-slate-950/82 text-cyan-100 shadow-[0_14px_40px_rgba(17,17,27,0.55)]'
 
   return (
     <button

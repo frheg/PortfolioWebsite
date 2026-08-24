@@ -78,7 +78,7 @@ export default function Intro() {
         <div className="space-y-5 sm:space-y-6 lg:space-y-8">
           <div
             ref={eyebrowRef}
-            className="inline-flex max-w-full items-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.24em] text-cyan-100 shadow-[0_0_30px_rgba(103,232,249,0.12)] sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.32em]"
+            className="inline-flex max-w-full items-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.24em] text-cyan-100 shadow-[0_0_30px_rgba(148,162,249,0.12)] sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.32em]"
           >
             {profile.hero.eyebrow}
           </div>
@@ -116,17 +116,14 @@ export default function Intro() {
 
         <div ref={panelRef} className="relative mx-auto w-full max-w-md lg:max-w-none">
           <div className="absolute -inset-8 rounded-full bg-cyan-400/10 blur-3xl" aria-hidden="true" />
-          <div className="relative overflow-hidden rounded-[1.8rem] border border-white/10 bg-slate-950/45 p-4 shadow-[0_30px_80px_rgba(8,15,35,0.55)] backdrop-blur-xl sm:rounded-[2rem] sm:p-5">
+          <div className="relative overflow-hidden rounded-[1.8rem] border border-cyan-300/20 bg-gradient-to-br from-cyan-300/12 via-slate-950/45 to-fuchsia-400/10 p-2.5 shadow-[0_30px_80px_rgba(17,17,27,0.55)] backdrop-blur-xl sm:rounded-[2rem] sm:p-3">
             <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
-
-            <div className="overflow-hidden rounded-[1.35rem] border border-cyan-300/20 bg-gradient-to-br from-cyan-300/12 via-transparent to-fuchsia-400/10 p-2.5 sm:rounded-[1.6rem] sm:p-3">
-              <img
-                src={selfPortrait}
-                alt="Portrait of Fredric Hegland"
-                loading="eager"
-                className="aspect-[5/6] w-full rounded-[1rem] object-cover sm:aspect-[4/5] sm:rounded-[1.2rem]"
-              />
-            </div>
+            <img
+              src={selfPortrait}
+              alt="Portrait of Fredric Hegland"
+              loading="eager"
+              className="aspect-[5/6] w-full rounded-[1.35rem] object-cover sm:aspect-[4/5] sm:rounded-[1.6rem]"
+            />
           </div>
 
           <p className="mt-4 font-display text-base font-semibold text-white sm:text-lg">{profile.name}</p>

@@ -25,7 +25,7 @@ export default function ExplorePauseOverlay() {
       aria-label="Explore mode paused"
     >
       <div
-        className="pointer-events-auto mx-4 max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-2xl border border-white/10 bg-slate-950/88 px-8 py-8 text-center shadow-[0_24px_64px_rgba(0,0,0,0.7)] backdrop-blur-xl"
+        className="pointer-events-auto mx-4 max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-2xl border border-white/10 bg-slate-950/88 px-8 py-8 text-center shadow-[0_24px_64px_rgba(17,17,27,0.7)] backdrop-blur-xl"
       >
         <p className="text-[0.6rem] uppercase tracking-[0.35em] text-cyan-400/70">Explore Mode</p>
         <h2 className="mt-1 text-2xl font-light uppercase tracking-[0.25em] text-cyan-100">

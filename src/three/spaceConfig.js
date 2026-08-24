@@ -21,7 +21,7 @@ export const spaceConfig = {
   renderer: {
     fov: 75,
     near: 0.1,
-    clearColor: 0x000000,
+    clearColor: 0x11111b, // crust
     maxPixelRatio: 2,
     powerPreference: 'high-performance',
     // ACES tonemapping maps physical candela values gracefully without clipping
@@ -104,14 +104,14 @@ export const spaceConfig = {
     detailOctaves: 3,
     densityPower: 2.4,
     densityFloor: 0.05,
-    // Matches the site's own palette: slate-950 background, cyan-300 and
-    // fuchsia-400 accents (the same two hues used in the hero panel glow
-    // and card borders), rather than an independent color scheme.
-    baseColor: { r: 2, g: 6, b: 23 },
+    // Catppuccin Mocha: crust background, sky/sapphire through mauve for
+    // the cloud color (lavender through mauve — the same hues used across
+    // the UI and the rest of the scene).
+    baseColor: { r: 17, g: 17, b: 27 },
     colorStops: [
-      { h: 0.52, s: 0.7, l: 0.42 },
-      { h: 0.66, s: 0.5, l: 0.38 },
-      { h: 0.81, s: 0.62, l: 0.46 },
+      { h: 0.61, s: 0.6, l: 0.4 },
+      { h: 0.6441, s: 0.5, l: 0.38 },
+      { h: 0.7428, s: 0.62, l: 0.46 },
     ],
     starCount: isDev ? 500 : 2200,
     starMinRadius: 0.15,
@@ -121,10 +121,10 @@ export const spaceConfig = {
 
   lights: {
     // Low ambient so sun-lit vs dark side is visible; point light does the heavy work
-    ambient: { color: 0xffffff, intensity: 0.08 },
+    ambient: { color: 0xcdd6f4, intensity: 0.08 }, // text
     point: {
       // Physical candelas at scene scale: 100k gives Earth ~0.5 lux → ACES maps it to ~60% brightness
-      color: 0xfff4e0,
+      color: 0xf5e0dc, // rosewater — warm, near-identical to the previous 0xfff4e0
       intensity: 100000,
       distance: 0,   // 0 = infinite range (quadratic decay handles falloff naturally)
       decay: 2,
@@ -158,10 +158,10 @@ export const spaceConfig = {
     sprite: {
       size: 64,
       gradientStops: [
-        { offset: 0, color: 'rgba(255, 255, 255, 1)' },
-        { offset: 0.45, color: 'rgba(255, 255, 255, 0.95)' },
-        { offset: 0.75, color: 'rgba(255, 255, 255, 0.35)' },
-        { offset: 1, color: 'rgba(255, 255, 255, 0)' },
+        { offset: 0, color: 'rgba(205, 214, 244, 1)' },
+        { offset: 0.45, color: 'rgba(205, 214, 244, 0.95)' },
+        { offset: 0.75, color: 'rgba(205, 214, 244, 0.35)' },
+        { offset: 1, color: 'rgba(205, 214, 244, 0)' },
       ],
     },
   },
@@ -210,9 +210,9 @@ export const spaceConfig = {
   galaxies: {
     spawnRadiusFactor: 1.25,
     colorThemes: [
-      { h: 0.05, s: 0.8, l: 0.6 },
-      { h: 0.6, s: 0.9, l: 0.7 },
-      { h: 0.15, s: 0.7, l: 0.8 },
+      { h: 0.0638, s: 0.8, l: 0.6 }, // peach
+      { h: 0.6441, s: 0.9, l: 0.7 }, // lavender
+      { h: 0.1149, s: 0.7, l: 0.8 }, // yellow
     ],
     drift: { min: -0.02, max: 0.02 },
     rotationSpeed: { min: 0.001, max: 0.002 },
@@ -230,11 +230,11 @@ export const spaceConfig = {
   comets: {
     fieldRadiusFactor: 0.85,
     speed: { min: 0.5, max: 2.0 },
-    core: { radius: 0.3, segments: 16, color: 0xffffff },
-    glow: { radius: 0.9, segments: 16, color: 0x66ccff, opacity: 0.3 },
-    halo: { innerRadius: 0.6, outerRadius: 1.1, segments: 32, color: 0x66ccff, opacity: 0.15 },
+    core: { radius: 0.3, segments: 16, color: 0xcdd6f4 }, // text
+    glow: { radius: 0.9, segments: 16, color: 0x94a2f9, opacity: 0.3 }, // sapphire
+    halo: { innerRadius: 0.6, outerRadius: 1.1, segments: 32, color: 0x94a2f9, opacity: 0.15 },
     trail: {
-      baseColor: 0x66ccff,
+      baseColor: 0x94a2f9,
       segments: 64,
       meshes: [
         { length: 20, radius: 0.8, opacity: 0.4 },

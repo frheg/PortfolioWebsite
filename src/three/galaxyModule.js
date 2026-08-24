@@ -16,9 +16,9 @@ function getSpriteTexture() {
   const context = canvas.getContext('2d')
   const center = size / 2
   const gradient = context.createRadialGradient(center, center, 0, center, center, center)
-  gradient.addColorStop(0, 'rgba(255,255,255,1)')
-  gradient.addColorStop(0.5, 'rgba(255,255,255,0.85)')
-  gradient.addColorStop(1, 'rgba(255,255,255,0)')
+  gradient.addColorStop(0, 'rgba(205,214,244,1)')
+  gradient.addColorStop(0.5, 'rgba(205,214,244,0.85)')
+  gradient.addColorStop(1, 'rgba(205,214,244,0)')
   context.fillStyle = gradient
   context.fillRect(0, 0, size, size)
 

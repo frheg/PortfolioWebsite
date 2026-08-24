@@ -156,9 +156,9 @@ function drawStars(context, size, count, seed, cfg, radiusScale) {
     const alpha = 0.35 + random() * 0.55
     const glowRadius = radius * cfg.starGlowMultiplier
     const gradient = context.createRadialGradient(x, y, 0, x, y, glowRadius)
-    gradient.addColorStop(0, `rgba(255,255,255,${alpha})`)
-    gradient.addColorStop(0.35, `rgba(210,228,255,${alpha * 0.45})`)
-    gradient.addColorStop(1, 'rgba(255,255,255,0)')
+    gradient.addColorStop(0, `rgba(205,214,244,${alpha})`)
+    gradient.addColorStop(0.35, `rgba(203,210,251,${alpha * 0.45})`)
+    gradient.addColorStop(1, 'rgba(205,214,244,0)')
     context.fillStyle = gradient
     context.beginPath()
     context.arc(x, y, glowRadius, 0, Math.PI * 2)
