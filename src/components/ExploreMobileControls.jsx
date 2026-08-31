@@ -1,6 +1,5 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { getExploreBoostSnapshot, setExploreMove, subscribeExploreInput } from '../three/exploreControls'
-import { useT } from '../i18n/useT'
 
 const BOOST_DRAG_THRESHOLD = 22
 
@@ -60,7 +59,6 @@ function ExploreButton({ direction, label, children, enableBoostDrag = false, sm
 }
 
 export default function ExploreMobileControls() {
-  const t = useT()
   useEffect(() => () => {
     setExploreMove('forward', false)
     setExploreMove('backward', false)
@@ -81,16 +79,16 @@ export default function ExploreMobileControls() {
             [ tilt↓ ] [ back  ▼  ] [      ]
         */}
         <div className="grid grid-cols-3 gap-2.5">
-          <ExploreButton direction="pitchUp"   label={t.explore.tiltUp}    small>↑</ExploreButton>
-          <ExploreButton direction="forward"   label={t.explore.moveForwardBoost} enableBoostDrag>▲</ExploreButton>
+          <ExploreButton direction="pitchUp"   label="Tilt opp"    small>↑</ExploreButton>
+          <ExploreButton direction="forward"   label="Beveg fremover, dra opp for å booste" enableBoostDrag>▲</ExploreButton>
           <div className="pointer-events-none h-14 w-14" />
 
-          <ExploreButton direction="yawLeft"   label={t.explore.turnLeft}  >◀</ExploreButton>
+          <ExploreButton direction="yawLeft"   label="Sving venstre"  >◀</ExploreButton>
           <div className="pointer-events-none h-14 w-14 rounded-2xl border border-white/8 bg-slate-950/35 backdrop-blur-md" />
-          <ExploreButton direction="yawRight"  label={t.explore.turnRight} >▶</ExploreButton>
+          <ExploreButton direction="yawRight"  label="Sving høyre" >▶</ExploreButton>
 
-          <ExploreButton direction="pitchDown" label={t.explore.tiltDown}  small>↓</ExploreButton>
-          <ExploreButton direction="backward"  label={t.explore.moveBackward}>▼</ExploreButton>
+          <ExploreButton direction="pitchDown" label="Tilt ned"  small>↓</ExploreButton>
+          <ExploreButton direction="backward"  label="Beveg bakover">▼</ExploreButton>
           <div className="pointer-events-none h-14 w-14" />
         </div>
       </div>

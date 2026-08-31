@@ -8,7 +8,6 @@ import ExplorePauseOverlay from './components/ExplorePauseOverlay'
 import ExploreSpeedHud from './components/ExploreSpeedHud'
 import { useExploreAudio } from './hooks/useExploreAudio'
 import { RouteProvider } from './context/RouteProvider'
-import { LanguageProvider } from './context/LanguageProvider'
 import ExploreMobileControls from './components/ExploreMobileControls'
 import FloatingNav from './components/FloatingNav'
 import LoadingScreen from './components/LoadingScreen'
@@ -88,37 +87,35 @@ export default function App() {
   const routeScanClassName = `route-scan route-scan--${routeStage}`
 
   return (
-    <LanguageProvider>
-      <main className="relative isolate overflow-x-clip">
-        <LoadingScreen />
-        <RouteProvider>
-          <Suspense fallback={null}>
-            <BackgroundCanvas />
-          </Suspense>
-        </RouteProvider>
-        <div className={routeVeilClassName} aria-hidden="true" />
-        <div className={routeScanClassName} aria-hidden="true" />
-        {isExploreRoute ? <ExploreBoostOverlay /> : null}
-        {isExploreRoute ? <ExplorePauseOverlay /> : null}
-        {isExploreRoute ? <ExplorePauseButton /> : null}
-        {isExploreRoute ? <ExploreSpeedHud /> : null}
-        {isExploreRoute ? <ExploreDateHud /> : null}
-        <div className={routeStageClassName}>
-          <Suspense fallback={<div className="route-loading" />}>
-            <Routes location={displayedLocation}>
-              <Route path="/" element={<LongPage />} />
-              <Route path="/projects" element={<LongPage />} />
-              <Route path="/journey" element={<LongPage />} />
-              <Route path="/contact" element={<LongPage />} />
-              <Route path="/chat" element={<LongPage />} />
-              <Route path="/explore" element={<ExplorePage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </Suspense>
-        </div>
-        {isExploreRoute ? <ExploreHelpHint /> : null}
-        {isExploreRoute ? <ExploreMobileControls /> : <FloatingNav />}
-      </main>
-    </LanguageProvider>
+    <main className="relative isolate overflow-x-clip">
+      <LoadingScreen />
+      <RouteProvider>
+        <Suspense fallback={null}>
+          <BackgroundCanvas />
+        </Suspense>
+      </RouteProvider>
+      <div className={routeVeilClassName} aria-hidden="true" />
+      <div className={routeScanClassName} aria-hidden="true" />
+      {isExploreRoute ? <ExploreBoostOverlay /> : null}
+      {isExploreRoute ? <ExplorePauseOverlay /> : null}
+      {isExploreRoute ? <ExplorePauseButton /> : null}
+      {isExploreRoute ? <ExploreSpeedHud /> : null}
+      {isExploreRoute ? <ExploreDateHud /> : null}
+      <div className={routeStageClassName}>
+        <Suspense fallback={<div className="route-loading" />}>
+          <Routes location={displayedLocation}>
+            <Route path="/" element={<LongPage />} />
+            <Route path="/projects" element={<LongPage />} />
+            <Route path="/journey" element={<LongPage />} />
+            <Route path="/contact" element={<LongPage />} />
+            <Route path="/chat" element={<LongPage />} />
+            <Route path="/explore" element={<ExplorePage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </div>
+      {isExploreRoute ? <ExploreHelpHint /> : null}
+      {isExploreRoute ? <ExploreMobileControls /> : <FloatingNav />}
+    </main>
   )
 }

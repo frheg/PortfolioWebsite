@@ -1,24 +1,21 @@
 import SectionCard from '../components/ui/SectionCard'
 import Reveal from '../components/ui/Reveal'
-import { useProfile } from '../data/useProfile'
-import { useT } from '../i18n/useT'
+import profile from '../data/profile.json'
 
 export default function JourneyPage() {
-  const profile = useProfile()
-  const t = useT()
   return (
     <>
       <div className="relative mx-auto w-full max-w-6xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
           id="journey"
-          eyebrow={t.journey.eyebrow}
-          title={t.journey.title}
+          eyebrow="Yrke og utdanning"
+          title="Utvikling, studier og ledelse."
         >
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-start justify-between gap-4">
-                <h3 className="font-display text-2xl font-semibold text-white">{t.journey.experience}</h3>
-                <span className="pt-1 text-right text-xs uppercase leading-none tracking-[0.28em] text-sky-300/80">{t.journey.professional}</span>
+                <h3 className="font-display text-2xl font-semibold text-white">Erfaring</h3>
+                <span className="pt-1 text-right text-xs uppercase leading-none tracking-[0.28em] text-sky-300/80">Yrkeserfaring</span>
               </div>
               {profile.experience.map((job, index) => (
                 <Reveal
@@ -52,7 +49,7 @@ export default function JourneyPage() {
                       rel="noopener noreferrer"
                       className="mt-4 inline-flex text-sm font-medium text-cyan-200 transition hover:text-cyan-100"
                     >
-                      {job.linkLabel || t.journey.learnMore}
+                      {job.linkLabel || 'Les mer'}
                     </a>
                   ) : null}
                 </Reveal>
@@ -61,8 +58,8 @@ export default function JourneyPage() {
 
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-start justify-between gap-4">
-                <h3 className="font-display text-2xl font-semibold text-white">{t.journey.education}</h3>
-                <span className="pt-1 text-right text-xs uppercase leading-none tracking-[0.28em] text-pink-300/80">{t.journey.academic}</span>
+                <h3 className="font-display text-2xl font-semibold text-white">Utdanning</h3>
+                <span className="pt-1 text-right text-xs uppercase leading-none tracking-[0.28em] text-pink-300/80">Akademisk</span>
               </div>
               {profile.education.map((ed, index) => (
                 <Reveal

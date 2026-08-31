@@ -3,7 +3,7 @@
   "location": "Bergen, Norge",
   "hero": {
     "eyebrow": "Masterstudent i programvareutvikling",
-    "description": "Masterstudent i programvareutvikling. For tiden jobber jeg mest med anvendt AI: agentic systemer, lokale modeller, og å holde meg oppdatert på det som skjer innen AI og ML.",
+    "description": "For tiden jobber jeg mest med praktisk anvendelse av AI både i jobb og på fritiden, hvor jeg eksperimenterer med lokale LLMer, agentiske systemer og bruk av disse. Jeg liker også å holde meg oppdatert på det aller nyeste innen AI/ML.",
     "primaryCtaLabel": "Se prosjektene mine",
     "primaryCtaHref": "/projects",
     "secondaryCtaLabel": "Ta kontakt",
@@ -12,7 +12,8 @@
   "quickFacts": [
     "Masterstudent i programvareutvikling",
     "Backend, frontend, anvendt AI",
-    "Agentic AI, LLM-rammeverk, lokale modeller"
+    "Agentic AI, LLM-rammeverk, lokale modeller",
+    "Student Software Engineer i Amitec"
   ],
   "currently": [
     "Master i programvareutvikling, UiB/HVL",
@@ -27,21 +28,21 @@
     "Seiling og luftfart",
     "Lavnivåprogrammering"
   ],
-  "about": "Bachelor i datateknologi fra UiB, tar nå en felles mastergrad i programvareutvikling. Jeg liker systemer som er enkle og lette å forstå. For tiden jobber jeg mest med anvendt AI. Bruker Neovim på NixOS daglig.",
+  "about": "Har en bachelorgrad i Informatikk: Datateknologi, tar en mastergrad i programvareutvikling. Bruker store deler av fritiden i ulike kaninhull om kvantedatamaskiner, AI/ML modeller og arkitekturer, low-level-programmering og mye mer. Jeg har som regel alltid noe jeg holder på med av teknologisk interesse.",
   "experience": [
     {
-      "title": "Sommerintern",
-      "company": "TV 2, Digital / Redaksjonell Utvikling",
+      "title": "Fullstack Utvikler - Sommer Internship",
+      "company": "TV 2 Digital / Redaksjonell Utvikling",
       "period": "juni 2026 - august 2026",
-      "details": ["Anvendt AI, i teamet Redaksjonell Utvikling i TV 2s digitalavdeling."]
+      "details": ["Laget omfattende agentisk system for databehandling og prosessering av reelle rettsdokumenter for journalister i TV 2, under teamet Redaksjonell Utvikling."]
     },
     {
       "title": "Student Software Engineer",
       "company": "Amitec AS",
       "period": "november 2024 - nå",
       "details": [
-        "Fullstack-arbeid på en bedriftschatbot: arkitektur, backend, frontend, nettverk, sikkerhet, databaser.",
-        "Tidsseriedata og AVEVA PI-systemer for kunder i energisektoren."
+        "Hovedansvar for utvikling av en intern AI-chatbot og andre verktøy for behandling av sensitive data og bedrifts-kunnskapsbasen. Ansvar for hele tech-stacken samt oppsett av produksjonsmiljø på lokal produksjonsserver.",
+        "Tidsseriedata-behandling via. AVEVA PI-systemer for ulike kunder i olje- og energisektoren."
       ],
       "link": "https://docs.aveva.com/category/pi-system",
       "linkLabel": "AVEVA PI-systemer"
@@ -74,7 +75,7 @@
     },
     {
       "school": "Universitetet i Bergen, Bergen",
-      "program": "Bachelor i datateknologi",
+      "program": "Bachelor i Informatikk: datateknologi",
       "period": "august 2022 - juni 2025",
       "link": "https://www4.uib.no/program/informatikk-datateknologi-bachelor/plan"
     },
@@ -93,36 +94,47 @@
   ],
   "highlights": [
     "Bachelor fullført, master i programvareutvikling pågår",
-    "Komfortabel på tvers av stacken i små team",
+    "Erfaring på tvers av hele tech-stacken",
+    "Vant til teamarbeid og teamledelse",
     "Styre- og ledererfaring fra ITxBergen"
   ],
   "projects": [
     {
       "name": "Portfolio Website",
-      "description": "Denne siden, bygget med React, Vite og en tilpasset Three.js-bakgrunn med stjernehimmel, galakser, kometer og scroll-styrt kamerabevegelse.",
+      "description": "Denne nettsiden, med interaktiv chatbot gjennom WebLLM, interaktiv galakse bygget med three.js som beregner korrekte relative posisjoner og rotasjoner av galaksen.",
       "highlight": "Vedlikeholdes aktivt, oppdateres etter hvert som siden endres.",
       "type": "Personlig",
       "typeKey": "personal",
-      "status": "I drift",
+      "status": "I produksjon",
       "statusKey": "live",
-      "featured": true,
       "repo": "https://github.com/frheg/PortfolioWebsite",
-      "tech": ["React", "Vite", "Tailwind", "Three.js"]
+      "tech": ["React", "Vite", "Tailwind", "Three.js", "Github Actions"]
     },
     {
       "name": "Enterprise Chatbot",
-      "description": "Arkitektur, backend, nettverk, databaser og retrieval-augmented AI for en chatbot i produksjon.",
-      "highlight": "Fullstack-arbeid på et produksjonssystem, fortsatt under utvikling.",
-      "type": "Yrkesrelatert",
+      "description": "Intern AI-chatbot med komplett produksjonsmiljø fra bunnen av.",
+      "highlight": "Fullstack-arbeid på et produksjonsmiljø, fortsatt under utvikling.",
+      "type": "Jobb",
       "typeKey": "professional",
       "status": "Under arbeid",
       "statusKey": "in-progress",
       "featured": true,
-      "tech": ["Kotlin", "Python", "Qdrant", "Neo4j", "Docker", "Azure OpenAI"]
+      "tech": ["Python", "Qdrant", "Neo4j", "PostgreSQL", "Docker", "Azure OpenAI", "Systemd", "Linux"]
+    },
+    {
+      "name": "Digital Etterforskning",
+      "description": "Laget omfattende agentisk system for databehandling og prosessering av reelle rettsdokumenter for journalister i TV 2, under teamet Redaksjonell Utvikling.",
+      "highlight": "Fullstack-arbeid i et eksisterende produksjonsmiljø.",
+      "type": "Jobb",
+      "typeKey": "professional",
+      "status": "I produksjon",
+      "statusKey": "live",
+      "featured": true,
+      "tech": ["Python", "PostgreSQL", "Docker", "Kubernetes", "Google Cloud Platform", "Azure"]
     },
     {
       "name": "Personal AI Homelab",
-      "description": "En lokal AI-agent på min egen maskinvare. Kjører åpne modeller via llama.cpp, med egne verktøy den kan bruke selv, nettsøk, Wikipedia, vær, filtilgang og en liten Qdrant-basert kunnskapsbase.",
+      "description": "Hoster ulike lokale modeller som jeg bruker daglig. Eksperimenterer med det aller nyeste innen AI/ML og følger aktivt med på hva som skjer i AI/ML-verdenen. Bruker Homelab-en til å eksperimentere med modeller og ulike oppsett, samt utvikle min egen kunnskap om fagfeltet.",
       "highlight": "Praktisk erfaring med agentic workflows og drift av egen AI-infrastruktur.",
       "type": "Personlig",
       "typeKey": "personal",
@@ -130,7 +142,7 @@
       "statusKey": "self-hosted",
       "featured": true,
       "repo": "https://github.com/frheg/HomeLab",
-      "tech": ["Python", "llama.cpp", "Qdrant", "FastAPI", "Docker"]
+      "tech": ["Python", "llama.cpp", "Qdrant", "FastAPI", "Docker", "PostgreSQL", "vLLM", "Ollama", "Tailscale", "Linux"]
     },
     {
       "name": "Machine Learning Experimentation",
@@ -138,7 +150,7 @@
       "type": "Utforskning",
       "typeKey": "exploration",
       "repo": "https://github.com/frheg/MachineLearning",
-      "tech": ["Python", "Qdrant", "Qiskit"]
+      "tech": ["Python", "Qdrant", "Qiskit", "Pytorch"]
     },
     {
       "name": "Programming Languages and Low-Level Exploration",
@@ -150,21 +162,23 @@
     },
     {
       "name": "Kollekt (Group Project)",
-      "description": "En fullstack-app for delte husholdninger, laget for et kurs i moderne metoder for programvareutvikling.",
+      "description": "En fullstack-app for delte husholdninger, laget for et kurs i moderne metoder for programvareutvikling. Live i appstore.",
       "type": "Skole",
       "typeKey": "university",
+      "status": "I prodksjon",
+      "statusKey": "live", 
       "repo": "https://github.com/frheg/DAT251_Kollekt",
       "link": "https://apps.apple.com/no/app/kollekt/id6788522377?l=nb",
       "linkLabel": "App Store",
-      "tech": ["Kotlin", "React", "Spring Boot", "PostgreSQL", "Docker", "Capacitor"]
+      "tech": ["Kotlin", "React", "Spring Boot", "PostgreSQL", "Docker"]
     },
     {
       "name": "DAT250 Poll App (Group Project)",
-      "description": "En avstemningsapplikasjon laget for et kurs i avanserte programvareteknologier.",
+      "description": "En avstemningsapp laget for et kurs i avanserte programvareteknologier.",
       "type": "Skole",
       "typeKey": "university",
       "repo": "https://github.com/Maren24/DAT250-project",
-      "tech": ["Kotlin", "Angular", "Spring Boot", "Python", "Docker", "Qdrant", "Kafka"]
+      "tech": ["Kotlin", "Angular", "Spring Boot", "Python", "Docker", "Qdrant", "Apache Kafka"]
     },
     {
       "name": "CodeMasters (Group Project)",
@@ -185,25 +199,11 @@
     "React",
     "Three.js",
     "Java",
-    "Meldingskøer",
+    "Kotlin",
     "SQL- og NoSQL-databaser",
     "Git & CI/CD",
     "Azure DevOps & CI/CD",
     "Docker"
-  ],
-  "skillGroups": [
-    {
-      "title": "Applikasjonsutvikling",
-      "items": ["Python", "Kotlin", "Java", "React"]
-    },
-    {
-      "title": "AI og datasystemer",
-      "items": ["Agentic AI", "LLM-rammeverk", "Lokal modellinferens", "Embedding-modeller", "SQL", "NoSQL-databaser", "Qdrant"]
-    },
-    {
-      "title": "Infrastruktur og arbeidsflyt",
-      "items": ["Linux", "NixOS", "Neovim", "Terminalarbeid", "Nettverk", "Arkitektur", "Docker", "Git & CI/CD"]
-    }
   ],
   "contact": {
     "email": "fredric.hegland@gmail.com",

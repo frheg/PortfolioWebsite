@@ -1,12 +1,9 @@
 import SectionCard from '../components/ui/SectionCard'
 import OrbitDisclosure from '../components/ui/OrbitDisclosure'
 import ProjectCard from '../components/projects/ProjectCard'
-import { useProfile } from '../data/useProfile'
-import { useT } from '../i18n/useT'
+import profile from '../data/profile.json'
 
 export default function ProjectsPage() {
-  const profile = useProfile()
-  const t = useT()
   const featuredProjects = profile.projects.filter((project) => project.featured)
   const otherProjects = profile.projects.filter((project) => !project.featured)
 
@@ -15,8 +12,8 @@ export default function ProjectsPage() {
       <div className="relative mx-auto w-full max-w-6xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
           id="projects"
-          eyebrow={t.projects.featuredEyebrow}
-          title={t.projects.featuredTitle}
+          eyebrow="Utvalgte"
+          title="Utvalgte prosjekter."
         >
           <div className="grid gap-4 sm:gap-5 xl:grid-cols-3">
             {featuredProjects.map((project, index) => (
@@ -27,10 +24,10 @@ export default function ProjectsPage() {
 
         <SectionCard
           id="archive"
-          eyebrow={t.projects.archiveEyebrow}
-          title={t.projects.archiveTitle}
+          eyebrow="Arkiv"
+          title="Flere prosjekter og eksperimenter."
         >
-          <OrbitDisclosure title={t.projects.archiveOpenTitle} hint={t.projects.archiveHint} defaultOpen>
+          <OrbitDisclosure title="Åpne prosjektarkiv" hint="Skolearbeid, sideprosjekter og mindre bygg" defaultOpen>
             <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
               {otherProjects.map((project, index) => (
                 <ProjectCard key={project.name} project={project} index={index} />

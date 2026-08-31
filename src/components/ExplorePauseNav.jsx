@@ -2,11 +2,10 @@
 // no persistent navbar of its own (FloatingNav is hidden there so it doesn't
 // clutter the flight view), so this is how you get to another page from it.
 import { NavLink } from 'react-router-dom'
-import { useNavLinks } from '../content/navLinks'
+import { navLinks } from '../content/navLinks'
 import NavIcon from './NavIcon'
 
 export default function ExplorePauseNav() {
-  const navLinks = useNavLinks()
   return (
     <div className="grid grid-cols-3 gap-2">
       {navLinks.map(({ to, label, icon }) => (

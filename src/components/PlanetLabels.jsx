@@ -1,11 +1,23 @@
 // PlanetLabels — screen-space HUD labels for each solar-system body.
 // Only visible in explore mode. Positions are updated every frame by a
 // requestAnimationFrame loop via direct DOM mutation (no React state churn).
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { getSolarCollisionBodies } from '../three/solarSystemRuntime'
-import { usePlanetFacts } from '../data/usePlanetFacts'
+import { planetFacts } from '../data/planetFacts'
 import { spaceConfig } from '../three/spaceConfig'
+
+// Expand the single 'ufo' entry in planetFacts into one entry per UFO instance
+// so each craft gets its own DOM label element.
+const ufoBase = planetFacts.find((p) => p.key === 'ufo')
+const allPlanetFacts = [
+  ...planetFacts.filter((p) => p.key !== 'ufo'),
+  ...Array.from({ length: spaceConfig.solarSystem.ufo.count }, (_, i) => ({
+    ...ufoBase,
+    key: `ufo_${i}`,
+    name: `${ufoBase.name} ${i + 1}`,
+  })),
+]
 
 // Distance thresholds expressed as multiples of the body's effective radius.
 // MIN_R so tiny bodies (Moon, Mercury) still have a useful visibility range.
@@ -17,21 +29,6 @@ const FACTS_SHOW_FACTOR = 12  // facts start appearing at this × body.radius
 
 export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
   const containerRef = useRef(null)
-  const planetFacts = usePlanetFacts()
-
-  // Expand the single 'ufo' entry in planetFacts into one entry per UFO
-  // instance so each craft gets its own DOM label element.
-  const allPlanetFacts = useMemo(() => {
-    const ufoBase = planetFacts.find((p) => p.key === 'ufo')
-    return [
-      ...planetFacts.filter((p) => p.key !== 'ufo'),
-      ...Array.from({ length: spaceConfig.solarSystem.ufo.count }, (_, i) => ({
-        ...ufoBase,
-        key: `ufo_${i}`,
-        name: `${ufoBase.name} ${i + 1}`,
-      })),
-    ]
-  }, [planetFacts])
 
   useEffect(() => {
     if (!isExplore) return undefined

@@ -1,10 +1,9 @@
 import { useRef } from 'react'
 import { pickRevealVariant, useScrollReveal } from '../../hooks/useScrollReveal'
-import { useT } from '../../i18n/useT'
 
-// Color-codes project type/status by a language-independent key instead of
-// the displayed (translated) label, so the grid keeps its accent variety
-// regardless of which language is active.
+// Color-codes project type/status by a stable key rather than the displayed
+// label text, so re-wording project.type/status in profile.json can't break
+// the accent color mapping.
 const TYPE_COLORS = {
   personal: 'text-teal-300/80',
   professional: 'text-sky-300/80',
@@ -32,7 +31,6 @@ function ActionLink({ href, label }) {
 
 export default function ProjectCard({ project, index = 0, featured = false }) {
   const cardRef = useRef(null)
-  const t = useT()
   useScrollReveal(cardRef, { variant: pickRevealVariant(index), delay: Math.min(index * 0.06, 0.3) })
 
   if (featured) {
@@ -59,7 +57,7 @@ export default function ProjectCard({ project, index = 0, featured = false }) {
           </div>
         </div>
         <div className="mt-auto pt-5">
-          <p className="mb-3 text-[0.68rem] uppercase tracking-[0.24em] text-cyan-300/65">{t.projects.stack}</p>
+          <p className="mb-3 text-[0.68rem] uppercase tracking-[0.24em] text-cyan-300/65">Stack</p>
           <div className="flex flex-wrap content-start gap-2">
             {project.tech.map((tech) => (
               <span key={tech} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-100/80">
@@ -69,8 +67,8 @@ export default function ProjectCard({ project, index = 0, featured = false }) {
           </div>
           {project.repo || project.link ? (
             <div className="mt-5 flex flex-wrap gap-2">
-              {project.repo ? <ActionLink href={project.repo} label={t.projects.repo} /> : null}
-              {project.link ? <ActionLink href={project.link} label={project.linkLabel || t.projects.link} /> : null}
+              {project.repo ? <ActionLink href={project.repo} label="Repo" /> : null}
+              {project.link ? <ActionLink href={project.link} label={project.linkLabel || 'Lenke'} /> : null}
             </div>
           ) : null}
         </div>
@@ -96,8 +94,8 @@ export default function ProjectCard({ project, index = 0, featured = false }) {
       </div>
       {project.repo || project.link ? (
         <div className="mt-4 flex flex-wrap gap-2">
-          {project.repo ? <ActionLink href={project.repo} label={t.projects.repo} /> : null}
-          {project.link ? <ActionLink href={project.link} label={project.linkLabel || t.projects.link} /> : null}
+          {project.repo ? <ActionLink href={project.repo} label="Repo" /> : null}
+          {project.link ? <ActionLink href={project.link} label={project.linkLabel || 'Lenke'} /> : null}
         </div>
       ) : null}
     </article>

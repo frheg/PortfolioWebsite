@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { subscribeSceneLoading } from '../utils/sceneLoadingState'
-import { useT } from '../i18n/useT'
 
 // Kept visible at least this long so it reads as an intentional entrance
 // rather than a flash on a warm cache, and never longer than the max wait
@@ -10,7 +9,6 @@ const MAX_WAIT_MS = 8000
 const EXIT_MS = 600
 
 export default function LoadingScreen() {
-  const t = useT()
   const [progress, setProgress] = useState(0)
   const [exiting, setExiting] = useState(false)
   const [dismissed, setDismissed] = useState(false)
@@ -63,7 +61,7 @@ export default function LoadingScreen() {
       className={`loading-screen${exiting ? ' loading-screen--exit' : ''}`}
       role="status"
       aria-live="polite"
-      aria-label={`${t.loadingScreen.ariaLabel}, ${percent}%`}
+      aria-label={`Laster, ${percent}%`}
     >
       <div className="loading-screen-glow" aria-hidden="true" />
       <div className="loading-orbit" aria-hidden="true">

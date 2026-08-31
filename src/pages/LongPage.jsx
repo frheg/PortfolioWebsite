@@ -8,7 +8,7 @@ import ChatPage from './ChatPage'
 import GoToTopButton from '../components/GoToTopButton'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { useActiveSection } from '../hooks/useActiveSection'
-import { chapterOrder, useChapterMeta } from '../content/chapterMeta'
+import { chapterOrder, chapterMeta } from '../content/chapterMeta'
 import { setChapterOffsets } from '../three/scrollChapters'
 import { loadGsap } from '../utils/gsapLoader'
 import { scheduleScrollTriggerRefresh } from '../utils/scrollTriggerRefresh'
@@ -85,7 +85,6 @@ export default function LongPage() {
   }, [location.pathname, location.state])
 
   const activePath = useActiveSection(chapterRefs, chapterOrder, location.pathname)
-  const chapterMeta = useChapterMeta()
   usePageMeta(chapterMeta[activePath] ?? chapterMeta['/'])
 
   return (

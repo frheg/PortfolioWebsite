@@ -1,4 +1,4 @@
-import profile from './profile.en.json'
+import profile from './profile.json'
 
 // A hand-trimmed view of profile.json, small enough (with the wrapper text
 // below) to sit alongside the whole conversation inside the ~4k-token context
@@ -7,7 +7,7 @@ import profile from './profile.en.json'
 // Kept to Fredric only (no solar-system trivia) to leave more of that budget
 // free for actual conversation.
 function buildProfileSummary() {
-  const currentJob = profile.experience.find((job) => job.period.includes('Present')) || profile.experience[0]
+  const currentJob = profile.experience.find((job) => job.period.includes('nå')) || profile.experience[0]
   const currentEducation = profile.education[0]
   const lines = [
     `${profile.name}, ${profile.location}.`,
