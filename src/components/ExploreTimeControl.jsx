@@ -12,19 +12,21 @@ import {
   canStepSpeedUp,
   canStepSpeedDown,
 } from '../three/ephemerisTime'
+import { useT } from '../i18n/useT'
 
 export default function ExploreTimeControl() {
   const label = useSyncExternalStore(subscribeSpeedMultiplier, getSpeedLabel, getSpeedLabel)
   const canUp = useSyncExternalStore(subscribeSpeedMultiplier, canStepSpeedUp, canStepSpeedUp)
   const canDown = useSyncExternalStore(subscribeSpeedMultiplier, canStepSpeedDown, canStepSpeedDown)
+  const t = useT()
 
   return (
     <div className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-      <span className="text-[0.62rem] uppercase tracking-[0.18em] text-cyan-100/70">Time speed</span>
+      <span className="text-[0.62rem] uppercase tracking-[0.18em] text-cyan-100/70">{t.explore.timeSpeed}</span>
       <div className="flex items-center gap-1">
         <button
           type="button"
-          aria-label="Slower"
+          aria-label={t.explore.slower}
           onClick={stepSpeedDown}
           disabled={!canDown}
           className="inline-flex h-7 w-7 items-center justify-center rounded-full text-sm text-cyan-100 transition hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent active:scale-95"
@@ -36,7 +38,7 @@ export default function ExploreTimeControl() {
         </span>
         <button
           type="button"
-          aria-label="Faster"
+          aria-label={t.explore.faster}
           onClick={stepSpeedUp}
           disabled={!canUp}
           className="inline-flex h-7 w-7 items-center justify-center rounded-full text-sm text-cyan-100 transition hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent active:scale-95"

@@ -4,10 +4,15 @@
 // bar) since there isn't room for six full text labels in one row there;
 // icon + label side by side once there's more width.
 import { NavLink } from 'react-router-dom'
-import { navLinks } from '../content/navLinks'
+import { useNavLinks } from '../content/navLinks'
 import NavIcon from './NavIcon'
+import { useLanguage } from '../context/LanguageContext'
+import { useT } from '../i18n/useT'
 
 export default function FloatingNav() {
+  const navLinks = useNavLinks()
+  const { lang, toggleLang } = useLanguage()
+  const t = useT()
   return (
     <div
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)]"
@@ -42,6 +47,18 @@ export default function FloatingNav() {
                 <span>{label}</span>
               </NavLink>
             ))}
+            <button
+              type="button"
+              onClick={toggleLang}
+              aria-label={t.languageToggle.switchTo}
+              title={t.languageToggle.switchTo}
+              className="relative isolate flex flex-1 flex-col items-center gap-0.5 overflow-visible whitespace-nowrap rounded-xl px-1.5 py-1.5 text-center text-[0.58rem] font-medium uppercase tracking-[0.1em] text-cyan-300/78 transition hover:bg-white/5 hover:text-cyan-100 sm:flex-none sm:flex-row sm:gap-1.5 sm:px-3 sm:py-2 sm:text-[0.62rem] sm:tracking-[0.16em]"
+            >
+              <span className="inline-flex h-5 w-5 items-center justify-center text-[0.7rem] font-bold sm:h-4 sm:w-4 sm:text-[0.6rem]">
+                {lang === 'no' ? 'NO' : 'EN'}
+              </span>
+              <span>{t.languageToggle.label}</span>
+            </button>
           </div>
         </div>
       </div>

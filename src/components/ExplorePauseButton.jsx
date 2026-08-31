@@ -3,9 +3,11 @@
 // this stays hidden there instead of duplicating it.
 import { useSyncExternalStore } from 'react'
 import { isExplorePaused, subscribeExplorePause, pauseExplore } from '../three/exploreState'
+import { useT } from '../i18n/useT'
 
 export default function ExplorePauseButton() {
   const paused = useSyncExternalStore(subscribeExplorePause, isExplorePaused, isExplorePaused)
+  const t = useT()
 
   // While paused, ExplorePauseOverlay already covers the screen with its
   // own Resume button — no need for this one too.
@@ -15,7 +17,7 @@ export default function ExplorePauseButton() {
     <button
       type="button"
       data-explore-control="true"
-      aria-label="Pause"
+      aria-label={t.explore.pause}
       onClick={pauseExplore}
       className="pointer-events-auto fixed right-4 top-4 z-40 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-slate-950/70 text-cyan-100 shadow-[0_10px_30px_rgba(17,17,27,0.5)] backdrop-blur-xl transition hover:border-cyan-300/40 hover:text-cyan-50 active:scale-95 sm:top-5 md:hidden"
     >

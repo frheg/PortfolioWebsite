@@ -1,0 +1,216 @@
+{
+  "name": "Fredric Hegland",
+  "location": "Bergen, Norge",
+  "hero": {
+    "eyebrow": "Masterstudent i programvareutvikling",
+    "description": "Masterstudent i programvareutvikling. For tiden jobber jeg mest med anvendt AI: agentic systemer, lokale modeller, og å holde meg oppdatert på det som skjer innen AI og ML.",
+    "primaryCtaLabel": "Se prosjektene mine",
+    "primaryCtaHref": "/projects",
+    "secondaryCtaLabel": "Ta kontakt",
+    "secondaryCtaHref": "/contact"
+  },
+  "quickFacts": [
+    "Masterstudent i programvareutvikling",
+    "Backend, frontend, anvendt AI",
+    "Agentic AI, LLM-rammeverk, lokale modeller"
+  ],
+  "currently": [
+    "Master i programvareutvikling, UiB/HVL",
+    "Bygger en chatbot for bedriftsbruk hos Amitec AS",
+    "Utforsker agentic AI og lokale modelloppsett på fritiden"
+  ],
+  "interests": [
+    "Anvendt AI og agenter",
+    "Neovim & NixOS",
+    "Unix-filosofi",
+    "Biler og motorer",
+    "Seiling og luftfart",
+    "Lavnivåprogrammering"
+  ],
+  "about": "Bachelor i datateknologi fra UiB, tar nå en felles mastergrad i programvareutvikling. Jeg liker systemer som er enkle og lette å forstå. For tiden jobber jeg mest med anvendt AI. Bruker Neovim på NixOS daglig.",
+  "experience": [
+    {
+      "title": "Sommerintern",
+      "company": "TV 2, Digital / Redaksjonell Utvikling",
+      "period": "juni 2026 - august 2026",
+      "details": ["Anvendt AI, i teamet Redaksjonell Utvikling i TV 2s digitalavdeling."]
+    },
+    {
+      "title": "Student Software Engineer",
+      "company": "Amitec AS",
+      "period": "november 2024 - nå",
+      "details": [
+        "Fullstack-arbeid på en bedriftschatbot: arkitektur, backend, frontend, nettverk, sikkerhet, databaser.",
+        "Tidsseriedata og AVEVA PI-systemer for kunder i energisektoren."
+      ],
+      "link": "https://docs.aveva.com/category/pi-system",
+      "linkLabel": "AVEVA PI-systemer"
+    },
+    {
+      "title": "Salgsmedarbeider",
+      "company": "IKEA Leangen/Åsane, Trondheim/Bergen",
+      "period": "mai 2022 - februar 2025",
+      "details": ["Lager- og salgsavdeling: kundeservice, lagerstyring og salg."]
+    },
+    {
+      "title": "Medarbeider",
+      "company": "McDonalds Nidarvoll, Trondheim",
+      "period": "januar 2022 - april 2022",
+      "details": ["Tilberedte mat som linjekokk."]
+    },
+    {
+      "title": "Sjåfør og lagerarbeider",
+      "company": "Rosenborg Bakeri, Trondheim",
+      "period": "september 2021 - januar 2022",
+      "details": ["Leverte brød og bakervarer til privatkunder og bakerier."]
+    }
+  ],
+  "education": [
+    {
+      "school": "UiB/HVL, Bergen",
+      "program": "Felles mastergrad i programvareutvikling (med ML-emner)",
+      "period": "august 2025 - juni 2027",
+      "link": "https://www4.uib.no/en/studies/programmes/joint-masters-in-software-engineering-masters"
+    },
+    {
+      "school": "Universitetet i Bergen, Bergen",
+      "program": "Bachelor i datateknologi",
+      "period": "august 2022 - juni 2025",
+      "link": "https://www4.uib.no/program/informatikk-datateknologi-bachelor/plan"
+    },
+    {
+      "school": "NTNU Handelshøyskolen, Trondheim",
+      "program": "Økonomi og administrasjon",
+      "period": "august 2021 - juni 2022",
+      "link": "https://www.ntnu.no/studier/boat"
+    },
+    {
+      "school": "Sandsli Videregående Skole, Bergen",
+      "program": "Studiespesialisering med realfag",
+      "period": "august 2018 - juni 2021",
+      "link": "https://www.sandsli.vgs.no/utdanningsprogram/vare-utdanningsprogram/studiespesialisering/"
+    }
+  ],
+  "highlights": [
+    "Bachelor fullført, master i programvareutvikling pågår",
+    "Komfortabel på tvers av stacken i små team",
+    "Styre- og ledererfaring fra ITxBergen"
+  ],
+  "projects": [
+    {
+      "name": "Portfolio Website",
+      "description": "Denne siden, bygget med React, Vite og en tilpasset Three.js-bakgrunn med stjernehimmel, galakser, kometer og scroll-styrt kamerabevegelse.",
+      "highlight": "Vedlikeholdes aktivt, oppdateres etter hvert som siden endres.",
+      "type": "Personlig",
+      "typeKey": "personal",
+      "status": "I drift",
+      "statusKey": "live",
+      "featured": true,
+      "repo": "https://github.com/frheg/PortfolioWebsite",
+      "tech": ["React", "Vite", "Tailwind", "Three.js"]
+    },
+    {
+      "name": "Enterprise Chatbot",
+      "description": "Arkitektur, backend, nettverk, databaser og retrieval-augmented AI for en chatbot i produksjon.",
+      "highlight": "Fullstack-arbeid på et produksjonssystem, fortsatt under utvikling.",
+      "type": "Yrkesrelatert",
+      "typeKey": "professional",
+      "status": "Under arbeid",
+      "statusKey": "in-progress",
+      "featured": true,
+      "tech": ["Kotlin", "Python", "Qdrant", "Neo4j", "Docker", "Azure OpenAI"]
+    },
+    {
+      "name": "Personal AI Homelab",
+      "description": "En lokal AI-agent på min egen maskinvare. Kjører åpne modeller via llama.cpp, med egne verktøy den kan bruke selv, nettsøk, Wikipedia, vær, filtilgang og en liten Qdrant-basert kunnskapsbase.",
+      "highlight": "Praktisk erfaring med agentic workflows og drift av egen AI-infrastruktur.",
+      "type": "Personlig",
+      "typeKey": "personal",
+      "status": "Selvhostet",
+      "statusKey": "self-hosted",
+      "featured": true,
+      "repo": "https://github.com/frheg/HomeLab",
+      "tech": ["Python", "llama.cpp", "Qdrant", "FastAPI", "Docker"]
+    },
+    {
+      "name": "Machine Learning Experimentation",
+      "description": "ML-modeller, embeddings, ideer innen kvantedatabehandling, og algoritmer implementert fra bunnen av for å forstå dem.",
+      "type": "Utforskning",
+      "typeKey": "exploration",
+      "repo": "https://github.com/frheg/MachineLearning",
+      "tech": ["Python", "Qdrant", "Qiskit"]
+    },
+    {
+      "name": "Programming Languages and Low-Level Exploration",
+      "description": "RISC-V- og x86_64-assembly, C++, Rust, og andre eksperimenter på systemnivå.",
+      "type": "Utforskning",
+      "typeKey": "exploration",
+      "repo": "https://github.com/frheg/ProgrammingLanguages",
+      "tech": ["RISC-V assembly", "x86_64 assembly", "C++", "Rust"]
+    },
+    {
+      "name": "Kollekt (Group Project)",
+      "description": "En fullstack-app for delte husholdninger, laget for et kurs i moderne metoder for programvareutvikling.",
+      "type": "Skole",
+      "typeKey": "university",
+      "repo": "https://github.com/frheg/DAT251_Kollekt",
+      "link": "https://apps.apple.com/no/app/kollekt/id6788522377?l=nb",
+      "linkLabel": "App Store",
+      "tech": ["Kotlin", "React", "Spring Boot", "PostgreSQL", "Docker", "Capacitor"]
+    },
+    {
+      "name": "DAT250 Poll App (Group Project)",
+      "description": "En avstemningsapplikasjon laget for et kurs i avanserte programvareteknologier.",
+      "type": "Skole",
+      "typeKey": "university",
+      "repo": "https://github.com/Maren24/DAT250-project",
+      "tech": ["Kotlin", "Angular", "Spring Boot", "Python", "Docker", "Qdrant", "Kafka"]
+    },
+    {
+      "name": "CodeMasters (Group Project)",
+      "description": "Et 2D-spill bygget med LibGDX for INF112, et systemutviklingskurs ved UiB.",
+      "type": "Skole",
+      "typeKey": "university",
+      "repo": "https://github.com/frheg/CodeMasters",
+      "tech": ["Java", "LibGDX"]
+    }
+  ],
+  "skills": [
+    "Python",
+    "Anvendt AI: agentic systemer, LLM-rammeverk, lokal inferens",
+    "Nettverk og arkitektur",
+    "JavaScript/TypeScript",
+    "Linux og terminalarbeid",
+    "Serverdrift og administrasjon",
+    "React",
+    "Three.js",
+    "Java",
+    "Meldingskøer",
+    "SQL- og NoSQL-databaser",
+    "Git & CI/CD",
+    "Azure DevOps & CI/CD",
+    "Docker"
+  ],
+  "skillGroups": [
+    {
+      "title": "Applikasjonsutvikling",
+      "items": ["Python", "Kotlin", "Java", "React"]
+    },
+    {
+      "title": "AI og datasystemer",
+      "items": ["Agentic AI", "LLM-rammeverk", "Lokal modellinferens", "Embedding-modeller", "SQL", "NoSQL-databaser", "Qdrant"]
+    },
+    {
+      "title": "Infrastruktur og arbeidsflyt",
+      "items": ["Linux", "NixOS", "Neovim", "Terminalarbeid", "Nettverk", "Arkitektur", "Docker", "Git & CI/CD"]
+    }
+  ],
+  "contact": {
+    "email": "fredric.hegland@gmail.com",
+    "linkedin": "https://www.linkedin.com/in/fredric-hegland-8a8972206/",
+    "github": "https://github.com/frheg",
+    "website": "https://fredrichegland.no/",
+    "location": "Bosatt i Bergen, Norge",
+    "note": "Jeg snakker gjerne om programvareutvikling, anvendt AI, eller andre interessante tekniske problemer."
+  }
+}

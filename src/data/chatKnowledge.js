@@ -1,4 +1,4 @@
-import profile from './profile.json'
+import profile from './profile.en.json'
 
 // A hand-trimmed view of profile.json, small enough (with the wrapper text
 // below) to sit alongside the whole conversation inside the ~4k-token context

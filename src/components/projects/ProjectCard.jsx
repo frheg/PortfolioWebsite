@@ -1,18 +1,20 @@
 import { useRef } from 'react'
 import { pickRevealVariant, useScrollReveal } from '../../hooks/useScrollReveal'
+import { useT } from '../../i18n/useT'
 
-// Color-codes project type/status by value instead of reusing the same
-// accent everywhere, so the project grid reads with some actual variety.
+// Color-codes project type/status by a language-independent key instead of
+// the displayed (translated) label, so the grid keeps its accent variety
+// regardless of which language is active.
 const TYPE_COLORS = {
-  Personal: 'text-teal-300/80',
-  Professional: 'text-sky-300/80',
-  Exploration: 'text-yellow-300/80',
-  University: 'text-pink-300/80',
+  personal: 'text-teal-300/80',
+  professional: 'text-sky-300/80',
+  exploration: 'text-yellow-300/80',
+  university: 'text-pink-300/80',
 }
 const STATUS_COLORS = {
-  Live: 'text-green-300/90',
-  'In progress': 'text-amber-300/90',
-  'Self-hosted': 'text-teal-300/90',
+  live: 'text-green-300/90',
+  'in-progress': 'text-amber-300/90',
+  'self-hosted': 'text-teal-300/90',
 }
 
 function ActionLink({ href, label }) {
@@ -30,6 +32,7 @@ function ActionLink({ href, label }) {
 
 export default function ProjectCard({ project, index = 0, featured = false }) {
   const cardRef = useRef(null)
+  const t = useT()
   useScrollReveal(cardRef, { variant: pickRevealVariant(index), delay: Math.min(index * 0.06, 0.3) })
 
   if (featured) {
@@ -39,12 +42,12 @@ export default function ProjectCard({ project, index = 0, featured = false }) {
         <div className="pointer-events-none absolute right-0 top-0 h-28 w-28 rounded-full bg-cyan-300/10 blur-3xl transition duration-300 group-hover:bg-cyan-300/16" />
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-3">
-            <p className={`text-xs uppercase tracking-[0.3em] ${TYPE_COLORS[project.type] || 'text-cyan-300/70'}`}>{project.type}</p>
+            <p className={`text-xs uppercase tracking-[0.3em] ${TYPE_COLORS[project.typeKey] || 'text-cyan-300/70'}`}>{project.type}</p>
             <span className="inline-flex rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.24em] text-slate-100/75">
               0{index + 1}
             </span>
           </div>
-          <span className={`inline-flex min-h-9 min-w-[7.75rem] shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1 text-center text-xs uppercase tracking-[0.24em] ${STATUS_COLORS[project.status] || 'text-cyan-100/85'}`}>
+          <span className={`inline-flex min-h-9 min-w-[7.75rem] shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1 text-center text-xs uppercase tracking-[0.24em] ${STATUS_COLORS[project.statusKey] || 'text-cyan-100/85'}`}>
             {project.status}
           </span>
         </div>
@@ -56,7 +59,7 @@ export default function ProjectCard({ project, index = 0, featured = false }) {
           </div>
         </div>
         <div className="mt-auto pt-5">
-          <p className="mb-3 text-[0.68rem] uppercase tracking-[0.24em] text-cyan-300/65">Stack</p>
+          <p className="mb-3 text-[0.68rem] uppercase tracking-[0.24em] text-cyan-300/65">{t.projects.stack}</p>
           <div className="flex flex-wrap content-start gap-2">
             {project.tech.map((tech) => (
               <span key={tech} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-100/80">
@@ -66,8 +69,8 @@ export default function ProjectCard({ project, index = 0, featured = false }) {
           </div>
           {project.repo || project.link ? (
             <div className="mt-5 flex flex-wrap gap-2">
-              {project.repo ? <ActionLink href={project.repo} label="Repo" /> : null}
-              {project.link ? <ActionLink href={project.link} label={project.linkLabel || 'Link'} /> : null}
+              {project.repo ? <ActionLink href={project.repo} label={t.projects.repo} /> : null}
+              {project.link ? <ActionLink href={project.link} label={project.linkLabel || t.projects.link} /> : null}
             </div>
           ) : null}
         </div>
@@ -81,7 +84,7 @@ export default function ProjectCard({ project, index = 0, featured = false }) {
         <h3 className="max-w-[18rem] font-display text-lg font-semibold leading-tight tracking-[0.03em] text-white sm:max-w-none">
           {project.name}
         </h3>
-        <span className={`shrink-0 pt-0.5 text-right text-xs uppercase leading-none tracking-[0.28em] ${TYPE_COLORS[project.type] || 'text-cyan-300/65'}`}>{project.type}</span>
+        <span className={`shrink-0 pt-0.5 text-right text-xs uppercase leading-none tracking-[0.28em] ${TYPE_COLORS[project.typeKey] || 'text-cyan-300/65'}`}>{project.type}</span>
       </div>
       <p className="mt-3 flex-1 text-sm leading-7 text-slate-200/80">{project.description}</p>
       <div className="mt-4 flex flex-wrap items-start gap-2">
@@ -93,8 +96,8 @@ export default function ProjectCard({ project, index = 0, featured = false }) {
       </div>
       {project.repo || project.link ? (
         <div className="mt-4 flex flex-wrap gap-2">
-          {project.repo ? <ActionLink href={project.repo} label="Repo" /> : null}
-          {project.link ? <ActionLink href={project.link} label={project.linkLabel || 'Link'} /> : null}
+          {project.repo ? <ActionLink href={project.repo} label={t.projects.repo} /> : null}
+          {project.link ? <ActionLink href={project.link} label={project.linkLabel || t.projects.link} /> : null}
         </div>
       ) : null}
     </article>

@@ -1,10 +1,9 @@
 import { usePageMeta } from '../hooks/usePageMeta'
+import { useT } from '../i18n/useT'
 
 export default function ExplorePage() {
-  usePageMeta({
-    title: 'Fredric Hegland | Explore',
-    description: 'Free-flight exploration mode through the portfolio galaxy scene.',
-  })
+  const t = useT()
+  usePageMeta(t.meta.explore)
 
   return <div className="min-h-screen" aria-hidden="true" />
 }

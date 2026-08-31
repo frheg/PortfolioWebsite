@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react'
 import selfPortrait from '../assets/Pictures/SelfPortrait-1400.webp'
 import { Link } from 'react-router-dom'
-import profile from '../data/profile.json'
+import { useProfile } from '../data/useProfile'
+import { useT } from '../i18n/useT'
 import { loadGsap } from '../utils/gsapLoader'
 import { prefersReducedMotion } from '../utils/motion'
 import { scheduleScrollTriggerRefresh } from '../utils/scrollTriggerRefresh'
 
 export default function Intro() {
+  const profile = useProfile()
+  const t = useT()
   const sectionRef = useRef(null)
   const eyebrowRef = useRef(null)
   const headlineRef = useRef(null)
@@ -120,7 +123,7 @@ export default function Intro() {
             <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent" />
             <img
               src={selfPortrait}
-              alt="Portrait of Fredric Hegland"
+              alt={t.loadingScreen.portraitAlt}
               loading="eager"
               className="aspect-[5/6] w-full rounded-[1.35rem] object-cover sm:aspect-[4/5] sm:rounded-[1.6rem]"
             />
@@ -130,7 +133,7 @@ export default function Intro() {
 
           <div className="mt-4 hidden items-center gap-3 text-sm text-cyan-200/80 sm:flex lg:mt-6">
             <span className="scroll-indicator" aria-hidden="true" />
-            <span>Scroll to see projects, experience, and more.</span>
+            <span>{t.home.scrollHint}</span>
           </div>
         </div>
       </div>
