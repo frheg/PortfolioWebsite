@@ -1,14 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { setActiveChapter } from '../utils/chapterScroll'
 
 // Tracks which chapter is currently centered in the viewport as the user
-// scrolls the merged long page, and keeps the URL bar in sync via a
-// replace-navigate (state.fromScrollSync marks it so LongPage's own
-// pathname-watcher doesn't mistake it for a nav-link click and re-jump).
-export function useActiveSection(chapterRefs, chapterOrder, initialPath) {
-  const navigate = useNavigate()
-  const [activePath, setActivePath] = useState(initialPath)
-  const activeIndexRef = useRef(chapterOrder.indexOf(initialPath))
+// scrolls the single merged page, and publishes it so FloatingNav can
+// highlight the matching nav item.
+export function useActiveSection(chapterRefs, chapterOrder) {
+  const activeIndexRef = useRef(-1)
 
   useEffect(() => {
     const elements = chapterRefs.current.filter(Boolean)
@@ -25,9 +22,7 @@ export function useActiveSection(chapterRefs, chapterOrder, initialPath) {
         if (index < 0 || index === activeIndexRef.current) return
         activeIndexRef.current = index
 
-        const path = chapterOrder[index]
-        setActivePath(path)
-        navigate(path, { replace: true, state: { fromScrollSync: true } })
+        setActiveChapter(chapterOrder[index])
       },
       { rootMargin: '-45% 0px -45% 0px', threshold: 0 }
     )
@@ -36,6 +31,4 @@ export function useActiveSection(chapterRefs, chapterOrder, initialPath) {
     return () => observer.disconnect()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  return activePath
 }

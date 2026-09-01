@@ -11,24 +11,15 @@ import { RouteProvider } from './context/RouteProvider'
 import ExploreMobileControls from './components/ExploreMobileControls'
 import FloatingNav from './components/FloatingNav'
 import LoadingScreen from './components/LoadingScreen'
-import { chapterOrder } from './content/chapterMeta'
 import { prefersReducedMotion } from './utils/motion'
 
 const BackgroundCanvas = lazy(() => import('./components/BackgroundCanvas'))
-// One reference, reused across all 5 merged-page routes below — React
-// Router reconciles by element type + tree position with no per-route key,
-// so navigating between these routes does not remount LongPage, as long as
-// it's this same lazy() reference every time.
 const LongPage = lazy(() => import('./pages/LongPage'))
 const ExplorePage = lazy(() => import('./pages/ExplorePage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 const ROUTE_EXIT_MS = 220
 const ROUTE_ENTER_MS = 420
-
-function isMergedPath(pathname) {
-  return chapterOrder.includes(pathname)
-}
 
 export default function App() {
   const location = useLocation()
@@ -46,11 +37,7 @@ export default function App() {
   useEffect(() => {
     if (location.pathname === displayedPathRef.current) return undefined
 
-    const skipTransition =
-      prefersReducedMotion() ||
-      (isMergedPath(displayedPathRef.current) && isMergedPath(location.pathname))
-
-    if (skipTransition) {
+    if (prefersReducedMotion()) {
       setDisplayedLocation(latestLocationRef.current)
       displayedPathRef.current = latestLocationRef.current.pathname
       setRouteStage('idle')
@@ -105,10 +92,6 @@ export default function App() {
         <Suspense fallback={<div className="route-loading" />}>
           <Routes location={displayedLocation}>
             <Route path="/" element={<LongPage />} />
-            <Route path="/projects" element={<LongPage />} />
-            <Route path="/journey" element={<LongPage />} />
-            <Route path="/contact" element={<LongPage />} />
-            <Route path="/chat" element={<LongPage />} />
             <Route path="/explore" element={<ExplorePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

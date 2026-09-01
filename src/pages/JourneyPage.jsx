@@ -9,7 +9,7 @@ export default function JourneyPage() {
         <SectionCard
           id="journey"
           eyebrow="Yrke og utdanning"
-          title="Utvikling, studier og ledelse."
+          title="Utvikling, studier og ledelse"
         >
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             <div className="space-y-3 sm:space-y-4">

@@ -17,7 +17,7 @@
   ],
   "currently": [
     "Master i programvareutvikling, UiB/HVL",
-    "Bygger en chatbot for bedriftsbruk hos Amitec AS",
+    "Bygger en chatbot for internbruk hos Amitec",
     "Utforsker agentic AI og lokale modelloppsett på fritiden"
   ],
   "interests": [
@@ -26,7 +26,9 @@
     "Unix-filosofi",
     "Biler og motorer",
     "Seiling og luftfart",
-    "Lavnivåprogrammering"
+    "Lavnivåprogrammering",
+    "Fotball og alt av idrett",
+    "Styrketrening"
   ],
   "about": "Har en bachelorgrad i Informatikk: Datateknologi, tar en mastergrad i programvareutvikling. Bruker store deler av fritiden i ulike kaninhull om kvantedatamaskiner, AI/ML modeller og arkitekturer, low-level-programmering og mye mer. Jeg har som regel alltid noe jeg holder på med av teknologisk interesse.",
   "experience": [
@@ -112,14 +114,14 @@
     },
     {
       "name": "Enterprise Chatbot",
-      "description": "Intern AI-chatbot med komplett produksjonsmiljø fra bunnen av.",
-      "highlight": "Fullstack-arbeid på et produksjonsmiljø, fortsatt under utvikling.",
+      "description": "Intern AI-chatbot med komplett produksjonsmiljø fra bunnen av i Amitec. Håndterer og prosesserer data fra flere fragmenterte kilder som Microsoft Teams, Sharepoint, Confluence, Airtable, og flere.",
+      "highlight": "Fullstack-utvikling i et selvutviklet lokalt produksjonsmiljø, fortsatt under utvikling.",
       "type": "Jobb",
       "typeKey": "professional",
       "status": "Under arbeid",
       "statusKey": "in-progress",
       "featured": true,
-      "tech": ["Python", "Qdrant", "Neo4j", "PostgreSQL", "Docker", "Azure OpenAI", "Systemd", "Linux"]
+      "tech": ["Python", "Qdrant", "Neo4j", "PostgreSQL", "Docker", "Azure OpenAI", "Systemd", "Linux", "vLLM", "llama.cpp"]
     },
     {
       "name": "Digital Etterforskning",
@@ -136,8 +138,8 @@
       "name": "Personal AI Homelab",
       "description": "Hoster ulike lokale modeller som jeg bruker daglig. Eksperimenterer med det aller nyeste innen AI/ML og følger aktivt med på hva som skjer i AI/ML-verdenen. Bruker Homelab-en til å eksperimentere med modeller og ulike oppsett, samt utvikle min egen kunnskap om fagfeltet.",
       "highlight": "Praktisk erfaring med agentic workflows og drift av egen AI-infrastruktur.",
-      "type": "Personlig",
-      "typeKey": "personal",
+      "type": "Sideprosjekt",
+      "typeKey": "exploration",
       "status": "Selvhostet",
       "statusKey": "self-hosted",
       "featured": true,
@@ -147,7 +149,7 @@
     {
       "name": "Machine Learning Experimentation",
       "description": "ML-modeller, embeddings, ideer innen kvantedatabehandling, og algoritmer implementert fra bunnen av for å forstå dem.",
-      "type": "Utforskning",
+      "type": "Sideprosjekt",
       "typeKey": "exploration",
       "repo": "https://github.com/frheg/MachineLearning",
       "tech": ["Python", "Qdrant", "Qiskit", "Pytorch"]
@@ -155,13 +157,13 @@
     {
       "name": "Programming Languages and Low-Level Exploration",
       "description": "RISC-V- og x86_64-assembly, C++, Rust, og andre eksperimenter på systemnivå.",
-      "type": "Utforskning",
+      "type": "Sideprosjekt",
       "typeKey": "exploration",
       "repo": "https://github.com/frheg/ProgrammingLanguages",
       "tech": ["RISC-V assembly", "x86_64 assembly", "C++", "Rust"]
     },
     {
-      "name": "Kollekt (Group Project)",
+      "name": "Kollekt (DAT251 - Group Project)",
       "description": "En fullstack-app for delte husholdninger, laget for et kurs i moderne metoder for programvareutvikling. Live i appstore.",
       "type": "Skole",
       "typeKey": "university",
@@ -173,7 +175,7 @@
       "tech": ["Kotlin", "React", "Spring Boot", "PostgreSQL", "Docker"]
     },
     {
-      "name": "DAT250 Poll App (Group Project)",
+      "name": "Poll App (DAT250 - Group Project)",
       "description": "En avstemningsapp laget for et kurs i avanserte programvareteknologier.",
       "type": "Skole",
       "typeKey": "university",
@@ -181,8 +183,8 @@
       "tech": ["Kotlin", "Angular", "Spring Boot", "Python", "Docker", "Qdrant", "Apache Kafka"]
     },
     {
-      "name": "CodeMasters (Group Project)",
-      "description": "Et 2D-spill bygget med LibGDX for INF112, et systemutviklingskurs ved UiB.",
+      "name": "CodeMasters (INF112 - Group Project)",
+      "description": "Et 2D-spill bygget med LibGDX, lignende Binding of Isaac / Zelda",
       "type": "Skole",
       "typeKey": "university",
       "repo": "https://github.com/frheg/CodeMasters",

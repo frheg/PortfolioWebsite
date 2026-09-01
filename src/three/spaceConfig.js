@@ -73,7 +73,7 @@ export const spaceConfig = {
       ry: 28,
       rz: 152,
     },
-    // Order must match chapterOrder in src/content/chapterMeta.js — that's
+    // Order must match chapterOrder in src/content/chapters.js — that's
     // the DOM order LongPage renders these chapters in, and useScrollCamera
     // measures/interpolates scroll-driven camera position against these
     // same path strings in this same order.

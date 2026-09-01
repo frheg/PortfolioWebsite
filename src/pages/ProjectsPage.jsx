@@ -12,8 +12,8 @@ export default function ProjectsPage() {
       <div className="relative mx-auto w-full max-w-6xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
           id="projects"
-          eyebrow="Utvalgte"
-          title="Utvalgte prosjekter."
+          eyebrow="Prosjekter"
+          title="Fremhevede prosjekter"
         >
           <div className="grid gap-4 sm:gap-5 xl:grid-cols-3">
             {featuredProjects.map((project, index) => (
@@ -24,10 +24,10 @@ export default function ProjectsPage() {
 
         <SectionCard
           id="archive"
-          eyebrow="Arkiv"
-          title="Flere prosjekter og eksperimenter."
+          eyebrow="Prosjekter"
+          title="Flere prosjekter og eksperimenter"
         >
-          <OrbitDisclosure title="Åpne prosjektarkiv" hint="Skolearbeid, sideprosjekter og mindre bygg" defaultOpen>
+          <OrbitDisclosure title="Åpne prosjektarkiv" hint="Skolearbeid og sideprosjekter" defaultOpen>
             <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
               {otherProjects.map((project, index) => (
                 <ProjectCard key={project.name} project={project} index={index} />

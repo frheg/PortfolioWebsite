@@ -202,7 +202,7 @@ export default function ChatPage() {
 
   return (
     <>
-      <div className="relative mx-auto w-full max-w-4xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
+      <div className="relative mx-auto w-full max-w-6xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
           id="chat"
           eyebrow={`${modelInfo.name} · WebGPU`}

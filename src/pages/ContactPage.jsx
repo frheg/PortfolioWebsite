@@ -15,23 +15,9 @@ export default function ContactPage() {
     <>
       <div className="relative mx-auto w-full max-w-6xl px-4 pb-28 text-left sm:px-6 sm:pb-24 lg:px-8">
         <SectionCard
-          id="skills"
-          eyebrow="Verktøykasse"
-          title="Det jeg jobber med."
-        >
-          <Reveal variant="up" className="flex flex-wrap gap-3">
-            {profile.skills.map((skill) => (
-              <span key={skill} className="break-words rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100/88">
-                {skill}
-              </span>
-            ))}
-          </Reveal>
-        </SectionCard>
-
-        <SectionCard
           id="contact"
-          eyebrow="Ta kontakt"
-          title="Ta gjerne kontakt."
+          eyebrow="Kontakt"
+          title="Ta gjerne kontakt"
           description="Den enkleste måten å nå meg på er via e-post eller LinkedIn. GitHub er der sideprosjektene og eksperimentene ligger."
         >
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_0.9fr]">
