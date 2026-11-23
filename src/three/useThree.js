@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
+import { setActiveCamera } from './cameraRuntime'
 
 export function useThree(canvasRef) {
   const sceneRef = useRef(null)
@@ -37,6 +38,7 @@ export function useThree(canvasRef) {
     sceneRef.current = scene
     cameraRef.current = camera
     rendererRef.current = renderer
+    setActiveCamera(camera)
 
     const onResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight
@@ -47,6 +49,7 @@ export function useThree(canvasRef) {
 
     return () => {
       window.removeEventListener('resize', onResize)
+      setActiveCamera(null)
       renderer.dispose()
       scene.traverse((obj) => {
         if (obj.geometry) obj.geometry.dispose?.()

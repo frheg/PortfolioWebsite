@@ -21,3 +21,14 @@ export function setCameraThrottle(throttle) {
 export function getCameraThrottle() {
   return _throttle
 }
+
+// Live camera object (rotation only; world pos = floatingOrigin.origin). For HUD instruments.
+let _camera = null
+
+export function setActiveCamera(camera) {
+  _camera = camera
+}
+
+export function getActiveCamera() {
+  return _camera
+}

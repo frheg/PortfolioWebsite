@@ -167,3 +167,24 @@ vec4 galaxySample(vec3 p) {
   return vec4(em, dust);
 }
 `
+
+// ─── Face-on map (HUD minimap) ───────────────────────────────────────────────
+// Same components as GALAXY_GLSL, z-integrated → constants. Linear RGB, unbounded.
+export function galaxyMapColor(x, y) {
+  const R = Math.hypot(x, y)
+  const theta = Math.atan2(y, x)
+  const { innerTaper, outerCut, thinDisk, arms, bar, nucleus } = GALAXY
+  const radial = smoothstep(innerTaper[0], innerTaper[1], R) * (1 - smoothstep(outerCut[0], outerCut[1], R))
+  const arm = armField(R, theta)
+  const old = Math.exp(-R / thinDisk.scaleLength) * (0.7 + 0.5 * arm) * radial
+  const young = Math.exp(-R / arms.youngScaleLength) * arm * arms.boost * radial
+  const bx = (x * Math.cos(BAR_ANGLE) + y * Math.sin(BAR_ANGLE)) / bar.axes[0]
+  const by = (-x * Math.sin(BAR_ANGLE) + y * Math.cos(BAR_ANGLE)) / bar.axes[1]
+  const bulge = bar.weight * 0.1 * Math.exp(-2 * Math.hypot(bx, by)) + nucleus.weight * 0.1 * Math.exp(-R / nucleus.scale)
+  const dust = 1 - 0.55 * armField(R, theta, GALAXY.dust.armShift, GALAXY.dust.width) * radial
+  return [
+    (old * 1.0 + young * 0.5 + bulge * 1.0) * dust,
+    (old * 0.84 + young * 0.64 + bulge * 0.72) * dust,
+    (old * 0.66 + young * 1.0 + bulge * 0.45) * dust,
+  ]
+}

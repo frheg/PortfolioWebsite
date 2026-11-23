@@ -10,7 +10,7 @@ import { loadStarCatalog } from './starCatalog'
 import { nearestStar } from './starRuntime'
 import { setPoiBodies } from './solarSystemRuntime'
 import { origin } from './floatingOrigin'
-import { LY_KM, PC_KM, SUN_ABS_MAG, SUN_RADIUS_KM } from './galaxyFrame'
+import { LY_KM, PC_KM, SUN_ABS_MAG, SUN_RADIUS_KM, spectralClass } from './galaxyFrame'
 
 const cfg = spaceConfig.galaxy.stars
 const CHUNK_AT_SUN = { x: 0, y: 0, z: 0 }
@@ -24,16 +24,6 @@ export function starRadiusKm(absMag, temp) {
   const luminosity = Math.pow(10, -0.4 * (absMag - SUN_ABS_MAG))
   const tr = 5778 / temp
   return SUN_RADIUS_KM * Math.sqrt(luminosity) * tr * tr
-}
-
-function spectralClass(temp) {
-  if (temp >= 30000) return 'O'
-  if (temp >= 10000) return 'B'
-  if (temp >= 7500) return 'A'
-  if (temp >= 6000) return 'F'
-  if (temp >= 5200) return 'G'
-  if (temp >= 3700) return 'K'
-  return 'M'
 }
 
 const fmt = (n, digits = 0) => n.toLocaleString('nb-NO', { maximumFractionDigits: digits })
@@ -102,6 +92,7 @@ export function useGalaxy(sceneRef, rendererRef) {
       .then((catalog) => {
         if (state.disposed) return
         state.catalog = catalog
+        state.nameByIndex = new Map(catalog.names.map(({ i, n }) => [i, n]))
         state.catalogPoints = createStarPoints(catalog.geometry, CHUNK_AT_SUN)
         scene.add(state.catalogPoints)
         setPoiBodies(namedStarPois(catalog))
@@ -150,6 +141,9 @@ export function useGalaxy(sceneRef, rendererRef) {
       nearestStar.world.y = hit.y * PC_KM
       nearestStar.world.z = hit.z * PC_KM
       nearestStar.radiusKm = starRadiusKm(hit.absMag, hit.temp)
+      nearestStar.temp = hit.temp
+      nearestStar.absMag = hit.absMag
+      nearestStar.name = hit.id.startsWith('c') ? (state.nameByIndex?.get(Number(hit.id.slice(1))) ?? null) : null
     }
   }
 

@@ -17,6 +17,7 @@ const BackgroundCanvas = lazy(() => import('./components/BackgroundCanvas'))
 const LongPage = lazy(() => import('./pages/LongPage'))
 const ExplorePage = lazy(() => import('./pages/ExplorePage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
+const ExploreHud = lazy(() => import('./components/ExploreHud'))
 
 const ROUTE_EXIT_MS = 220
 const ROUTE_ENTER_MS = 420
@@ -98,6 +99,11 @@ export default function App() {
         </Suspense>
       </div>
       {isExploreRoute ? <ExploreHelpHint /> : null}
+      {isExploreRoute ? (
+        <Suspense fallback={null}>
+          <ExploreHud />
+        </Suspense>
+      ) : null}
       {isExploreRoute ? <ExploreMobileControls /> : <FloatingNav />}
     </main>
   )
