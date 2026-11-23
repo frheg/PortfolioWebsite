@@ -1,14 +1,18 @@
-// Galaxy orchestrator: volume glow (sky pass), catalog + procedural + Sun star points (world pass),
-// nearest-star telemetry, named-star label POIs.
+// Galaxy orchestrator + frame pipeline: volume glow (sky pass) → world pass → optional lens pass.
+// Owns catalog/procedural/Sun star points, nebulae + black holes, nearest-star telemetry + promotion.
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { createGalaxyVolume } from './galaxyVolume'
+import { createDeepSpace } from './deepSpace'
+import { createLensPass } from './lensPass'
+import { createStarPromoter } from './starPromoter'
+import { createFadeOverlay } from './fadeOverlay'
 import { createStarSectors } from './starSectors'
 import { createStarPoints, starUniforms, updateStarUniforms } from './starMaterial'
 import { loadStarCatalog } from './starCatalog'
 import { nearestStar } from './starRuntime'
-import { setPoiBodies } from './solarSystemRuntime'
+import { setPoiGroup } from './solarSystemRuntime'
 import { origin } from './floatingOrigin'
 import { LY_KM, PC_KM, SUN_ABS_MAG, SUN_RADIUS_KM, spectralClass } from './galaxyFrame'
 
@@ -75,6 +79,10 @@ export function useGalaxy(sceneRef, rendererRef) {
 
     const volume = createGalaxyVolume(isMobile)
     const sectors = createStarSectors(scene, magLimit)
+    const deepSpace = createDeepSpace(scene, isMobile)
+    const lens = createLensPass(isMobile)
+    const promoter = createStarPromoter(scene)
+    const fade = createFadeOverlay()
 
     // The Sun as a star: takes over from its body LOD once its disc is sub-pixel.
     const sunGeometry = new THREE.BufferGeometry()
@@ -85,7 +93,7 @@ export function useGalaxy(sceneRef, rendererRef) {
     const sunPoint = createStarPoints(sunGeometry, CHUNK_AT_SUN)
     scene.add(sunPoint)
 
-    const state = { volume, sectors, catalog: null, catalogPoints: null, nearestTimer: 0, disposed: false }
+    const state = { volume, sectors, deepSpace, lens, promoter, fade, catalog: null, catalogPoints: null, nearestTimer: 0, disposed: false }
     stateRef.current = state
 
     loadStarCatalog()
@@ -95,7 +103,7 @@ export function useGalaxy(sceneRef, rendererRef) {
         state.nameByIndex = new Map(catalog.names.map(({ i, n }) => [i, n]))
         state.catalogPoints = createStarPoints(catalog.geometry, CHUNK_AT_SUN)
         scene.add(state.catalogPoints)
-        setPoiBodies(namedStarPois(catalog))
+        setPoiGroup('stars', namedStarPois(catalog))
       })
       .catch((error) => console.warn('Star catalog unavailable:', error))
 
@@ -103,6 +111,10 @@ export function useGalaxy(sceneRef, rendererRef) {
       state.disposed = true
       volume.dispose()
       sectors.dispose()
+      deepSpace.dispose()
+      lens.dispose()
+      promoter.dispose()
+      fade.dispose()
       scene.remove(sunPoint)
       sunGeometry.dispose()
       sunPoint.material.dispose()
@@ -111,7 +123,7 @@ export function useGalaxy(sceneRef, rendererRef) {
         state.catalogPoints.geometry.dispose()
         state.catalogPoints.material.dispose()
       }
-      setPoiBodies([])
+      setPoiGroup('stars', [])
       nearestStar.valid = false
       stateRef.current = null
     }
@@ -128,6 +140,8 @@ export function useGalaxy(sceneRef, rendererRef) {
     updateStarUniforms(camera, renderer)
     camPc.current.copy(origin).divideScalar(PC_KM)
     state.sectors.update(deltaSeconds, camPc.current)
+    state.deepSpace.update(deltaSeconds)
+    state.promoter.update(deltaSeconds, nearestStar, starUniforms.uFocalPx.value)
 
     state.nearestTimer -= deltaSeconds
     if (state.nearestTimer > 0) return
@@ -143,13 +157,23 @@ export function useGalaxy(sceneRef, rendererRef) {
       nearestStar.radiusKm = starRadiusKm(hit.absMag, hit.temp)
       nearestStar.temp = hit.temp
       nearestStar.absMag = hit.absMag
+      nearestStar.id = hit.id
       nearestStar.name = hit.id.startsWith('c') ? (state.nameByIndex?.get(Number(hit.id.slice(1))) ?? null) : null
     }
   }
 
-  const renderSky = (renderer, camera, deltaSeconds) => {
-    stateRef.current?.volume.render(renderer, camera, deltaSeconds)
+  /** Full frame: sky glow → world → lens (only when a black hole bends ≥ few px). */
+  const render = (renderer, scene, camera, deltaSeconds) => {
+    const state = stateRef.current
+    const target = state ? state.lens.prepare(renderer, camera, state.deepSpace.blackHoles) : null
+    renderer.setRenderTarget(target)
+    renderer.clear()
+    state?.volume.render(renderer, camera, deltaSeconds, target)
+    renderer.clearDepth()
+    renderer.render(scene, camera)
+    if (target) state.lens.finish(renderer)
+    state?.fade.render(renderer)
   }
 
-  return { update, renderSky }
+  return { update, render }
 }

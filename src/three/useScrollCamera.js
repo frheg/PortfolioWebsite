@@ -4,7 +4,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
-import { getSolarCollisionBodies } from './solarSystemRuntime'
+import { getDeepBodies, getSolarCollisionBodies } from './solarSystemRuntime'
 import { getChapterOffsets } from './scrollChapters'
 import { setScrollVelocity } from './scrollVelocity'
 import {
@@ -24,6 +24,7 @@ import {
 import { setCameraSpeed, setCameraThrottle } from './cameraRuntime'
 import { origin } from './floatingOrigin'
 import { nearestStar } from './starRuntime'
+import { setWormholeApproach, triggerWormhole } from './wormholeRuntime'
 import { GALAXY_CENTER_PC, PC_KM } from './galaxyFrame'
 
 const { pageStops, scroll: scrollConfig, explore: exploreConfig, transitionLerp } = spaceConfig.camera
@@ -56,6 +57,12 @@ function shortestAngleDelta(from, to) {
 // Frame-rate independent lerp factor.
 function expFactor(rate, dt) {
   return 1 - Math.exp(-rate * dt)
+}
+
+// Solar + deep (black holes, promoted star) bodies.
+function forEachBody(fn) {
+  getSolarCollisionBodies().forEach(fn)
+  getDeepBodies().forEach(fn)
 }
 
 function findBody(key) {
@@ -443,9 +450,10 @@ export function useScrollCamera(cameraRef, routePath) {
   // Effective altitude, km: nearest body surface, or nearest star scaled up (far stars barely brake).
   const nearestAltitude = (position) => {
     let best = Infinity
-    getSolarCollisionBodies().forEach((body) => {
+    forEachBody((body) => {
       if (body.kind !== 'body') return
-      best = Math.min(best, position.distanceTo(body.position) - body.radius)
+      // Portal: speed ∝ distance to singularity → horizon reachable in seconds.
+      best = Math.min(best, position.distanceTo(body.position) - (body.portal ? 0 : body.radius))
     })
     if (nearestStar.valid) {
       const w = nearestStar.world
@@ -462,7 +470,8 @@ export function useScrollCamera(cameraRef, routePath) {
       position.copy(GALAXY_CENTER_KM).addScaledVector(fromCenter.normalize(), exploreConfig.maxGalaxyDistance)
     }
 
-    getSolarCollisionBodies().forEach((body) => {
+    forEachBody((body) => {
+      if (body.portal) return
       const minDistance = body.radius + (body.kind === 'body' ? exploreConfig.minAltitude : 0)
       const offset = bodyOffsetRef.current.subVectors(position, body.position)
       if (offset.lengthSq() >= minDistance * minDistance) return
@@ -510,6 +519,23 @@ export function useScrollCamera(cameraRef, routePath) {
   }
 
   // ─── Explore ───────────────────────────────────────────────────────────────
+
+  const exitWormhole = (camera) => {
+    const pose = poseRef.current
+    if (!stopPose(pageStops[0], pose)) return
+    origin.copy(pose.pos)
+    aimAt(camera, pose.look, true)
+    camera.fov = baseFovRef.current + exploreConfig.wormholeFovKick
+    camera.updateProjectionMatrix()
+    // Emerge drifting toward the planet, auto-brake does the rest.
+    const yaw = currentYawRef.current
+    const pitch = currentPitchRef.current
+    velocityRef.current
+      .set(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch))
+      .multiplyScalar(nearestAltitude(origin) * exploreConfig.speedPerAltitude * 0.4)
+    boostBlendRef.current = 0
+    triggerWormhole()
+  }
 
   const updateExplore = (camera, deltaSeconds) => {
     // Drain look even when paused → no stale deltas on resume.
@@ -581,6 +607,18 @@ export function useScrollCamera(cameraRef, routePath) {
     // Blocked by surface → bleed speed.
     if (next.distanceTo(origin) < speed * deltaSeconds * 0.5) velocity.multiplyScalar(0.2)
     origin.copy(next)
+
+    // Portal: darken toward horizon, cross → respawn at first stop out of a white-hole flash.
+    let approach = 0
+    let crossed = false
+    getDeepBodies().forEach((body) => {
+      if (!body.portal) return
+      const d = origin.distanceTo(body.position)
+      approach = Math.max(approach, 1 - smoothstep(body.rsKm, body.rsKm * 2.2, d))
+      if (d < body.rsKm) crossed = true
+    })
+    setWormholeApproach(approach)
+    if (crossed) exitWormhole(camera)
 
     return boostActive
   }

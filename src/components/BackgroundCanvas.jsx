@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-// 3D bg orchestrator. Per frame: sim → camera (moves origin) → sync anchors → galaxy glow pass → world pass.
+// 3D bg orchestrator. Per frame: sim → camera (moves origin) → sync anchors → galaxy update → render pipeline (useGalaxy).
 import { useThree } from '../three/useThree'
 import { useLights } from '../three/useLights'
 import { useSolarSystem } from '../three/useSolarSystem'
@@ -56,11 +56,7 @@ export default function BackgroundCanvas() {
       camera.updateMatrixWorld()
       galaxyRef.current.update?.(deltaSeconds, camera, renderer)
 
-      renderer.setRenderTarget(null)
-      renderer.clear()
-      galaxyRef.current.renderSky?.(renderer, camera, deltaSeconds)
-      renderer.clearDepth()
-      renderer.render(scene, camera)
+      galaxyRef.current.render?.(renderer, scene, camera, deltaSeconds)
     }
     animate()
     return () => cancelAnimationFrame(animationId)

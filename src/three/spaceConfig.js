@@ -54,6 +54,7 @@ export const spaceConfig = {
       touchLookSensitivity: 0.003,
       minAltitude: 1,       // km above surface
       maxGalaxyDistance: 150_000 * PC_KM, // from galactic center
+      wormholeFovKick: 55,  // deg, eases back after Sgr A* exit
       // Nearest star limits speed: effective altitude = d × factor, factor 1 → starInfluence
       // over starInfluenceRangePc. Far stars barely brake, close ones fully.
       starInfluence: 50,
@@ -159,6 +160,8 @@ export const spaceConfig = {
       gain: 1,
       seed: 1337,
       // Procedural bands: abs mag range + local density (stars/pc³ at sun, rough local LF).
+      // × densityScale: calibrated so procedural sky ≈ catalog sky near the Sun.
+      densityScale: 0.35,
       bands: [
         { mag: [-10, -7.5], density: 2e-9 },
         { mag: [-7.5, -5], density: 3e-8 },
@@ -183,6 +186,18 @@ export const spaceConfig = {
       nearestIntervalS: 0.2,
       labelMag: 1.5,        // named star label when brighter than this
       labelNearPc: 4,       // ...or closer than this
+      promoteDistancePc: 0.05, // nearest star → real sphere + label inside this (~10 000 AU)
+    },
+    deepSpace: {
+      nebulaSprites: 7000,
+      mobileFactor: 0.5,
+      nebulaGain: 1.4,      // ÷ sprite overlap → total brightness independent of count
+      nebulaMaxPx: 180,     // overdraw cap
+      diskOuterRs: 24,
+      diskGain: 2.2,
+      diskSpin: 0.6,        // visual time scale for disk rotation
+      lensMinPx: 2,         // Einstein radius on screen to switch lens pass on
+      photonRingGain: 0.9,
     },
   },
 }

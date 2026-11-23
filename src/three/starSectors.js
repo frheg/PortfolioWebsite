@@ -104,7 +104,7 @@ export function createStarSectors(scene, magLimit) {
         iz: w.iz,
         size: w.lv.size,
         mag: w.lv.band.mag,
-        density: w.lv.band.density,
+        density: w.lv.band.density * cfg.densityScale,
         exclusionPc: w.lv.exclusionPc,
         cap: cfg.cellCap,
         seed: cfg.seed,

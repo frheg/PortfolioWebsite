@@ -21,9 +21,11 @@ uniform vec3 uSunDir;
 uniform vec3 uSunLight;
 uniform vec3 uAmbientLight;
 uniform float uEmissive;
+uniform vec3 uTint;
+uniform float uTintMix;
 
 vec3 shadeBody(vec3 albedo, vec3 nW) {
-  if (uEmissive > 0.5) return albedo;
+  if (uEmissive > 0.5) return mix(albedo, vec3(dot(albedo, vec3(0.3, 0.59, 0.11))) * uTint * 1.6, uTintMix);
   float ndl = max(dot(nW, uSunDir), 0.0);
   return albedo * (uSunLight * ndl + uAmbientLight) * RECIPROCAL_PI;
 }
@@ -200,13 +202,15 @@ const _m4 = new THREE.Matrix4()
  */
 export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
   const emissive = { value: def.emissive ? 1 : 0 }
+  const tint = { value: new THREE.Color(...(def.tint ?? [1, 1, 1])) }
+  const tintMix = { value: def.tint ? 1 : 0 }
   const sunDir = { value: new THREE.Vector3(1, 0, 0) }
   const mapUniform = { value: map }
 
   const mesh = new THREE.Mesh(
     getSphere(0),
     new THREE.ShaderMaterial({
-      uniforms: { map: mapUniform, uSunDir: sunDir, uEmissive: emissive, ...sharedLight },
+      uniforms: { map: mapUniform, uSunDir: sunDir, uEmissive: emissive, uTint: tint, uTintMix: tintMix, ...sharedLight },
       vertexShader: MESH_VERT,
       fragmentShader: MESH_FRAG,
     })
@@ -223,6 +227,8 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
         map: mapUniform,
         uSunDir: sunDir,
         uEmissive: emissive,
+        uTint: tint,
+        uTintMix: tintMix,
         uBodyRot: bodyRot,
         uRadius: { value: def.radius },
         uFade: fade,
@@ -285,5 +291,14 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
     if (ring) ring.visible = radiusPx > lodCfg.dotFade[0]
   }
 
-  return { mesh, update }
+  const dispose = () => {
+    mesh.material.dispose()
+    impostor.material.dispose()
+    if (dot) {
+      dot.geometry.dispose()
+      dot.material.dispose()
+    }
+  }
+
+  return { mesh, update, dispose }
 }

@@ -7,4 +7,5 @@ export const nearestStar = {
   temp: 0,
   absMag: 0,
   name: null,
+  id: null,
 }

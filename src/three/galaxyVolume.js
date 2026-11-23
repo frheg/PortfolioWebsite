@@ -80,7 +80,8 @@ void main() {
       float dt = min(byDist, byPlane);
       vec3 ps = uCamG + rd * (t + dt * dither);
       vec4 s = galaxySample(ps);
-      E += T * s.rgb * dt;
+      // Near cam: individual stars carry the light → skip diffuse glow (no haze inside arms).
+      E += T * s.rgb * dt * smoothstep(0.15, 0.8, t);
       T *= exp(-uDustOpacity * s.a * dt);
       t += dt;
     }
@@ -217,8 +218,8 @@ export function createGalaxyVolume(isMobile) {
     }
   }
 
-  /** Sky pass. Call after sky scene render, before world pass. Restores screen target. */
-  const render = (renderer, camera, deltaSeconds) => {
+  /** Sky pass, before world pass. Ends bound to outputTarget (null = screen). */
+  const render = (renderer, camera, deltaSeconds, outputTarget = null) => {
     _camPc.copy(origin).divideScalar(PC_KM)
     speedPc = speedPc * 0.8 + (_camPc.distanceTo(lastCam) / Math.max(deltaSeconds, 1e-3)) * 0.2
     lastCam.copy(_camPc)
@@ -261,7 +262,7 @@ export function createGalaxyVolume(isMobile) {
       march(renderer, live, 0, _basis, camG)
     }
 
-    renderer.setRenderTarget(null)
+    renderer.setRenderTarget(outputTarget)
     compositeMat.uniforms.uViewBasis.value.copy(_basis)
     renderer.render(compositeScene, quadCam)
   }
