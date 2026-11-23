@@ -170,7 +170,20 @@ export const spaceConfig = {
     // Scroll mode: positions at real time (1×), spin sped up ×this. Explore: ephemerisTime.
     scrollSpinScale: 600,
     textureAnisotropy: 8,
-    segments: { width: 128, height: 64 },
+    // LOD by projected radius px (see bodyLod.js).
+    lod: {
+      dotFade: [0.8, 2.5],  // dot → impostor crossfade
+      meshIn: 24,           // impostor → mesh
+      meshOut: 20,          // mesh → impostor (hysteresis)
+      // Mesh detail by px. Chord sag stays ≤ ~0.2 px at each switch.
+      meshLevels: [
+        { maxPx: 100, segments: [48, 24] },
+        { maxPx: 400, segments: [96, 48] },
+        { maxPx: Infinity, segments: [192, 96] },
+      ],
+      levelHysteresis: 0.15,
+      dotNightFloor: 0.35,  // dot brightness when fully backlit
+    },
     // Real radii, km. Positions: ephemeris (sun fixed at 0, moon custom).
     // beaconPx: min-size dot when sub-pixel. labelRange: km, hide label past it.
     bodies: [

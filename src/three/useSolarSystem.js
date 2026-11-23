@@ -6,6 +6,7 @@ import { spaceConfig, AU_KM } from './spaceConfig'
 import { setSolarCollisionBodies } from './solarSystemRuntime'
 import { sceneLoadingManager } from './sceneLoadingManager'
 import { origin, trackAnchor, untrackAnchor } from './floatingOrigin'
+import { createBodyLod } from './bodyLod'
 import {
   daysSinceJ2000,
   dateMsFromDaysSinceJ2000,
@@ -448,44 +449,6 @@ function addUfoGlow(anchor, lightIntensity) {
 }
 
 
-// ─── Beacons ─────────────────────────────────────────────────────────────────
-// Fixed-px dot per body. Visible when sphere sub-pixel, fades out as disc grows.
-// Phase 2 replaces with impostor crossfade.
-
-const BEACON_FADE_PX = { start: 1.5, end: 5 }
-
-function buildBeaconTexture() {
-  const S = 32
-  const canvas = document.createElement('canvas')
-  canvas.width = S
-  canvas.height = S
-  const ctx = canvas.getContext('2d')
-  const grd = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
-  grd.addColorStop(0.0, 'rgba(255,255,255,1)')
-  grd.addColorStop(0.45, 'rgba(255,255,255,0.9)')
-  grd.addColorStop(1.0, 'rgba(255,255,255,0)')
-  ctx.fillStyle = grd
-  ctx.fillRect(0, 0, S, S)
-  return new THREE.CanvasTexture(canvas)
-}
-
-function buildBeacon(def) {
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3))
-  const material = new THREE.PointsMaterial({
-    size: def.beaconPx,
-    sizeAttenuation: false,
-    color: def.beaconColor,
-    map: cachedGlowTex('beacon', buildBeaconTexture),
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  })
-  const points = new THREE.Points(geometry, material)
-  points.frustumCulled = false
-  return points
-}
-
 // RingGeometry UVs are planar. Strip textures need u = radial fraction.
 function remapRingUvRadial(geometry, inner, outer) {
   const pos = geometry.attributes.position
@@ -495,11 +458,6 @@ function remapRingUvRadial(geometry, inner, outer) {
     uv.setXY(i, (r - inner) / (outer - inner), 0.5)
   }
   uv.needsUpdate = true
-}
-
-function smoothstep(edge0, edge1, x) {
-  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
-  return t * t * (3 - 2 * t)
 }
 
 // Ecliptic (x, y, z=north) → scene (x, z, -y). Proper rotation, no mirror:
@@ -563,7 +521,6 @@ export function useSolarSystem(sceneRef, isExplore = false) {
     const bodyMap = new Map()
     const collisions = []
     const anchors = []
-    const sphereGeometry = new THREE.SphereGeometry(1, cfg.segments.width, cfg.segments.height)
 
     for (const def of cfg.bodies) {
       const world = new THREE.Vector3()
@@ -575,17 +532,11 @@ export function useSolarSystem(sceneRef, isExplore = false) {
       tiltGroup.rotation.z = def.axialTilt || 0
       anchor.add(tiltGroup)
 
-      const material = def.emissive
-        ? new THREE.MeshBasicMaterial({ map: textures[def.texture] })
-        : new THREE.MeshStandardMaterial({ map: textures[def.texture], metalness: 0, roughness: 1 })
-      const mesh = new THREE.Mesh(sphereGeometry, material)
-      mesh.scale.setScalar(def.radius)
-      tiltGroup.add(mesh)
-
+      let ring = null
       if (def.ringTexture) {
         const ringGeo = new THREE.RingGeometry(def.ringInner, def.ringOuter, 192)
         if (def.ringUv === 'radial') remapRingUvRadial(ringGeo, def.ringInner, def.ringOuter)
-        const ring = new THREE.Mesh(
+        ring = new THREE.Mesh(
           ringGeo,
           new THREE.MeshBasicMaterial({
             map: textures[def.ringTexture],
@@ -605,11 +556,10 @@ export function useSolarSystem(sceneRef, isExplore = false) {
         anchor.add(new THREE.PointLight(color, intensity, 0, decay))
       }
 
-      const beacon = buildBeacon(def)
-      anchor.add(beacon)
+      const lod = createBodyLod(def, textures[def.texture], anchor, tiltGroup, ring)
 
       system.add(anchor)
-      bodyMap.set(def.key, { def, world, anchor, mesh, beacon })
+      bodyMap.set(def.key, { def, world, anchor, mesh: lod.mesh, lod })
       collisions.push({
         key: def.key,
         kind: 'body',
@@ -723,23 +673,10 @@ export function useSolarSystem(sceneRef, isExplore = false) {
       }
     })
 
-    // Beacons. Uses last frame's origin → 1-frame lag on alpha, invisible.
+    // LOD tiers. Last frame's origin → 1-frame lag on tier/fade, invisible.
     if (camera) {
       const focalPx = window.innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
-      bodyMap.forEach(({ def, world, beacon }) => {
-        _toCam.subVectors(origin, world)
-        const dist = _toCam.length()
-        if (dist <= def.radius) {
-          beacon.visible = false
-          return
-        }
-        const radiusPx = (def.radius / dist) * focalPx
-        const alpha = 1 - smoothstep(BEACON_FADE_PX.start, BEACON_FADE_PX.end, radiusPx)
-        beacon.visible = alpha > 0.01
-        beacon.material.opacity = alpha
-        // Sit just in front of surface → own sphere never hides it.
-        beacon.position.copy(_toCam).multiplyScalar((def.radius * 1.05) / dist)
-      })
+      bodyMap.forEach(({ world, lod }) => lod.update(world, origin, focalPx))
     }
 
     // Sun glow pulse + slow spike spin.

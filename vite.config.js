@@ -6,4 +6,8 @@ export default defineConfig({
   plugins: [react()],
   // Custom domain deployment (fredrichegland.no): use root base so assets resolve at domain root
   base: '/',
+  // Dev only: tailnet access via MagicDNS (kratos, kratos.<tailnet>.ts.net).
+  server: {
+    allowedHosts: ['kratos', '.ts.net'],
+  },
 })
