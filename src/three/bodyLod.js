@@ -237,8 +237,8 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
   impostor.frustumCulled = false // quad geometry ≠ real extent
   anchor.add(impostor)
 
-  const dot = buildDot(def)
-  anchor.add(dot)
+  const dot = def.beaconPx > 0 ? buildDot(def) : null
+  if (dot) anchor.add(dot)
 
   const levels = lodCfg.meshLevels
   let meshTier = false
@@ -271,13 +271,16 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
     fade.value = t
     impostor.visible = !meshTier && t > 0.001
 
-    const phaseCos = def.emissive ? 1 : -_toCam.dot(world) / Math.max(dist * world.length(), 1e-9)
-    const lit = def.emissive ? 1 : THREE.MathUtils.lerp(lodCfg.dotNightFloor, 1, (1 + phaseCos) / 2)
-    const dotAlpha = (1 - t) * lit
-    dot.visible = dotAlpha > 0.01 && dist > def.radius
-    dot.material.opacity = dotAlpha
-    // Just in front of surface → own sphere never hides it.
-    if (dist > 0) dot.position.copy(_toCam).multiplyScalar((def.radius * 1.05) / dist)
+    if (dot) {
+      const phaseCos = def.emissive ? 1 : -_toCam.dot(world) / Math.max(dist * world.length(), 1e-9)
+      const lit = def.emissive ? 1 : THREE.MathUtils.lerp(lodCfg.dotNightFloor, 1, (1 + phaseCos) / 2)
+      const far = 1 - smoothstep(lodCfg.dotFadeFar[0], lodCfg.dotFadeFar[1], dist)
+      const dotAlpha = (1 - t) * lit * far
+      dot.visible = dotAlpha > 0.01 && dist > def.radius
+      dot.material.opacity = dotAlpha
+      // Just in front of surface → own sphere never hides it.
+      if (dist > 0) dot.position.copy(_toCam).multiplyScalar((def.radius * 1.05) / dist)
+    }
 
     if (ring) ring.visible = radiusPx > lodCfg.dotFade[0]
   }

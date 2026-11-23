@@ -565,7 +565,7 @@ export function useSolarSystem(sceneRef, isExplore = false) {
         kind: 'body',
         position: world,
         radius: def.radius,
-        labelRange: def.labelRange ?? Infinity,
+        labelRange: def.labelRange ?? (def.emissive ? Infinity : cfg.lod.planetLabelRange),
       })
     }
 

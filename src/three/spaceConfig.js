@@ -1,37 +1,17 @@
-const isDev = import.meta.env.DEV
-
 // Units: world = km, float64 (JS numbers). Sun at world 0.
 // Render: floating origin → camera always at render 0 (see floatingOrigin.js).
-// Sky layer (skybox, starfield, deco galaxies, comets) = own scene,
-// rotation-only cam, own arbitrary units (bounds below).
-export const AU_KM = 149_597_870.7
+// Galaxy glow = sky pass (galaxyVolume.js). Stars = world pass, RTE points (starMaterial.js).
+// Frames + unit constants: galaxyFrame.js.
+import { AU_KM, PC_KM } from './galaxyFrame'
+
+export { AU_KM }
 
 export const spaceConfig = {
-  // Sky layer extent, sky units.
-  bounds: {
-    width: 5000,
-    height: 3200,
-    depth: 5000,
-  },
-
-  get half() {
-    const { width, height, depth } = this.bounds
-    return { x: width / 2, y: height / 2, z: depth / 2 }
-  },
-
-  counts: {
-    stars: isDev ? 1800 : 8000,
-    galaxies: isDev ? 18 : 36,
-    comets: isDev ? 8 : 12,
-  },
-
   renderer: {
     fov: 75,
-    // World cam, km. Log depth → 1 m to ~670 AU in one pass.
+    // km. Log depth → 1 m to ~3 Mpc in one pass.
     near: 1e-3,
-    far: 1e11,
-    // Sky cam, sky units.
-    skyNear: 0.1,
+    far: 1e20,
     clearColor: 0x11111b, // crust
     maxPixelRatio: 2,
     powerPreference: 'high-performance',
@@ -58,7 +38,7 @@ export const spaceConfig = {
       // 1 AU → 1000 km alt ≈ ln(1.5e5) / k seconds.
       speedPerAltitude: 0.5,
       minSpeed: 0.02,       // km/s
-      maxSpeed: 3e9,        // km/s (~10 000c)
+      maxSpeed: 1e17,       // km/s (~3 kpc/s)
       boostMultiplier: 8,
       boostBlendRate: 3,    // 1/s, speed cap eases 1× ↔ boost
       acceleration: 2.2,    // 1/s, exp approach to target vel
@@ -73,7 +53,11 @@ export const spaceConfig = {
       lookSensitivity: 0.0022,
       touchLookSensitivity: 0.003,
       minAltitude: 1,       // km above surface
-      maxSunDistance: 200 * AU_KM,
+      maxGalaxyDistance: 150_000 * PC_KM, // from galactic center
+      // Nearest star limits speed: effective altitude = d × factor, factor 1 → starInfluence
+      // over starInfluenceRangePc. Far stars barely brake, close ones fully.
+      starInfluence: 50,
+      starInfluenceRangePc: [0.01, 1],
       maxPitch: 1.35,
       bankAngle: 0.1,
       bankLerp: 0.12,
@@ -92,78 +76,11 @@ export const spaceConfig = {
     ],
   },
 
-  nebula: {
-    seed: 1337,
-    // Noise grid computed at this size, then upscaled onto textureSize —
-    // nebulae are inherently soft, so the upscale reads as detail rather
-    // than blur, and it keeps generation fast even at a large final size.
-    gridSize: isDev ? 96 : 224,
-    textureSize: isDev ? 768 : 3072,
-    // Star radii below were tuned at this texture size; useSkybox scales
-    // them by (actual size / this) so stars keep their apparent size —
-    // and just get smoother edges — as textureSize changes.
-    referenceTextureSize: 2048,
-    mobileTextureSize: 2048,
-    cloudScale: 1.6,
-    detailScale: 4.5,
-    octaves: 4,
-    detailOctaves: 3,
-    densityPower: 2.4,
-    densityFloor: 0.05,
-    // Catppuccin Mocha: crust background, sky/sapphire through mauve for
-    // the cloud color (lavender through mauve — the same hues used across
-    // the UI and the rest of the scene).
-    baseColor: { r: 17, g: 17, b: 27 },
-    colorStops: [
-      { h: 0.61, s: 0.6, l: 0.4 },
-      { h: 0.6441, s: 0.5, l: 0.38 },
-      { h: 0.7428, s: 0.62, l: 0.46 },
-    ],
-    starCount: isDev ? 500 : 2200,
-    starMinRadius: 0.15,
-    starMaxRadius: 0.55,
-    starGlowMultiplier: 2.4,
-  },
-
   lights: {
     ambient: { color: 0xcdd6f4, intensity: 0.08 }, // text
     // Sun light = child of sun anchor. decay 0 → no falloff, outer planets stay readable.
     // Intensity ≈ old Earth illuminance (1e5 cd / 128²).
     sun: { color: 0xf5e0dc, intensity: 6, decay: 0 }, // rosewater
-  },
-
-  starfield: {
-    fieldRadiusFactor: 1.7,
-    rotationSpeed: 0.005,
-    pointSize: 1.25,
-    opacity: 0.9,
-    alphaTest: 0.08,
-    boost: {
-      lerp: 0.14,
-      sizeMultiplier: 2.6,
-      spreadMultiplier: 1.08,
-      opacityBoost: 0.08,
-      textureThreshold: 0.18,
-    },
-    hRange: { min: 0, max: 1 },
-    sRange: { min: 0.6, max: 1 },
-    lRange: { min: 0.6, max: 0.9 },
-    twinkle: {
-      timeStep: 0.1,
-      orbitPhaseStep: 0.05,
-      colorPhaseStep: 0.1,
-      amplitude: 1.2,
-      base: 0.3,
-    },
-    sprite: {
-      size: 64,
-      gradientStops: [
-        { offset: 0, color: 'rgba(205, 214, 244, 1)' },
-        { offset: 0.45, color: 'rgba(205, 214, 244, 0.95)' },
-        { offset: 0.75, color: 'rgba(205, 214, 244, 0.35)' },
-        { offset: 1, color: 'rgba(205, 214, 244, 0)' },
-      ],
-    },
   },
 
   solarSystem: {
@@ -183,11 +100,13 @@ export const spaceConfig = {
       ],
       levelHysteresis: 0.15,
       dotNightFloor: 0.35,  // dot brightness when fully backlit
+      dotFadeFar: [300 * AU_KM, 800 * AU_KM], // planets invisible from interstellar space
+      planetLabelRange: 2000 * AU_KM,
     },
     // Real radii, km. Positions: ephemeris (sun fixed at 0, moon custom).
     // beaconPx: min-size dot when sub-pixel. labelRange: km, hide label past it.
     bodies: [
-      { key: 'sun',     radius: 695_700, rotationSign: 1,  axialTilt: 0.12, texture: 'sun',     emissive: true, beaconPx: 8, beaconColor: 0xf9e2af },
+      { key: 'sun',     radius: 695_700, rotationSign: 1,  axialTilt: 0.12, texture: 'sun',     emissive: true, beaconPx: 0, beaconColor: 0xf9e2af },
       { key: 'mercury', radius: 2_439.7, rotationSign: 1,  axialTilt: 0.03, texture: 'mercury', beaconPx: 3,   beaconColor: 0x9399b2 },
       { key: 'venus',   radius: 6_051.8, rotationSign: -1, axialTilt: 3.09, texture: 'venus',   beaconPx: 3.5, beaconColor: 0xfab387 },
       { key: 'earth',   radius: 6_371,   rotationSign: 1,  axialTilt: 0.41, texture: 'earth',   beaconPx: 3.5, beaconColor: 0x94e2d5 },
@@ -215,43 +134,56 @@ export const spaceConfig = {
     },
   },
 
-  galaxies: {
-    spawnRadiusFactor: 1.25,
-    colorThemes: [
-      { h: 0.0638, s: 0.8, l: 0.6 }, // peach
-      { h: 0.6441, s: 0.9, l: 0.7 }, // lavender
-      { h: 0.1149, s: 0.7, l: 0.8 }, // yellow
-    ],
-    drift: { min: -0.02, max: 0.02 },
-    rotationSpeed: { min: 0.001, max: 0.002 },
-    star: {
-      count: 100,
-      galaxySize: 20,
-      radiusFactor: 0.4,
-      heightFactor: 0.2,
-      size: 0.3,
-      opacity: 0.6,
-      hueVariation: 0.1,
+  galaxy: {
+    volume: {
+      exposure: 0.9,
+      knee: 1.6,           // soft compression strength
+      adaptation: 3,       // exposure / (1 + this·√(local star density, sun = 1))
+      dustOpacity: 8,
+      maxSteps: 140,       // cube capture
+      liveSteps: 72,
+      liveStepsMobile: 48,
+      cubeSize: 512,
+      cubeSizeMobile: 256,
+      liveScale: 0.4,      // × drawing buffer
+      liveScaleMobile: 0.25,
+      // Recapture when cam drifts > tolPc + tolFrac × dist to GC (pc).
+      captureTolPc: 2,
+      captureTolFrac: 0.0005,
+      liveSpeedFactor: 2,  // drifting faster than tol × this /s → live march
+      mixRate: 5,          // 1/s crossfade
     },
-  },
-
-  comets: {
-    fieldRadiusFactor: 0.85,
-    speed: { min: 0.5, max: 2.0 },
-    core: { radius: 0.3, segments: 16, color: 0xcdd6f4 }, // text
-    glow: { radius: 0.9, segments: 16, color: 0x94a2f9, opacity: 0.3 }, // sapphire
-    halo: { innerRadius: 0.6, outerRadius: 1.1, segments: 32, color: 0x94a2f9, opacity: 0.15 },
-    trail: {
-      baseColor: 0x94a2f9,
-      segments: 64,
-      meshes: [
-        { length: 20, radius: 0.8, opacity: 0.4 },
-        { length: 22, radius: 1.2, opacity: 0.2 },
-        { length: 24, radius: 1.6, opacity: 0.08 },
+    stars: {
+      magLimit: 7.5,
+      magLimitMobile: 7,
+      gain: 1,
+      seed: 1337,
+      // Procedural bands: abs mag range + local density (stars/pc³ at sun, rough local LF).
+      bands: [
+        { mag: [-10, -7.5], density: 2e-9 },
+        { mag: [-7.5, -5], density: 3e-8 },
+        { mag: [-5, -2.5], density: 5e-7 },
+        { mag: [-2.5, 0], density: 1.5e-5 },
+        { mag: [0, 2.5], density: 3e-4 },
+        { mag: [2.5, 5], density: 3e-3 },
+        { mag: [5, 7.5], density: 8e-3 },
+        { mag: [7.5, 10], density: 1.5e-2 },
+        { mag: [10, 12.5], density: 3e-2 },
+        { mag: [12.5, 16], density: 6e-2 },
       ],
+      loadMagMargin: 1,     // load band out to where its brightest star is this far below limit
+      cellFactor: 0.75,     // cell size × load radius
+      cellCap: 30000,
+      cellFadeS: 0.6,
+      maxInFlight: 6,
+      scanIntervalS: 0.25,
+      catalogCompleteMag: 8.5, // HYG ~complete to here
+      catalogMaxPc: 1000,
+      nearestSearchPc: 5,
+      nearestIntervalS: 0.2,
+      labelMag: 1.5,        // named star label when brighter than this
+      labelNearPc: 4,       // ...or closer than this
     },
-    inwardTargetFactor: 0.2,
-    velocityOffset: { min: -0.3, max: 0.3 },
   },
 }
 

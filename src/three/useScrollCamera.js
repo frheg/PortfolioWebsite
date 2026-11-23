@@ -23,10 +23,14 @@ import {
 } from './exploreState'
 import { setCameraSpeed, setCameraThrottle } from './cameraRuntime'
 import { origin } from './floatingOrigin'
+import { nearestStar } from './starRuntime'
+import { GALAXY_CENTER_PC, PC_KM } from './galaxyFrame'
 
 const { pageStops, scroll: scrollConfig, explore: exploreConfig, transitionLerp } = spaceConfig.camera
 const EXPLORE_PATH = '/explore'
 const UP = new THREE.Vector3(0, 1, 0)
+const GALAXY_CENTER_KM = new THREE.Vector3(...GALAXY_CENTER_PC).multiplyScalar(PC_KM)
+const [STAR_NEAR_KM, STAR_FAR_KM] = exploreConfig.starInfluenceRangePc.map((pc) => pc * PC_KM)
 
 function isExploreRoute(pathname) {
   return pathname === EXPLORE_PATH
@@ -436,18 +440,27 @@ export function useScrollCamera(cameraRef, routePath) {
     camera.rotation.set(currentPitchRef.current, currentYawRef.current, currentRollRef.current)
   }
 
-  // Altitude above nearest body surface, km.
+  // Effective altitude, km: nearest body surface, or nearest star scaled up (far stars barely brake).
   const nearestAltitude = (position) => {
     let best = Infinity
     getSolarCollisionBodies().forEach((body) => {
       if (body.kind !== 'body') return
       best = Math.min(best, position.distanceTo(body.position) - body.radius)
     })
+    if (nearestStar.valid) {
+      const w = nearestStar.world
+      const d = Math.max(Math.hypot(position.x - w.x, position.y - w.y, position.z - w.z) - nearestStar.radiusKm, 0)
+      const factor = 1 + (exploreConfig.starInfluence - 1) * smoothstep(STAR_NEAR_KM, STAR_FAR_KM, d)
+      best = Math.min(best, d * factor)
+    }
     return best
   }
 
   const clampExplorePosition = (position) => {
-    if (position.length() > exploreConfig.maxSunDistance) position.setLength(exploreConfig.maxSunDistance)
+    const fromCenter = bodyOffsetRef.current.subVectors(position, GALAXY_CENTER_KM)
+    if (fromCenter.length() > exploreConfig.maxGalaxyDistance) {
+      position.copy(GALAXY_CENTER_KM).addScaledVector(fromCenter.normalize(), exploreConfig.maxGalaxyDistance)
+    }
 
     getSolarCollisionBodies().forEach((body) => {
       const minDistance = body.radius + (body.kind === 'body' ? exploreConfig.minAltitude : 0)
@@ -457,6 +470,15 @@ export function useScrollCamera(cameraRef, routePath) {
       offset.setLength(minDistance)
       position.addVectors(body.position, offset)
     })
+
+    if (nearestStar.valid) {
+      const minDistance = nearestStar.radiusKm + exploreConfig.minAltitude
+      const offset = bodyOffsetRef.current.set(position.x - nearestStar.world.x, position.y - nearestStar.world.y, position.z - nearestStar.world.z)
+      if (offset.lengthSq() < minDistance * minDistance) {
+        offset.setLength(minDistance)
+        position.set(nearestStar.world.x + offset.x, nearestStar.world.y + offset.y, nearestStar.world.z + offset.z)
+      }
+    }
   }
 
   // Rotation-only shake. Positional shake meaningless across 12 decades of scale.

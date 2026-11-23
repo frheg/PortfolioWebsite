@@ -1,0 +1,161 @@
+// Galaxy orchestrator: volume glow (sky pass), catalog + procedural + Sun star points (world pass),
+// nearest-star telemetry, named-star label POIs.
+import { useEffect, useRef } from 'react'
+import * as THREE from 'three'
+import { spaceConfig } from './spaceConfig'
+import { createGalaxyVolume } from './galaxyVolume'
+import { createStarSectors } from './starSectors'
+import { createStarPoints, starUniforms, updateStarUniforms } from './starMaterial'
+import { loadStarCatalog } from './starCatalog'
+import { nearestStar } from './starRuntime'
+import { setPoiBodies } from './solarSystemRuntime'
+import { origin } from './floatingOrigin'
+import { LY_KM, PC_KM, SUN_ABS_MAG, SUN_RADIUS_KM } from './galaxyFrame'
+
+const cfg = spaceConfig.galaxy.stars
+const CHUNK_AT_SUN = { x: 0, y: 0, z: 0 }
+
+function isMobileDevice() {
+  if (typeof navigator === 'undefined') return false
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 2
+}
+
+export function starRadiusKm(absMag, temp) {
+  const luminosity = Math.pow(10, -0.4 * (absMag - SUN_ABS_MAG))
+  const tr = 5778 / temp
+  return SUN_RADIUS_KM * Math.sqrt(luminosity) * tr * tr
+}
+
+function spectralClass(temp) {
+  if (temp >= 30000) return 'O'
+  if (temp >= 10000) return 'B'
+  if (temp >= 7500) return 'A'
+  if (temp >= 6000) return 'F'
+  if (temp >= 5200) return 'G'
+  if (temp >= 3700) return 'K'
+  return 'M'
+}
+
+const fmt = (n, digits = 0) => n.toLocaleString('nb-NO', { maximumFractionDigits: digits })
+
+function namedStarPois(catalog) {
+  const { positions, absMag, temp, names } = catalog
+  return names.map(({ i, n }) => {
+    const pc = [positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]]
+    const distPc = Math.hypot(...pc)
+    const M = absMag[i]
+    const T = temp[i]
+    const luminosity = Math.pow(10, -0.4 * (M - SUN_ABS_MAG))
+    return {
+      key: `star_${i}`,
+      kind: 'star',
+      name: n,
+      position: new THREE.Vector3(pc[0] * PC_KM, pc[1] * PC_KM, pc[2] * PC_KM),
+      radius: starRadiusKm(M, T),
+      labelRange: Infinity,
+      factsRange: 0.5 * PC_KM,
+      // Bright from here, or close → label.
+      labelVisibility: (distKm) => {
+        const d = Math.max(distKm / PC_KM, 1e-9)
+        if (d < cfg.labelNearPc) return 1
+        const mApp = M + 5 * Math.log10(d) - 5
+        return 1 - THREE.MathUtils.smoothstep(mApp, cfg.labelMag, cfg.labelMag + 1)
+      },
+      facts: [
+        `Avstand fra Solen: ${fmt((distPc * PC_KM) / LY_KM, 1)} lysår`,
+        `Spektralklasse: ${spectralClass(T)}`,
+        `Temperatur: ~${fmt(Math.round(T / 100) * 100)} K`,
+        `Lysstyrke: ${fmt(luminosity, luminosity < 10 ? 2 : 0)} × Solen`,
+      ],
+    }
+  })
+}
+
+export function useGalaxy(sceneRef, rendererRef) {
+  const stateRef = useRef(null)
+
+  useEffect(() => {
+    const scene = sceneRef.current
+    const renderer = rendererRef.current
+    if (!scene || !renderer) return undefined
+
+    const isMobile = isMobileDevice()
+    const magLimit = isMobile ? cfg.magLimitMobile : cfg.magLimit
+    starUniforms.uMagLimit.value = magLimit
+
+    const volume = createGalaxyVolume(isMobile)
+    const sectors = createStarSectors(scene, magLimit)
+
+    // The Sun as a star: takes over from its body LOD once its disc is sub-pixel.
+    const sunGeometry = new THREE.BufferGeometry()
+    sunGeometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3))
+    sunGeometry.setAttribute('absMag', new THREE.Float32BufferAttribute([SUN_ABS_MAG], 1))
+    sunGeometry.setAttribute('temp', new THREE.Float32BufferAttribute([5778], 1))
+    sunGeometry.setAttribute('color', new THREE.Uint8BufferAttribute([255, 236, 214], 3, true))
+    const sunPoint = createStarPoints(sunGeometry, CHUNK_AT_SUN)
+    scene.add(sunPoint)
+
+    const state = { volume, sectors, catalog: null, catalogPoints: null, nearestTimer: 0, disposed: false }
+    stateRef.current = state
+
+    loadStarCatalog()
+      .then((catalog) => {
+        if (state.disposed) return
+        state.catalog = catalog
+        state.catalogPoints = createStarPoints(catalog.geometry, CHUNK_AT_SUN)
+        scene.add(state.catalogPoints)
+        setPoiBodies(namedStarPois(catalog))
+      })
+      .catch((error) => console.warn('Star catalog unavailable:', error))
+
+    return () => {
+      state.disposed = true
+      volume.dispose()
+      sectors.dispose()
+      scene.remove(sunPoint)
+      sunGeometry.dispose()
+      sunPoint.material.dispose()
+      if (state.catalogPoints) {
+        scene.remove(state.catalogPoints)
+        state.catalogPoints.geometry.dispose()
+        state.catalogPoints.material.dispose()
+      }
+      setPoiBodies([])
+      nearestStar.valid = false
+      stateRef.current = null
+    }
+  }, [sceneRef, rendererRef])
+
+  const camPc = useRef(new THREE.Vector3())
+  const hitA = useRef({})
+  const hitB = useRef({})
+
+  /** After camera moved (origin final for this frame). */
+  const update = (deltaSeconds, camera, renderer) => {
+    const state = stateRef.current
+    if (!state) return
+    updateStarUniforms(camera, renderer)
+    camPc.current.copy(origin).divideScalar(PC_KM)
+    state.sectors.update(deltaSeconds, camPc.current)
+
+    state.nearestTimer -= deltaSeconds
+    if (state.nearestTimer > 0) return
+    state.nearestTimer = cfg.nearestIntervalS
+    const dCat = state.catalog ? state.catalog.nearest(camPc.current, cfg.nearestSearchPc, hitA.current) : Infinity
+    const dProc = state.sectors.nearest(camPc.current, Math.min(dCat, cfg.nearestSearchPc), hitB.current)
+    const hit = dProc < dCat ? hitB.current : dCat < Infinity ? hitA.current : null
+    nearestStar.valid = Boolean(hit)
+    if (hit) {
+      nearestStar.world.x = hit.x * PC_KM
+      nearestStar.world.y = hit.y * PC_KM
+      nearestStar.world.z = hit.z * PC_KM
+      nearestStar.radiusKm = starRadiusKm(hit.absMag, hit.temp)
+    }
+  }
+
+  const renderSky = (renderer, camera, deltaSeconds) => {
+    stateRef.current?.volume.render(renderer, camera, deltaSeconds)
+  }
+
+  return { update, renderSky }
+}
