@@ -1,6 +1,13 @@
 const isDev = import.meta.env.DEV
 
+// Units: world = km, float64 (JS numbers). Sun at world 0.
+// Render: floating origin → camera always at render 0 (see floatingOrigin.js).
+// Sky layer (skybox, starfield, deco galaxies, comets) = own scene,
+// rotation-only cam, own arbitrary units (bounds below).
+export const AU_KM = 149_597_870.7
+
 export const spaceConfig = {
+  // Sky layer extent, sky units.
   bounds: {
     width: 5000,
     height: 3200,
@@ -20,69 +27,68 @@ export const spaceConfig = {
 
   renderer: {
     fov: 75,
-    near: 0.1,
+    // World cam, km. Log depth → 1 m to ~670 AU in one pass.
+    near: 1e-3,
+    far: 1e11,
+    // Sky cam, sky units.
+    skyNear: 0.1,
     clearColor: 0x11111b, // crust
     maxPixelRatio: 2,
     powerPreference: 'high-performance',
-    // ACES tonemapping maps physical candela values gracefully without clipping
     toneMappingExposure: 1.1,
   },
 
   camera: {
-    initialZ: 150,
     transitionLerp: 0.025,
     scroll: {
-      progressLerp: 0.08,
       rotLerp: 0.08,
-      snapThreshold: 0.001,
       lockFrames: 8,
-      // Scroll speed (in fractions of total page height per second) that
-      // reaches full galaxy "boost" visual, and how fast that blend eases.
+      // Segment progress remap: hold at stop until holdStart, arrive by holdEnd.
+      holdStart: 0.3,
+      holdEnd: 0.95,
+      // Travel arc lift above ecliptic, × segment length. Avoids flying thru sun.
+      arcLift: 0.3,
+      // Scroll speed (fraction of page height / s) → full warp visual.
       velocityBoostThreshold: 2.2,
       velocityLerp: 0.08,
     },
     explore: {
-      // Narrower than the site-wide 75° (renderer.fov) and slower movement,
-      // explore-mode only — makes the universe read as larger without
-      // actually resizing anything. Scroll-driven pages are unaffected.
       baseFov: 40,
-      moveSpeed: 16,
-      boostMultiplier: 2.8,
-      acceleration: 2.2,
-      coastDamping: 0.55,     // low = long space-like glide after releasing keys
-      brakeAcceleration: 10.5,
+      // Speed = altitude × speedPerAltitude (km/s per km). Log-feel travel:
+      // 1 AU → 1000 km alt ≈ ln(1.5e5) / k seconds.
+      speedPerAltitude: 0.5,
+      minSpeed: 0.02,       // km/s
+      maxSpeed: 3e9,        // km/s (~10 000c)
+      boostMultiplier: 8,
+      boostBlendRate: 3,    // 1/s, speed cap eases 1× ↔ boost
+      acceleration: 2.2,    // 1/s, exp approach to target vel
+      brakeAcceleration: 6, // 1/s, reversing
+      coastDamping: 0.55,   // 1/s, no input. low = long glide
       keyTurnSpeed: 0.55,
       keyPitchSpeed: 0.45,
       boostFovIncrease: 16,
       fovLerp: 0.12,
-      boostShakeAmplitude: 0.18,
       boostShakeRotation: 0.01,
       boostShakeFrequency: 26,
       lookSensitivity: 0.0022,
       touchLookSensitivity: 0.003,
-      worldMargin: 18,
-      moveFieldRadiusFactor: 1.20,
-      planetClearance: 0.1, // camera can approach almost flush with the visual surface
+      minAltitude: 1,       // km above surface
+      maxSunDistance: 200 * AU_KM,
       maxPitch: 1.35,
       bankAngle: 0.1,
       bankLerp: 0.12,
     },
-    orbit: {
-      center: { x: 0, y: 0, z: 0 },
-      rx: 168,
-      ry: 28,
-      rz: 152,
-    },
-    // Order must match chapterOrder in src/content/chapters.js — that's
-    // the DOM order LongPage renders these chapters in, and useScrollCamera
-    // measures/interpolates scroll-driven camera position against these
-    // same path strings in this same order.
+    // Order must match chapterOrder (src/content/chapters.js).
+    // body: target key. distance: × body radius, from center.
+    // azimuth: rad from body→sun dir (0 = full lit, π = backlit).
+    // elevation: rad above ecliptic. lookShiftX/Y: aim offset, × radius
+    // (+X aim right → body sits left).
     pageStops: [
-      { path: '/', angle: 3.4, heightOffset: 8 },
-      { path: '/projects', angle: 1.9, heightOffset: -10 },
-      { path: '/journey', angle: 0.4, heightOffset: -4 },
-      { path: '/contact', angle: -1.1, heightOffset: -12 },
-      { path: '/chat', angle: -2.6, heightOffset: -6 },
+      { path: '/',         body: 'earth',   distance: 3.4, azimuth: 0.75, elevation: 0.2,  lookShiftX: 0.5,  lookShiftY: 0 },
+      { path: '/projects', body: 'mars',    distance: 3.2, azimuth: -0.8, elevation: 0.15, lookShiftX: -0.5, lookShiftY: 0 },
+      { path: '/journey',  body: 'jupiter', distance: 3.6, azimuth: 0.9,  elevation: 0.1,  lookShiftX: 0.55, lookShiftY: 0 },
+      { path: '/contact',  body: 'saturn',  distance: 6.5, azimuth: -0.7, elevation: 0.38, lookShiftX: -0.9, lookShiftY: 0 },
+      { path: '/chat',     body: 'neptune', distance: 3.4, azimuth: 1.1,  elevation: 0.12, lookShiftX: 0.5,  lookShiftY: 0 },
     ],
   },
 
@@ -120,16 +126,10 @@ export const spaceConfig = {
   },
 
   lights: {
-    // Low ambient so sun-lit vs dark side is visible; point light does the heavy work
     ambient: { color: 0xcdd6f4, intensity: 0.08 }, // text
-    point: {
-      // Physical candelas at scene scale: 100k gives Earth ~0.5 lux → ACES maps it to ~60% brightness
-      color: 0xf5e0dc, // rosewater — warm, near-identical to the previous 0xfff4e0
-      intensity: 100000,
-      distance: 0,   // 0 = infinite range (quadratic decay handles falloff naturally)
-      decay: 2,
-      position: { x: 0, y: 0, z: 0 },
-    },
+    // Sun light = child of sun anchor. decay 0 → no falloff, outer planets stay readable.
+    // Intensity ≈ old Earth illuminance (1e5 cd / 128²).
+    sun: { color: 0xf5e0dc, intensity: 6, decay: 0 }, // rosewater
   },
 
   starfield: {
@@ -167,43 +167,38 @@ export const spaceConfig = {
   },
 
   solarSystem: {
-    center: { x: 0, y: 0, z: 0 },
-    // A single time-dilation knob applied uniformly to both orbital motion
-    // AND axial rotation (see useSolarSystem.js's update()), so slowing it
-    // down keeps every body's orbit-to-rotation ratio — and every body's
-    // speed relative to every other body's — exactly as tuned. The
-    // rotationSpeed values below were renormalized ×(1/0.055) when this
-    // became a shared knob, so at the old 0.055 they'd look identical to
-    // before; the actual value here is the new, slower pace.
-    timeScale: 0.032,
-    textureAnisotropy: 4,
-    segments: { width: 32, height: 32 },
-    bodyCollisionPadding: 1,
+    // Scroll mode: positions at real time (1×), spin sped up ×this. Explore: ephemerisTime.
+    scrollSpinScale: 600,
+    textureAnisotropy: 8,
+    segments: { width: 128, height: 64 },
+    // Real radii, km. Positions: ephemeris (sun fixed at 0, moon custom).
+    // beaconPx: min-size dot when sub-pixel. labelRange: km, hide label past it.
     bodies: [
-      // All radii and orbitRadii scaled ×0.625 so Pluto (orbit 800) fits
-      // comfortably within the ~960-unit explore movement area.
-      { key: 'sun',     radius: 19,  orbitRadius: 0,   orbitSpeed: 0,     rotationSpeed: 0.01364, axialTilt: 0.12, texture: 'sun',     emissive: true },
-      { key: 'mercury', radius: 2.0, orbitRadius: 56,  orbitSpeed: 0.95,  rotationSpeed: 0.02727, axialTilt: 0.03, texture: 'mercury' },
-      { key: 'venus',   radius: 3.5, orbitRadius: 92,  orbitSpeed: 0.74,  rotationSpeed: -0.00909, axialTilt: 3.09, texture: 'venus'   },
-      { key: 'earth',   radius: 3.9, orbitRadius: 128, orbitSpeed: 0.62,  rotationSpeed: 0.04545, axialTilt: 0.41, texture: 'earth'   },
-      // tidallyLocked: moon rotation tracks its orbital angle so the near side always faces Earth
-      { key: 'moon',    radius: 1.2, orbitRadius: 13,  orbitSpeed: 2.60,  rotationSpeed: 0.01364, axialTilt: 0.09, texture: 'moon',   parent: 'earth', tidallyLocked: true },
-      { key: 'mars',    radius: 2.9, orbitRadius: 181, orbitSpeed: 0.50,  rotationSpeed: 0.04545, axialTilt: 0.44, texture: 'mars'    },
-      { key: 'jupiter', radius: 9.1, orbitRadius: 300, orbitSpeed: 0.28,  rotationSpeed: 0.1,     axialTilt: 0.05, texture: 'jupiter' },
-      { key: 'saturn',  radius: 7.8, orbitRadius: 412, orbitSpeed: 0.20,  rotationSpeed: 0.08636, axialTilt: 0.47, texture: 'saturn',  ringTexture: 'saturnRing', ringInner: 9.4,  ringOuter: 21,   ringOpacity: 0.72 },
-      { key: 'uranus',  radius: 5.8, orbitRadius: 512, orbitSpeed: 0.15,  rotationSpeed: 0.06818, axialTilt: 1.71, texture: 'uranus',  ringTexture: 'uranusRing', ringInner: 7.8,  ringOuter: 10.6, ringOpacity: 0.48 },
-      { key: 'neptune', radius: 5.6, orbitRadius: 612, orbitSpeed: 0.11,  rotationSpeed: 0.05909, axialTilt: 0.49, texture: 'neptune' },
-      { key: 'pluto',   radius: 1.4, orbitRadius: 800, orbitSpeed: 0.073, rotationSpeed: 0.00709, axialTilt: 2.13, texture: 'pluto'   },
+      { key: 'sun',     radius: 695_700, rotationSign: 1,  axialTilt: 0.12, texture: 'sun',     emissive: true, beaconPx: 8, beaconColor: 0xf9e2af },
+      { key: 'mercury', radius: 2_439.7, rotationSign: 1,  axialTilt: 0.03, texture: 'mercury', beaconPx: 3,   beaconColor: 0x9399b2 },
+      { key: 'venus',   radius: 6_051.8, rotationSign: -1, axialTilt: 3.09, texture: 'venus',   beaconPx: 3.5, beaconColor: 0xfab387 },
+      { key: 'earth',   radius: 6_371,   rotationSign: 1,  axialTilt: 0.41, texture: 'earth',   beaconPx: 3.5, beaconColor: 0x94e2d5 },
+      // Moon: circular orbit, real period, tidally locked.
+      { key: 'moon',    radius: 1_737.4, rotationSign: 1,  axialTilt: 0.09, texture: 'moon',    parent: 'earth', orbitRadius: 384_400, orbitInclination: 0.0898, tidallyLocked: true, beaconPx: 2.5, beaconColor: 0xa6adc8, labelRange: 5e6 },
+      { key: 'mars',    radius: 3_389.5, rotationSign: 1,  axialTilt: 0.44, texture: 'mars',    beaconPx: 3,   beaconColor: 0xeba0ac },
+      { key: 'jupiter', radius: 69_911,  rotationSign: 1,  axialTilt: 0.05, texture: 'jupiter', beaconPx: 4,   beaconColor: 0xf9e2af },
+      // Rings: C ring inner → A ring outer. ringUv 'radial' = 1D strip texture (u = radius); else planar top-down image.
+      { key: 'saturn',  radius: 58_232,  rotationSign: 1,  axialTilt: 0.47, texture: 'saturn',  ringTexture: 'saturnRing', ringUv: 'radial', ringInner: 74_500, ringOuter: 136_800, ringOpacity: 0.72, beaconPx: 4, beaconColor: 0xf5e0dc },
+      { key: 'uranus',  radius: 25_362,  rotationSign: -1, axialTilt: 1.71, texture: 'uranus',  ringTexture: 'uranusRing', ringInner: 34_100, ringOuter: 46_400, ringOpacity: 0.48, beaconPx: 3.5, beaconColor: 0x89dceb },
+      { key: 'neptune', radius: 24_622,  rotationSign: 1,  axialTilt: 0.49, texture: 'neptune', beaconPx: 3.5, beaconColor: 0x74c7ec },
+      { key: 'pluto',   radius: 1_188.3, rotationSign: -1, axialTilt: 2.13, texture: 'pluto',   beaconPx: 2.5, beaconColor: 0xf2cdcd },
     ],
+    // UFOs roam LEO-ish shell round Earth.
     ufo: {
       count: 3,
-      scale: 0.45,
-      roamRadius: 875,
-      minSunDistance: 44,
-      speed: 20,
+      scale: 0.006,          // saucer ~40 m wide
+      shellInner: 400,       // km altitude
+      shellOuter: 4_000,
+      speed: 7.8,            // km/s
       steering: 0.22,
       wobble: 0.18,
-      collisionRadius: 4,
+      collisionRadius: 0.05, // km
+      labelRange: 2e4,
     },
   },
 

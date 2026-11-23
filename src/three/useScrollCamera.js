@@ -1,5 +1,6 @@
-// Drives the camera along a continuous orbit path as the user scrolls the
-// merged long page, and switches to free-flight on /explore.
+// Camera driver. Camera world pos = floating origin (km); camera object stays at render 0.
+// Scroll page: fly between pageStops bodies at true scale (arc path, hold at stops).
+// /explore: free flight, speed ∝ altitude above nearest surface → log-feel travel.
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
@@ -20,36 +21,12 @@ import {
   resetExplorePauseState,
   setExplorePaused,
 } from './exploreState'
-import { setCameraSpeed } from './cameraRuntime'
+import { setCameraSpeed, setCameraThrottle } from './cameraRuntime'
+import { origin } from './floatingOrigin'
 
-const {
-  orbit,
-  pageStops,
-  scroll: scrollConfig,
-  explore: exploreConfig,
-  transitionLerp,
-} = spaceConfig.camera
+const { pageStops, scroll: scrollConfig, explore: exploreConfig, transitionLerp } = spaceConfig.camera
 const EXPLORE_PATH = '/explore'
-
-// N-1 segments across pageStops in document order — no wraparound. The
-// last chapter (chat) has no segment starting at it; scroll past its
-// offset just clamps at t=1 of the final segment (see findChapterPose).
-function buildChapterSegments(stops) {
-  const segments = []
-  for (let index = 0; index < stops.length - 1; index += 1) {
-    const stop = stops[index]
-    const nextStop = stops[index + 1]
-    segments.push({
-      startAngle: stop.angle,
-      endAngle: nextStop.angle,
-      startHeightOffset: stop.heightOffset,
-      endHeightOffset: nextStop.heightOffset,
-    })
-  }
-  return segments
-}
-
-const chapterSegments = buildChapterSegments(pageStops)
+const UP = new THREE.Vector3(0, 1, 0)
 
 function isExploreRoute(pathname) {
   return pathname === EXPLORE_PATH
@@ -63,55 +40,103 @@ function clamp01(value) {
   return clamp(value, 0, 1)
 }
 
-export function orbitPos(angle, heightOffset = 0) {
-  return {
-    x: orbit.center.x + orbit.rx * Math.cos(angle),
-    y: orbit.center.y + orbit.ry * Math.sin(angle * 0.5) + heightOffset,
-    z: orbit.center.z + orbit.rz * Math.sin(angle),
-  }
+function smoothstep(edge0, edge1, x) {
+  const t = clamp01((x - edge0) / (edge1 - edge0))
+  return t * t * (3 - 2 * t)
 }
 
-function poseForSegment(segment, progress) {
-  const t = clamp01(progress)
-  const angle = segment.startAngle + (segment.endAngle - segment.startAngle) * t
-  const heightOffset =
-    segment.startHeightOffset + (segment.endHeightOffset - segment.startHeightOffset) * t
-
-  return orbitPos(angle, heightOffset)
+function shortestAngleDelta(from, to) {
+  return Math.atan2(Math.sin(to - from), Math.cos(to - from))
 }
 
-// Pose for a chapter's own stop (t=0 of the segment starting there, or the
-// end pose of the final segment for the last chapter). Used for transition
-// targets/fallbacks — not used in the per-frame scroll-driven steady state.
-function poseForChapterPath(path) {
-  const index = pageStops.findIndex((stop) => stop.path === path)
-  if (index < 0) return orbitPos(pageStops[0].angle, pageStops[0].heightOffset)
-  if (index >= chapterSegments.length) {
-    return poseForSegment(chapterSegments[chapterSegments.length - 1], 1)
-  }
-  return poseForSegment(chapterSegments[index], 0)
+// Frame-rate independent lerp factor.
+function expFactor(rate, dt) {
+  return 1 - Math.exp(-rate * dt)
 }
 
-// Steady-state pose: find which pair of measured chapter offsets scrollY
-// falls between, then interpolate within that segment. Falls back to the
-// first chapter's start pose if offsets haven't been measured/published yet.
-function findChapterPose(chapterOffsets, scrollY) {
-  if (chapterOffsets.length < chapterSegments.length + 1) {
-    return poseForSegment(chapterSegments[0], 0)
-  }
+function findBody(key) {
+  return getSolarCollisionBodies().find((body) => body.key === key) ?? null
+}
+
+// ─── Scroll poses ────────────────────────────────────────────────────────────
+
+const makePose = () => ({ pos: new THREE.Vector3(), look: new THREE.Vector3() })
+const _toSun = new THREE.Vector3()
+const _right = new THREE.Vector3()
+const _dir = new THREE.Vector3()
+const _camRight = new THREE.Vector3()
+const _ctrl = new THREE.Vector3()
+
+// Stop pose: offset from body in sun-relative frame. False if body not ready.
+function stopPose(stop, out) {
+  const body = findBody(stop.body)
+  if (!body) return false
+
+  _toSun.copy(body.position).negate() // sun at world 0
+  if (_toSun.lengthSq() < 1) _toSun.set(1, 0, 0)
+  _toSun.normalize()
+  _right.crossVectors(_toSun, UP).normalize()
+
+  _dir
+    .copy(_toSun)
+    .multiplyScalar(Math.cos(stop.azimuth))
+    .addScaledVector(_right, Math.sin(stop.azimuth))
+    .multiplyScalar(Math.cos(stop.elevation))
+    .addScaledVector(UP, Math.sin(stop.elevation))
+    .normalize()
+
+  const r = body.radius
+  out.pos.copy(body.position).addScaledVector(_dir, stop.distance * r)
+  // cam right = forward × up, forward = -dir
+  _camRight.crossVectors(_dir, UP).negate().normalize()
+  out.look
+    .copy(body.position)
+    .addScaledVector(_camRight, stop.lookShiftX * r)
+    .addScaledVector(UP, stop.lookShiftY * r)
+  return true
+}
+
+function chapterPose(path, out) {
+  const index = Math.max(0, pageStops.findIndex((stop) => stop.path === path))
+  return stopPose(pageStops[index], out)
+}
+
+// Quadratic bezier a→b, control lifted above ecliptic. out must not alias a/b.
+function arcPoint(a, b, t, out) {
+  const lift = a.distanceTo(b) * scrollConfig.arcLift
+  _ctrl.addVectors(a, b).multiplyScalar(0.5).addScaledVector(UP, lift)
+  const u = 1 - t
+  out.set(
+    u * u * a.x + 2 * u * t * _ctrl.x + t * t * b.x,
+    u * u * a.y + 2 * u * t * _ctrl.y + t * t * b.y,
+    u * u * a.z + 2 * u * t * _ctrl.z + t * t * b.z
+  )
+  return out
+}
+
+const _poseA = makePose()
+const _poseB = makePose()
+
+// Scroll → segment index + t → arc between stop poses. Hold near stops.
+function scrollPose(scrollY, out) {
+  const raw = getChapterOffsets()
+  if (raw.length < pageStops.length) return stopPose(pageStops[0], out)
+  // Short last chapter can't scroll to its top → clamp, else final stop never reached.
+  const maxScroll = measureScrollRange()
+  const offsets = raw.map((offset) => Math.min(offset, maxScroll))
 
   let index = 0
-  for (let i = 1; i < chapterOffsets.length - 1; i += 1) {
-    if (scrollY >= chapterOffsets[i]) index = i
+  for (let i = 1; i < offsets.length - 1; i += 1) {
+    if (scrollY >= offsets[i]) index = i
   }
+  const span = Math.max(offsets[index + 1] - offsets[index], 1)
+  const t = clamp01((scrollY - offsets[index]) / span)
+  const e = smoothstep(scrollConfig.holdStart, scrollConfig.holdEnd, t)
 
-  const segment = chapterSegments[index]
-  const segStart = chapterOffsets[index]
-  const segEnd = chapterOffsets[index + 1]
-  const span = Math.max(segEnd - segStart, 1)
-  const t = clamp01((scrollY - segStart) / span)
-
-  return poseForSegment(segment, t)
+  if (!stopPose(pageStops[index], _poseA) || !stopPose(pageStops[index + 1], _poseB)) return false
+  arcPoint(_poseA.pos, _poseB.pos, e, out.pos)
+  out.look.lerpVectors(_poseA.look, _poseB.look, e)
+  return true
 }
 
 function chapterOffsetForPath(path) {
@@ -119,24 +144,6 @@ function chapterOffsetForPath(path) {
   const index = pageStops.findIndex((stop) => stop.path === path)
   if (index < 0 || index >= offsets.length) return 0
   return offsets[index]
-}
-
-function lerp(a, b, t) {
-  return {
-    x: a.x + (b.x - a.x) * t,
-    y: a.y + (b.y - a.y) * t,
-    z: a.z + (b.z - a.z) * t,
-  }
-}
-
-function shortestAngleDelta(from, to) {
-  return Math.atan2(Math.sin(to - from), Math.cos(to - from))
-}
-
-function stepToward(current, target, maxDelta) {
-  if (current < target) return Math.min(current + maxDelta, target)
-  if (current > target) return Math.max(current - maxDelta, target)
-  return target
 }
 
 function measureScrollRange() {
@@ -197,25 +204,24 @@ export function useScrollCamera(cameraRef, routePath) {
   const currentYawRef = useRef(0)
   const currentPitchRef = useRef(0)
   const currentRollRef = useRef(0)
+  const aimedRef = useRef(false) // first valid pose snaps rotation + places camera
   const pageScrollRangeRef = useRef(typeof window === 'undefined' ? 1 : Math.max(measureScrollRange(), 1))
   const lastScrollYRef = useRef(typeof window === 'undefined' ? 0 : window.scrollY || 0)
   const scrollVelocityBlendRef = useRef(0)
 
   const routeRef = useRef(routePath)
-  const transFromRef = useRef(null)
-  const transToRef = useRef(null)
+  const transFromRef = useRef(new THREE.Vector3())
   const transTRef = useRef(1)
   const settleFramesRef = useRef(0)
 
-  const forwardRef = useRef(new THREE.Vector3())
-  const rightRef = useRef(new THREE.Vector3())
-  const upRef = useRef(new THREE.Vector3())
+  const poseRef = useRef(makePose())
   const nextPosRef = useRef(new THREE.Vector3())
-  const previousPosRef = useRef(new THREE.Vector3())
   const bodyOffsetRef = useRef(new THREE.Vector3())
+  const aimRef = useRef(new THREE.Vector3())
+  const forwardRef = useRef(new THREE.Vector3())
   const velocityRef = useRef(new THREE.Vector3())
   const targetVelocityRef = useRef(new THREE.Vector3())
-  const appliedShakePosRef = useRef(new THREE.Vector3())
+  const boostBlendRef = useRef(0)
   const appliedShakeRotRef = useRef({ x: 0, y: 0, z: 0 })
 
   useEffect(() => {
@@ -386,136 +392,114 @@ export function useScrollCamera(cameraRef, routePath) {
     }
   }, [routePath])
 
-  // Only a genuine explore-mode boundary crossing triggers the hard
-  // snap/settle transition below. Navigating between the 5 merged-page
-  // routes changes routePath (e.g. via useActiveSection's scroll-sync
-  // replace()) without one of these firing — scroll position keeps driving
-  // the camera continuously across chapters instead.
+  // Explore boundary crossing → transition. Chapter-to-chapter changes don't
+  // trigger this; scroll drives camera continuously.
   if (isExploreRoute(routePath) !== isExploreRoute(routeRef.current)) {
     const camera = cameraRef.current
     const nextIsExplore = isExploreRoute(routePath)
-
-    transFromRef.current = camera
-      ? { x: camera.position.x, y: camera.position.y, z: camera.position.z }
-      : poseForChapterPath(routeRef.current)
+    transFromRef.current.copy(origin)
+    velocityRef.current.set(0, 0, 0)
+    targetVelocityRef.current.set(0, 0, 0)
+    boostBlendRef.current = 0
+    settleFramesRef.current = 0
+    resetExploreInput()
 
     if (nextIsExplore) {
       currentYawRef.current = camera?.rotation.y ?? currentYawRef.current
       currentPitchRef.current = camera?.rotation.x ?? currentPitchRef.current
-      velocityRef.current.set(0, 0, 0)
-      targetVelocityRef.current.set(0, 0, 0)
-      transToRef.current = transFromRef.current
       transTRef.current = 1
-      settleFramesRef.current = 0
-      routeRef.current = routePath
       baseFovRef.current = exploreConfig.baseFov ?? spaceConfig.renderer.fov
-      resetExploreInput()
       scrollVelocityBlendRef.current = 0
       setScrollVelocity(0)
     } else {
-      transToRef.current = poseForChapterPath(routePath)
       transTRef.current = 0
-      settleFramesRef.current = 0
-      velocityRef.current.set(0, 0, 0)
-      targetVelocityRef.current.set(0, 0, 0)
-      routeRef.current = routePath
       baseFovRef.current = spaceConfig.renderer.fov
-      resetExploreInput()
     }
-  } else {
-    routeRef.current = routePath
+  }
+  routeRef.current = routePath
+
+  // ─── Shared helpers ────────────────────────────────────────────────────────
+
+  // Rotate toward world point. snap = instant.
+  const aimAt = (camera, lookWorld, snap) => {
+    const d = aimRef.current.subVectors(lookWorld, origin)
+    const yawDesired = Math.atan2(-d.x, -d.z)
+    const pitchDesired = Math.atan2(d.y, Math.hypot(d.x, d.z))
+    if (snap) {
+      currentYawRef.current = yawDesired
+      currentPitchRef.current = pitchDesired
+    } else {
+      currentYawRef.current += shortestAngleDelta(currentYawRef.current, yawDesired) * scrollConfig.rotLerp
+      currentPitchRef.current += (pitchDesired - currentPitchRef.current) * scrollConfig.rotLerp
+    }
+    currentRollRef.current += (0 - currentRollRef.current) * 0.14
+    camera.rotation.set(currentPitchRef.current, currentYawRef.current, currentRollRef.current)
+  }
+
+  // Altitude above nearest body surface, km.
+  const nearestAltitude = (position) => {
+    let best = Infinity
+    getSolarCollisionBodies().forEach((body) => {
+      if (body.kind !== 'body') return
+      best = Math.min(best, position.distanceTo(body.position) - body.radius)
+    })
+    return best
   }
 
   const clampExplorePosition = (position) => {
-    const movementExtent =
-      Math.min(spaceConfig.half.x, spaceConfig.half.y, spaceConfig.half.z) *
-      exploreConfig.moveFieldRadiusFactor *
-      0.5
-    const maxY = Math.max(movementExtent - exploreConfig.worldMargin, 1)
-    const xzRadius = Math.max(movementExtent - exploreConfig.worldMargin, 1)
-
-    position.y = clamp(position.y, -maxY, maxY)
-
-    const radialLength = Math.hypot(position.x, position.z)
-    if (radialLength > xzRadius) {
-      const scale = xzRadius / radialLength
-      position.x *= scale
-      position.z *= scale
-    }
+    if (position.length() > exploreConfig.maxSunDistance) position.setLength(exploreConfig.maxSunDistance)
 
     getSolarCollisionBodies().forEach((body) => {
-      const minDistance = body.radius + exploreConfig.planetClearance
-      const minDistanceSq = minDistance * minDistance
-      bodyOffsetRef.current.set(
-        position.x - body.position.x,
-        position.y - body.position.y,
-        position.z - body.position.z
-      )
-
-      if (bodyOffsetRef.current.lengthSq() < minDistanceSq) {
-        if (bodyOffsetRef.current.lengthSq() < 1e-6) {
-          bodyOffsetRef.current.set(0, 1, 0)
-        }
-        bodyOffsetRef.current.normalize().multiplyScalar(minDistance)
-        position.set(
-          body.position.x + bodyOffsetRef.current.x,
-          body.position.y + bodyOffsetRef.current.y,
-          body.position.z + bodyOffsetRef.current.z
-        )
-      }
+      const minDistance = body.radius + (body.kind === 'body' ? exploreConfig.minAltitude : 0)
+      const offset = bodyOffsetRef.current.subVectors(position, body.position)
+      if (offset.lengthSq() >= minDistance * minDistance) return
+      if (offset.lengthSq() < 1e-12) offset.set(0, 1, 0)
+      offset.setLength(minDistance)
+      position.addVectors(body.position, offset)
     })
   }
 
+  // Rotation-only shake. Positional shake meaningless across 12 decades of scale.
   const clearAppliedShake = (camera) => {
-    if (appliedShakePosRef.current.lengthSq() > 0) {
-      camera.position.sub(appliedShakePosRef.current)
-      appliedShakePosRef.current.set(0, 0, 0)
-    }
-
-    const appliedRotation = appliedShakeRotRef.current
-    if (appliedRotation.x !== 0 || appliedRotation.y !== 0 || appliedRotation.z !== 0) {
-      camera.rotation.x -= appliedRotation.x
-      camera.rotation.y -= appliedRotation.y
-      camera.rotation.z -= appliedRotation.z
-      appliedRotation.x = 0
-      appliedRotation.y = 0
-      appliedRotation.z = 0
-    }
+    const r = appliedShakeRotRef.current
+    if (r.x === 0 && r.y === 0 && r.z === 0) return
+    camera.rotation.x -= r.x
+    camera.rotation.y -= r.y
+    camera.rotation.z -= r.z
+    r.x = 0
+    r.y = 0
+    r.z = 0
   }
 
   const applyBoostShake = (camera, deltaSeconds) => {
     boostTimeRef.current += deltaSeconds * exploreConfig.boostShakeFrequency
     const t = boostTimeRef.current
-    const posAmp = exploreConfig.boostShakeAmplitude
-    const rotAmp = exploreConfig.boostShakeRotation
+    const amp = exploreConfig.boostShakeRotation
     const jitterX = Math.sin(t * 1.7) + Math.sin(t * 3.9 + 0.6) * 0.45
     const jitterY = Math.cos(t * 2.4 + 0.9) + Math.sin(t * 5.2 + 1.3) * 0.35
     const jitterZ = Math.sin(t * 2.1 + 2.2) + Math.cos(t * 4.7 + 0.2) * 0.3
-
-    camera.getWorldDirection(forwardRef.current)
-    rightRef.current.crossVectors(forwardRef.current, camera.up).normalize()
-    upRef.current.crossVectors(rightRef.current, forwardRef.current).normalize()
-
-    appliedShakePosRef.current
-      .copy(rightRef.current)
-      .multiplyScalar(jitterX * posAmp)
-      .addScaledVector(upRef.current, jitterY * posAmp * 0.6)
-      .addScaledVector(forwardRef.current, jitterZ * posAmp * 0.25)
-
-    camera.position.add(appliedShakePosRef.current)
-
-    appliedShakeRotRef.current.x = jitterY * rotAmp * 0.45
-    appliedShakeRotRef.current.y = jitterX * rotAmp * 0.2
-    appliedShakeRotRef.current.z = jitterZ * rotAmp
-
-    camera.rotation.x += appliedShakeRotRef.current.x
-    camera.rotation.y += appliedShakeRotRef.current.y
-    camera.rotation.z += appliedShakeRotRef.current.z
+    const r = appliedShakeRotRef.current
+    r.x = jitterY * amp * 0.45
+    r.y = jitterX * amp * 0.2
+    r.z = jitterZ * amp
+    camera.rotation.x += r.x
+    camera.rotation.y += r.y
+    camera.rotation.z += r.z
   }
 
+  // ─── Explore ───────────────────────────────────────────────────────────────
+
   const updateExplore = (camera, deltaSeconds) => {
-    // Drain accumulated look even when paused to avoid stale deltas on resume
+    // Drain look even when paused → no stale deltas on resume.
     const look = consumeExploreLook()
+    // Fresh load on /explore: origin still 0 (inside sun) → place at first stop.
+    if (!aimedRef.current) {
+      const pose = poseRef.current
+      if (!stopPose(pageStops[0], pose)) return false
+      origin.copy(pose.pos)
+      aimAt(camera, pose.look, true)
+      aimedRef.current = true
+    }
     if (isExplorePaused()) return false
 
     const movement = getExploreMovement()
@@ -525,8 +509,7 @@ export function useScrollCamera(cameraRef, routePath) {
     const bankIntent = clamp(turnInput + lookTurnIntent, -1, 1)
     const boostActive = movement.boost && movement.forward && !movement.backward
 
-    currentYawRef.current += turnInput * exploreConfig.keyTurnSpeed * deltaSeconds
-    currentYawRef.current -= look.dx
+    currentYawRef.current += turnInput * exploreConfig.keyTurnSpeed * deltaSeconds - look.dx
     currentPitchRef.current = clamp(
       currentPitchRef.current + pitchInput * exploreConfig.keyPitchSpeed * deltaSeconds - look.dy,
       -exploreConfig.maxPitch,
@@ -540,64 +523,51 @@ export function useScrollCamera(cameraRef, routePath) {
       camera.fov = nextFov
       camera.updateProjectionMatrix()
     }
+    camera.rotation.set(currentPitchRef.current, currentYawRef.current, currentRollRef.current)
 
-    camera.rotation.x = currentPitchRef.current
-    camera.rotation.y = currentYawRef.current
-    camera.rotation.z = currentRollRef.current
+    // YXZ euler → forward. Roll doesn't move it.
+    const yaw = currentYawRef.current
+    const pitch = currentPitchRef.current
+    const forward = forwardRef.current.set(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch))
+
+    // Speed cap ∝ altitude. Hard cap every frame = auto-brake on approach.
+    const altitude = Math.max(nearestAltitude(origin), exploreConfig.minAltitude)
+    const baseSpeed = clamp(altitude * exploreConfig.speedPerAltitude, exploreConfig.minSpeed, exploreConfig.maxSpeed)
+    boostBlendRef.current += ((boostActive ? 1 : 0) - boostBlendRef.current) * expFactor(exploreConfig.boostBlendRate, deltaSeconds)
+    const speedCap = baseSpeed * (1 + (exploreConfig.boostMultiplier - 1) * boostBlendRef.current)
 
     const moveForward = (movement.forward ? 1 : 0) - (movement.backward ? 1 : 0)
     const hasMoveInput = moveForward !== 0
+    const velocity = velocityRef.current
+    const target = targetVelocityRef.current.copy(forward).multiplyScalar(moveForward * speedCap)
+    const reversing = hasMoveInput && velocity.dot(target) < 0
 
-    camera.getWorldDirection(forwardRef.current)
+    const rate = hasMoveInput
+      ? reversing ? exploreConfig.brakeAcceleration : exploreConfig.acceleration
+      : exploreConfig.coastDamping
+    velocity.lerp(target, expFactor(rate, deltaSeconds))
+    if (velocity.length() > speedCap) velocity.setLength(speedCap)
+    if (!hasMoveInput && velocity.length() < exploreConfig.minSpeed * 0.05) velocity.set(0, 0, 0)
 
-    const speed = exploreConfig.moveSpeed * (boostActive ? exploreConfig.boostMultiplier : 1)
-    const accelPerSecond = speed * exploreConfig.acceleration
-    const brakePerSecond = speed * exploreConfig.brakeAcceleration
-    const coastPerSecond = exploreConfig.moveSpeed * exploreConfig.coastDamping
+    const speed = velocity.length()
+    setCameraSpeed(speed)
+    setCameraThrottle(clamp01(speed / (baseSpeed * 3)))
+    if (speed === 0) return false
 
-    targetVelocityRef.current.set(0, 0, 0)
-    if (hasMoveInput) {
-      targetVelocityRef.current.addScaledVector(forwardRef.current, moveForward * speed)
-    }
+    const next = nextPosRef.current.copy(origin).addScaledVector(velocity, deltaSeconds)
+    clampExplorePosition(next)
+    // Blocked by surface → bleed speed.
+    if (next.distanceTo(origin) < speed * deltaSeconds * 0.5) velocity.multiplyScalar(0.2)
+    origin.copy(next)
 
-    const reversing =
-      hasMoveInput &&
-      velocityRef.current.lengthSq() > 0.0001 &&
-      targetVelocityRef.current.lengthSq() > 0.0001 &&
-      velocityRef.current.dot(targetVelocityRef.current) < 0
+    return boostActive
+  }
 
-    const maxDelta = (hasMoveInput
-      ? reversing
-        ? brakePerSecond
-        : accelPerSecond
-      : coastPerSecond) * deltaSeconds
+  // ─── Scroll page ───────────────────────────────────────────────────────────
 
-    velocityRef.current.set(
-      stepToward(velocityRef.current.x, targetVelocityRef.current.x, maxDelta),
-      stepToward(velocityRef.current.y, targetVelocityRef.current.y, maxDelta),
-      stepToward(velocityRef.current.z, targetVelocityRef.current.z, maxDelta)
-    )
-
-    if (!hasMoveInput && velocityRef.current.lengthSq() < 0.0001) {
-      velocityRef.current.set(0, 0, 0)
-    }
-
-    if (velocityRef.current.lengthSq() === 0) return false
-
-    previousPosRef.current.copy(camera.position)
-    nextPosRef.current.copy(camera.position)
-    nextPosRef.current.addScaledVector(velocityRef.current, deltaSeconds)
-    clampExplorePosition(nextPosRef.current)
-    camera.position.copy(nextPosRef.current)
-
-    if (camera.position.distanceToSquared(previousPosRef.current) < velocityRef.current.lengthSq() * deltaSeconds * deltaSeconds * 0.25) {
-      velocityRef.current.multiplyScalar(0.2)
-    }
-
-    // Publish real-time speed for the audio system
-    setCameraSpeed(velocityRef.current.length())
-
-    return boostActive && velocityRef.current.lengthSq() > 0.05
+  const pinToRoute = () => {
+    pinScrollToChapter(chapterOffsetForPath(routeRef.current))
+    lastScrollYRef.current = window.scrollY || 0
   }
 
   const updateScrollRoute = (camera, deltaSeconds) => {
@@ -606,66 +576,48 @@ export function useScrollCamera(cameraRef, routePath) {
       camera.updateProjectionMatrix()
     }
 
-    if (transTRef.current < 1) {
-      pinScrollToChapter(chapterOffsetForPath(routeRef.current))
-      lastScrollYRef.current = window.scrollY || 0
-      transTRef.current = Math.min(transTRef.current + transitionLerp, 1)
+    const pose = poseRef.current
 
+    // Explore → page: arc from where we were to route's stop. Scroll pinned meanwhile.
+    if (transTRef.current < 1) {
+      pinToRoute()
+      transTRef.current = Math.min(transTRef.current + transitionLerp, 1)
       const t = transTRef.current
       const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
-      const pose = lerp(transFromRef.current, transToRef.current, ease)
-
-      camera.position.set(pose.x, pose.y, pose.z)
-
-      if (transTRef.current >= 1) {
-        camera.position.set(transToRef.current.x, transToRef.current.y, transToRef.current.z)
-        settleFramesRef.current = scrollConfig.lockFrames
+      if (chapterPose(routeRef.current, pose)) {
+        arcPoint(transFromRef.current, pose.pos, ease, origin)
+        aimAt(camera, pose.look, false)
       }
-    } else {
-      // Keep self-correcting, not just right after a transition — on a
-      // fresh/direct load there's no transition to trigger a remeasure, so
-      // the very first (pre-layout) guess would otherwise stick for the
-      // whole visit while images/fonts/lazy content still grow the page.
-      pageScrollRangeRef.current = Math.max(pageScrollRangeRef.current, measureScrollRange())
-
-      if (settleFramesRef.current > 0) {
-        settleFramesRef.current -= 1
-        pinScrollToChapter(chapterOffsetForPath(routeRef.current))
-        lastScrollYRef.current = window.scrollY || 0
-      } else {
-        const scrollY = window.scrollY || 0
-        const pose = findChapterPose(getChapterOffsets(), scrollY)
-        camera.position.set(pose.x, pose.y, pose.z)
-
-        const scrollRange = pageScrollRangeRef.current || 1
-        const rawVelocity = Math.abs(scrollY - lastScrollYRef.current) / scrollRange / Math.max(deltaSeconds, 1 / 120)
-        lastScrollYRef.current = scrollY
-        const velocityTarget = clamp01(rawVelocity / scrollConfig.velocityBoostThreshold)
-        scrollVelocityBlendRef.current += (velocityTarget - scrollVelocityBlendRef.current) * scrollConfig.velocityLerp
-        setScrollVelocity(scrollVelocityBlendRef.current)
-      }
+      if (transTRef.current >= 1) settleFramesRef.current = scrollConfig.lockFrames
+      return
     }
 
-    const dx = orbit.center.x - camera.position.x
-    const dz = orbit.center.z - camera.position.z
-    const yawDesired = Math.atan2(-dx, -dz)
-    const shouldSnapYaw = transTRef.current < 1 || settleFramesRef.current > 0
+    // Page keeps growing as images/fonts load → keep remeasuring.
+    pageScrollRangeRef.current = Math.max(pageScrollRangeRef.current, measureScrollRange())
 
-    currentPitchRef.current = transTRef.current < 1
-      ? currentPitchRef.current + (0 - currentPitchRef.current) * 0.12
-      : 0
-    currentRollRef.current += (0 - currentRollRef.current) * 0.14
-
-    if (shouldSnapYaw) {
-      currentYawRef.current = yawDesired
-    } else {
-      currentYawRef.current +=
-        shortestAngleDelta(currentYawRef.current, yawDesired) * scrollConfig.rotLerp
+    if (settleFramesRef.current > 0) {
+      settleFramesRef.current -= 1
+      pinToRoute()
+      if (chapterPose(routeRef.current, pose)) {
+        origin.copy(pose.pos)
+        aimAt(camera, pose.look, false)
+      }
+      return
     }
 
-    camera.rotation.x = currentPitchRef.current
-    camera.rotation.y = currentYawRef.current
-    camera.rotation.z = currentRollRef.current
+    const scrollY = window.scrollY || 0
+    if (scrollPose(scrollY, pose)) {
+      origin.copy(pose.pos)
+      aimAt(camera, pose.look, !aimedRef.current)
+      aimedRef.current = true
+    }
+
+    const scrollRange = pageScrollRangeRef.current || 1
+    const rawVelocity = Math.abs(scrollY - lastScrollYRef.current) / scrollRange / Math.max(deltaSeconds, 1 / 120)
+    lastScrollYRef.current = scrollY
+    const velocityTarget = clamp01(rawVelocity / scrollConfig.velocityBoostThreshold)
+    scrollVelocityBlendRef.current += (velocityTarget - scrollVelocityBlendRef.current) * scrollConfig.velocityLerp
+    setScrollVelocity(scrollVelocityBlendRef.current)
   }
 
   const update = (deltaSeconds = 1 / 60) => {
@@ -675,17 +627,14 @@ export function useScrollCamera(cameraRef, routePath) {
     clearAppliedShake(camera)
 
     if (isExploreRoute(routeRef.current)) {
-      const boosting = updateExplore(camera, deltaSeconds)
-      if (boosting) {
-        applyBoostShake(camera, deltaSeconds)
-      } else {
-        boostTimeRef.current = 0
-      }
+      if (updateExplore(camera, deltaSeconds)) applyBoostShake(camera, deltaSeconds)
+      else boostTimeRef.current = 0
       return
     }
 
     boostTimeRef.current = 0
-    setCameraSpeed(0) // not in explore — reset so audio returns to idle
+    setCameraSpeed(0)
+    setCameraThrottle(0)
     updateScrollRoute(camera, deltaSeconds)
   }
 

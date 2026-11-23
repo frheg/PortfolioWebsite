@@ -1,14 +1,16 @@
+// Solar system at true scale. World = km, sun at 0. Positions: real ephemeris.
+// Anchors tracked by floating origin. Sub-pixel bodies → beacon dot (fixed px).
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { spaceConfig } from './spaceConfig'
+import { spaceConfig, AU_KM } from './spaceConfig'
 import { setSolarCollisionBodies } from './solarSystemRuntime'
 import { sceneLoadingManager } from './sceneLoadingManager'
+import { origin, trackAnchor, untrackAnchor } from './floatingOrigin'
 import {
   daysSinceJ2000,
   dateMsFromDaysSinceJ2000,
   heliocentricPositionAU,
   hasEphemeris,
-  baseSemiMajorAxisAU,
   ROTATION_PERIOD_DAYS,
   MOON_SIDEREAL_ORBIT_DAYS,
 } from './ephemeris'
@@ -152,19 +154,6 @@ function applyHueShift(image, targetHex, strength) {
   ctx.putImageData(imageData, 0, 0)
   return canvas
 }
-
-// ─── Real-ephemeris scale ────────────────────────────────────────────────────
-// The scene's orbitRadius values are already hand-compressed (outer planets
-// pulled in much more than a true linear AU scale would) so the whole system
-// stays flyable. Deriving a per-body AU→scene-units factor from each body's
-// own existing orbitRadius keeps that layout, while still giving each body
-// its true elliptical shape, eccentricity and orbital phase relative to
-// itself — only the distance unit is rescaled, not the orbit's geometry.
-const AU_SCALE = Object.fromEntries(
-  spaceConfig.solarSystem.bodies
-    .filter((def) => hasEphemeris(def.key))
-    .map((def) => [def.key, def.orbitRadius / baseSemiMajorAxisAU(def.key)])
-)
 
 // ─── Singleton glow texture cache ────────────────────────────────────────────
 // Canvas textures are created exactly once per page load and reused across all
@@ -437,7 +426,7 @@ function buildSaucer(anchor) {
  * self-illuminated from below — this makes the UFO visible even in dark areas
  * without creating an over-bright glow that competes with the sun.
  */
-function addUfoGlow(anchor) {
+function addUfoGlow(anchor, lightIntensity) {
   // Singleton glow texture — created once, reused for all UFO instances
   const tex = cachedGlowTex('ufo-glow', () => buildSoftGlowTexture([0, 210, 160]))
   const sprite = new THREE.Sprite(
@@ -454,30 +443,97 @@ function addUfoGlow(anchor) {
 
   // Dim cyan PointLight: illuminates the saucer body and nearby space
   // decay=2 (quadratic), intensity tuned so lit side shows at ~5–15 anchor units
-  const light = new THREE.PointLight(0x94e2d5, 500, 0, 2)
+  const light = new THREE.PointLight(0x94e2d5, lightIntensity, 0, 2)
   anchor.add(light)
 }
+
+
+// ─── Beacons ─────────────────────────────────────────────────────────────────
+// Fixed-px dot per body. Visible when sphere sub-pixel, fades out as disc grows.
+// Phase 2 replaces with impostor crossfade.
+
+const BEACON_FADE_PX = { start: 1.5, end: 5 }
+
+function buildBeaconTexture() {
+  const S = 32
+  const canvas = document.createElement('canvas')
+  canvas.width = S
+  canvas.height = S
+  const ctx = canvas.getContext('2d')
+  const grd = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2)
+  grd.addColorStop(0.0, 'rgba(255,255,255,1)')
+  grd.addColorStop(0.45, 'rgba(255,255,255,0.9)')
+  grd.addColorStop(1.0, 'rgba(255,255,255,0)')
+  ctx.fillStyle = grd
+  ctx.fillRect(0, 0, S, S)
+  return new THREE.CanvasTexture(canvas)
+}
+
+function buildBeacon(def) {
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3))
+  const material = new THREE.PointsMaterial({
+    size: def.beaconPx,
+    sizeAttenuation: false,
+    color: def.beaconColor,
+    map: cachedGlowTex('beacon', buildBeaconTexture),
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+  const points = new THREE.Points(geometry, material)
+  points.frustumCulled = false
+  return points
+}
+
+// RingGeometry UVs are planar. Strip textures need u = radial fraction.
+function remapRingUvRadial(geometry, inner, outer) {
+  const pos = geometry.attributes.position
+  const uv = geometry.attributes.uv
+  for (let i = 0; i < pos.count; i += 1) {
+    const r = Math.hypot(pos.getX(i), pos.getY(i))
+    uv.setXY(i, (r - inner) / (outer - inner), 0.5)
+  }
+  uv.needsUpdate = true
+}
+
+function smoothstep(edge0, edge1, x) {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
+}
+
+// Ecliptic (x, y, z=north) → scene (x, z, -y). Proper rotation, no mirror:
+// north = +y, orbits CCW seen from north, prograde spin = +rotation.y.
+function eclipticToScene(au, out) {
+  return out.set(au.x * AU_KM, au.z * AU_KM, -au.y * AU_KM)
+}
+
+const TWO_PI = Math.PI * 2
+const _toCam = new THREE.Vector3()
+const _dir = new THREE.Vector3()
+const _m = new THREE.Matrix4()
+const _zero = new THREE.Vector3()
+const _up = new THREE.Vector3(0, 1, 0)
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useSolarSystem(sceneRef, isExplore = false) {
-  const systemRef = useRef(null)
-  const timeRef = useRef(0)
   const bodyMapRef = useRef(new Map())
-  const collisionBodiesRef = useRef([])
   const ufosRef = useRef([])
   const sunGlowRef = useRef(null)
+  const timeRef = useRef(0)
   const isExploreRef = useRef(isExplore)
   const wasExploreRef = useRef(isExplore)
+  // Positions: simDays. Spin: simDays + spinOffsetDays (scroll-mode speedup, no position jump).
   const simDaysRef = useRef(daysSinceJ2000())
+  const spinOffsetDaysRef = useRef(0)
   isExploreRef.current = isExplore
 
   useEffect(() => {
     const scene = sceneRef.current
     if (!scene) return undefined
 
-    const disposables = []
-
+    const cfg = spaceConfig.solarSystem
     const textureLoader = new THREE.TextureLoader(sceneLoadingManager)
     const textures = Object.fromEntries(
       Object.entries(textureUrls).map(([key, url]) => {
@@ -495,7 +551,7 @@ export function useSolarSystem(sceneRef, isExplore = false) {
             }
           : undefined
         const texture = textureLoader.load(url, onLoad)
-        texture.anisotropy = spaceConfig.solarSystem.textureAnisotropy
+        texture.anisotropy = cfg.textureAnisotropy
         texture.colorSpace = THREE.SRGBColorSpace
         return [key, texture]
       })
@@ -503,17 +559,18 @@ export function useSolarSystem(sceneRef, isExplore = false) {
 
     const system = new THREE.Group()
     scene.add(system)
-    systemRef.current = system
 
     const bodyMap = new Map()
-    const sphereGeometry = new THREE.SphereGeometry(
-      1,
-      spaceConfig.solarSystem.segments.width,
-      spaceConfig.solarSystem.segments.height
-    )
+    const collisions = []
+    const anchors = []
+    const sphereGeometry = new THREE.SphereGeometry(1, cfg.segments.width, cfg.segments.height)
 
-    for (const [index, def] of spaceConfig.solarSystem.bodies.entries()) {
+    for (const def of cfg.bodies) {
+      const world = new THREE.Vector3()
       const anchor = new THREE.Group()
+      trackAnchor(anchor, world)
+      anchors.push(anchor)
+
       const tiltGroup = new THREE.Group()
       tiltGroup.rotation.z = def.axialTilt || 0
       anchor.add(tiltGroup)
@@ -521,13 +578,13 @@ export function useSolarSystem(sceneRef, isExplore = false) {
       const material = def.emissive
         ? new THREE.MeshBasicMaterial({ map: textures[def.texture] })
         : new THREE.MeshStandardMaterial({ map: textures[def.texture], metalness: 0, roughness: 1 })
-
       const mesh = new THREE.Mesh(sphereGeometry, material)
       mesh.scale.setScalar(def.radius)
       tiltGroup.add(mesh)
 
       if (def.ringTexture) {
-        const ringGeo = new THREE.RingGeometry(def.ringInner, def.ringOuter, 96)
+        const ringGeo = new THREE.RingGeometry(def.ringInner, def.ringOuter, 192)
+        if (def.ringUv === 'radial') remapRingUvRadial(ringGeo, def.ringInner, def.ringOuter)
         const ring = new THREE.Mesh(
           ringGeo,
           new THREE.MeshBasicMaterial({
@@ -542,47 +599,70 @@ export function useSolarSystem(sceneRef, isExplore = false) {
         tiltGroup.add(ring)
       }
 
-      // Sun gets layered smooth-gradient glow (no hard-edged BackSide spheres)
       if (def.emissive) {
         sunGlowRef.current = buildSunGlowEffect(def.radius, anchor)
+        const { color, intensity, decay } = spaceConfig.lights.sun
+        anchor.add(new THREE.PointLight(color, intensity, 0, decay))
       }
 
+      const beacon = buildBeacon(def)
+      anchor.add(beacon)
+
       system.add(anchor)
-      bodyMap.set(def.key, { def: { ...def, phase: index * 0.8 }, anchor, tiltGroup, mesh })
+      bodyMap.set(def.key, { def, world, anchor, mesh, beacon })
+      collisions.push({
+        key: def.key,
+        kind: 'body',
+        position: world,
+        radius: def.radius,
+        labelRange: def.labelRange ?? Infinity,
+      })
     }
 
     bodyMapRef.current = bodyMap
 
-    // Build all UFOs
-    const { count, scale, roamRadius, speed } = spaceConfig.solarSystem.ufo
-    for (let i = 0; i < count; i += 1) {
-      const ufoAnchor = new THREE.Group()
-      ufoAnchor.scale.setScalar(scale)
-      system.add(ufoAnchor)
+    // UFOs: local offset from Earth, LEO-ish shell.
+    const ufoCfg = cfg.ufo
+    const earthRadius = bodyMap.get('earth').def.radius
+    // Old tuning: 500 cd at anchor scale 0.45. Inverse-square → scale² keeps same look.
+    const ufoLight = 500 * (ufoCfg.scale / 0.45) ** 2
+    const ufos = []
+    for (let i = 0; i < ufoCfg.count; i += 1) {
+      const anchor = new THREE.Group()
+      anchor.scale.setScalar(ufoCfg.scale)
+      buildSaucer(anchor)
+      addUfoGlow(anchor, ufoLight)
+      system.add(anchor)
 
-      buildSaucer(ufoAnchor)
-      addUfoGlow(ufoAnchor)
+      const world = new THREE.Vector3()
+      trackAnchor(anchor, world)
+      anchors.push(anchor)
 
-      const angle = (i / count) * Math.PI * 2
-      const startR = roamRadius * 0.3
-      const startPos = new THREE.Vector3(
-        Math.cos(angle) * startR,
-        (i - (count - 1) / 2) * 25,
-        Math.sin(angle) * startR
-      )
-      ufoAnchor.position.copy(startPos)
-
-      ufosRef.current.push({
-        group: ufoAnchor,
-        position: startPos.clone(),
-        velocity: new THREE.Vector3(-Math.sin(angle), 0, Math.cos(angle)).multiplyScalar(speed),
-        steer: new THREE.Vector3(Math.cos(angle + 0.5), 0.15, Math.sin(angle + 0.5)),
+      const angle = (i / ufoCfg.count) * TWO_PI
+      const r = earthRadius + (ufoCfg.shellInner + ufoCfg.shellOuter) / 2
+      ufos.push({
+        group: anchor,
+        world,
+        local: new THREE.Vector3(Math.cos(angle) * r, (i - (ufoCfg.count - 1) / 2) * 500, Math.sin(angle) * r),
+        velocity: new THREE.Vector3(-Math.sin(angle), 0, Math.cos(angle)).multiplyScalar(ufoCfg.speed),
+        steer: new THREE.Vector3(),
         phase: i * Math.E,
       })
+      collisions.push({
+        key: `ufo_${i}`,
+        kind: 'ufo',
+        position: world,
+        radius: ufoCfg.collisionRadius,
+        labelRange: ufoCfg.labelRange,
+      })
     }
+    ufosRef.current = ufos
+
+    setSolarCollisionBodies(collisions)
 
     return () => {
       setSolarCollisionBodies([])
+      anchors.forEach(untrackAnchor)
       system.traverse((obj) => {
         obj.geometry?.dispose?.()
         const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
@@ -590,170 +670,125 @@ export function useSolarSystem(sceneRef, isExplore = false) {
       })
       scene.remove(system)
       Object.values(textures).forEach((t) => t.dispose())
-      disposables.forEach((t) => t.dispose())
-      systemRef.current = null
       bodyMapRef.current = new Map()
       ufosRef.current = []
       sunGlowRef.current = null
     }
   }, [sceneRef])
 
-  const update = (deltaSeconds = 1 / 60) => {
+  const update = (deltaSeconds = 1 / 60, camera = null) => {
     const bodyMap = bodyMapRef.current
     if (!bodyMap.size) return
 
     const explore = isExploreRef.current
-    if (explore && !wasExploreRef.current) {
-      // Re-sync to the real "right now" each time Explore mode is entered,
-      // rather than resuming from wherever a previous visit left off.
-      simDaysRef.current = daysSinceJ2000()
-    }
+    // Leaving explore → snap back to real now (time may have been fast-forwarded).
+    if (!explore && wasExploreRef.current) simDaysRef.current = daysSinceJ2000()
     wasExploreRef.current = explore
 
-    timeRef.current += deltaSeconds * spaceConfig.solarSystem.timeScale
+    timeRef.current += deltaSeconds
     const time = timeRef.current
 
     if (explore) {
       simDaysRef.current += (deltaSeconds * getSpeedMultiplier()) / 86400
-      setSimulatedDateMs(dateMsFromDaysSinceJ2000(simDaysRef.current))
+    } else {
+      simDaysRef.current += deltaSeconds / 86400
+      spinOffsetDaysRef.current += (deltaSeconds * (spaceConfig.solarSystem.scrollSpinScale - 1)) / 86400
     }
+    setSimulatedDateMs(dateMsFromDaysSinceJ2000(simDaysRef.current))
     const simDays = simDaysRef.current
+    const spinDays = simDays + spinOffsetDaysRef.current
 
-    const collisions = []
-
-    bodyMap.forEach((body) => {
-      const { def, anchor, mesh } = body
-      let x = spaceConfig.solarSystem.center.x
-      let y = spaceConfig.solarSystem.center.y
-      let z = spaceConfig.solarSystem.center.z
-
-      const useRealOrbit = explore && hasEphemeris(def.key)
-
-      if (useRealOrbit) {
-        // Ephemeris "z" is ecliptic-north; map it to the scene's up axis.
-        const auPos = heliocentricPositionAU(def.key, simDays)
-        const scale = AU_SCALE[def.key]
-        x = auPos.x * scale
-        y = auPos.z * scale
-        z = auPos.y * scale
-      } else if (def.parent) {
-        const parent = bodyMap.get(def.parent)
-        const theta =
-          explore && def.key === 'moon'
-            // Simplified real circular orbit at the Moon's true sidereal
-            // period — full lunar perturbation theory is overkill here.
-            ? (simDays / MOON_SIDEREAL_ORBIT_DAYS) * Math.PI * 2 + def.phase
-            : time * def.orbitSpeed + def.phase
-        x = parent.anchor.position.x + Math.cos(theta) * def.orbitRadius
-        y = parent.anchor.position.y + Math.sin(theta * 1.7) * 1.5
-        z = parent.anchor.position.z + Math.sin(theta) * def.orbitRadius
-      } else if (def.orbitRadius > 0) {
-        const theta = time * def.orbitSpeed + def.phase
-        x = Math.cos(theta) * def.orbitRadius
-        y = Math.sin(theta * 0.5 + def.phase) * 3
-        z = Math.sin(theta) * def.orbitRadius
-      }
-
-      anchor.position.set(x, y, z)
-
-      if (def.tidallyLocked && def.parent) {
-        // Tidally locked: rotation tracks the orbital angle so the same face
-        // always points toward the parent body (like Earth's Moon in reality).
-        const lockTheta =
-          explore
-            ? (simDays / MOON_SIDEREAL_ORBIT_DAYS) * Math.PI * 2 + def.phase
-            : time * def.orbitSpeed + def.phase
-        mesh.rotation.y = Math.PI / 2 + lockTheta
-      } else if (explore && ROTATION_PERIOD_DAYS[def.key]) {
-        // Real sidereal rotation rate. Direction reuses the existing
-        // rotationSpeed's sign — the site's already-tuned retrograde
-        // convention (see spaceConfig's axialTilt for Venus/Uranus/Pluto) —
-        // rather than introducing a second, possibly inconsistent encoding.
-        const direction = Math.sign(def.rotationSpeed) || 1
-        mesh.rotation.y = direction * (simDays / ROTATION_PERIOD_DAYS[def.key]) * Math.PI * 2
+    // Bodies (config order: parents before children).
+    bodyMap.forEach(({ def, world, mesh }) => {
+      if (def.parent) {
+        const parent = bodyMap.get(def.parent).world
+        const theta = ((simDays / MOON_SIDEREAL_ORBIT_DAYS) % 1) * TWO_PI
+        const r = def.orbitRadius
+        const inc = def.orbitInclination || 0
+        world.set(
+          parent.x + Math.cos(theta) * r,
+          parent.y + Math.sin(theta) * r * Math.sin(inc),
+          parent.z - Math.sin(theta) * r * Math.cos(inc)
+        )
+        // Local +x (texture lon 0 = near side) → faces parent.
+        if (def.tidallyLocked) mesh.rotation.y = Math.PI + theta
+      } else if (hasEphemeris(def.key)) {
+        eclipticToScene(heliocentricPositionAU(def.key, simDays), world)
       } else {
-        mesh.rotation.y += def.rotationSpeed * deltaSeconds * spaceConfig.solarSystem.timeScale * 60
+        world.set(0, 0, 0)
       }
 
-      collisions.push({
-        key: def.key,
-        position: anchor.position.clone(),
-        radius: def.radius + spaceConfig.solarSystem.bodyCollisionPadding,
-      })
+      if (!def.tidallyLocked && ROTATION_PERIOD_DAYS[def.key]) {
+        mesh.rotation.y = def.rotationSign * ((spinDays / ROTATION_PERIOD_DAYS[def.key]) % 1) * TWO_PI
+      }
     })
 
-    // Animate sun glow (soft pulse on each corona layer + slow spike rotation)
+    // Beacons. Uses last frame's origin → 1-frame lag on alpha, invisible.
+    if (camera) {
+      const focalPx = window.innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
+      bodyMap.forEach(({ def, world, beacon }) => {
+        _toCam.subVectors(origin, world)
+        const dist = _toCam.length()
+        if (dist <= def.radius) {
+          beacon.visible = false
+          return
+        }
+        const radiusPx = (def.radius / dist) * focalPx
+        const alpha = 1 - smoothstep(BEACON_FADE_PX.start, BEACON_FADE_PX.end, radiusPx)
+        beacon.visible = alpha > 0.01
+        beacon.material.opacity = alpha
+        // Sit just in front of surface → own sphere never hides it.
+        beacon.position.copy(_toCam).multiplyScalar((def.radius * 1.05) / dist)
+      })
+    }
+
+    // Sun glow pulse + slow spike spin.
     if (sunGlowRef.current) {
+      const glowTime = time * 0.032
       const { glowSprites, haloSprite } = sunGlowRef.current
       glowSprites.forEach((sprite, i) => {
         sprite.material.opacity =
-          sprite.userData.baseOpacity * (1 + Math.sin(time * (0.50 + i * 0.22) + i * 1.1) * 0.20)
-        // Innermost layer also pulses slightly in scale
+          sprite.userData.baseOpacity * (1 + Math.sin(glowTime * (0.5 + i * 0.22) + i * 1.1) * 0.2)
         if (i === 0) {
-          sprite.scale.setScalar(sprite.userData.baseSize * (1 + Math.sin(time * 0.38) * 0.04))
+          sprite.scale.setScalar(sprite.userData.baseSize * (1 + Math.sin(glowTime * 0.38) * 0.04))
         }
       })
-      haloSprite.material.opacity  = 0.72 + Math.sin(time * 0.33) * 0.22
+      haloSprite.material.opacity = 0.72 + Math.sin(glowTime * 0.33) * 0.22
       haloSprite.material.rotation += deltaSeconds * 0.008
-      haloSprite.scale.setScalar(
-        haloSprite.userData.baseScale * (1 + Math.sin(time * 0.15) * 0.03)
-      )
+      haloSprite.scale.setScalar(haloSprite.userData.baseScale * (1 + Math.sin(glowTime * 0.15) * 0.03))
     }
 
-    // Update all UFOs
-    ufosRef.current.forEach((ufo, idx) => {
-      const roam = spaceConfig.solarSystem.ufo.roamRadius
-      const t = time * 2.3 + ufo.phase
-
+    // UFOs: wander inside shell round Earth.
+    const earth = bodyMap.get('earth')
+    const ufoCfg = spaceConfig.solarSystem.ufo
+    const inner = earth.def.radius + ufoCfg.shellInner
+    const outer = earth.def.radius + ufoCfg.shellOuter
+    ufosRef.current.forEach((ufo) => {
+      const t = time * 0.074 + ufo.phase
       ufo.steer.set(
         Math.sin(t * 0.71) + Math.cos(t * 1.17) * 0.45,
         Math.sin(t * 0.43 + 1.2) * 0.32,
         Math.cos(t * 0.53 + 0.4) + Math.sin(t * 0.91) * 0.45
       ).normalize()
 
-      const centerPull = ufo.position.clone().multiplyScalar(-1 / Math.max(ufo.position.length(), 1))
-      if (ufo.position.length() > roam) {
-        ufo.steer.add(centerPull.multiplyScalar(2.6))
-      }
-
-      const sunOffset = ufo.position.clone().sub(spaceConfig.solarSystem.center)
-      if (sunOffset.length() < spaceConfig.solarSystem.ufo.minSunDistance) {
-        ufo.steer.add(sunOffset.normalize().multiplyScalar(3))
-      }
-
-      collisions.forEach((body) => {
-        const offset = ufo.position.clone().sub(body.position)
-        const minDist = body.radius + spaceConfig.solarSystem.ufo.collisionRadius + 12
-        if (offset.length() < minDist) {
-          ufo.steer.add(offset.normalize().multiplyScalar(3.2))
-        }
-      })
-
+      const r = ufo.local.length()
+      _dir.copy(ufo.local).divideScalar(Math.max(r, 1e-6))
+      if (r > outer) ufo.steer.addScaledVector(_dir, -2.6)
+      if (r < inner) ufo.steer.addScaledVector(_dir, 3)
       ufo.steer.normalize()
-      const targetVelocity = ufo.steer.clone().multiplyScalar(spaceConfig.solarSystem.ufo.speed)
-      ufo.velocity.lerp(targetVelocity, spaceConfig.solarSystem.ufo.steering * deltaSeconds)
-      ufo.position.addScaledVector(ufo.velocity, deltaSeconds)
 
-      if (ufo.position.length() > roam + 18) {
-        ufo.position.setLength(roam + 18)
+      ufo.velocity.lerp(_toCam.copy(ufo.steer).multiplyScalar(ufoCfg.speed), Math.min(1, ufoCfg.steering * deltaSeconds))
+      ufo.local.addScaledVector(ufo.velocity, deltaSeconds)
+      const clamped = THREE.MathUtils.clamp(ufo.local.length(), earth.def.radius + ufoCfg.shellInner * 0.5, outer * 1.2)
+      ufo.local.setLength(clamped)
+
+      ufo.world.addVectors(earth.world, ufo.local)
+      if (ufo.velocity.lengthSq() > 1e-6) {
+        _m.lookAt(ufo.velocity, _zero, _up)
+        ufo.group.quaternion.setFromRotationMatrix(_m)
       }
-
-      ufo.group.position.copy(ufo.position)
-      if (ufo.velocity.lengthSq() > 0.001) {
-        ufo.group.lookAt(ufo.position.clone().add(ufo.velocity))
-      }
-      ufo.group.rotation.z +=
-        Math.sin(time * 6.5 + ufo.phase) * spaceConfig.solarSystem.ufo.wobble * 0.002
-
-      collisions.push({
-        key: `ufo_${idx}`,
-        position: ufo.position.clone(),
-        radius: spaceConfig.solarSystem.ufo.collisionRadius,
-      })
+      ufo.group.rotateZ(Math.sin(time * 6.5 + ufo.phase) * ufoCfg.wobble * 0.1)
     })
-
-    collisionBodiesRef.current = collisions
-    setSolarCollisionBodies(collisions)
   }
 
   return { update }

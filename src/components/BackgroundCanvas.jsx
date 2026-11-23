@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-// Orchestrator for the 3D background: wires together modular hooks and runs the render loop
-import { useThree } from '../three/useThree'
+// 3D bg orchestrator. Order per frame: sim → camera (moves origin) → sync anchors → sky pass → world pass.
+import { useThree, syncSkyCamera } from '../three/useThree'
 import { useSkybox } from '../three/useSkybox'
 import { useLights } from '../three/useLights'
 import { useStarField } from '../three/useStarField'
@@ -8,6 +8,7 @@ import { useSolarSystem } from '../three/useSolarSystem'
 import { useGalaxies } from '../three/useGalaxies'
 import { useComets } from '../three/useComets'
 import { useScrollCamera } from '../three/useScrollCamera'
+import { syncAnchors } from '../three/floatingOrigin'
 import { useRoutePath } from '../context/RouteContext'
 import PlanetLabels from './PlanetLabels'
 
@@ -15,18 +16,18 @@ export default function BackgroundCanvas() {
   const canvasRef = useRef(null)
   const routePath = useRoutePath()
 
-  // Core Three.js objects bound to this canvas
-  const { sceneRef, cameraRef, rendererRef } = useThree(canvasRef)
-  useSkybox(sceneRef)
+  const { sceneRef, skySceneRef, cameraRef, skyCameraRef, rendererRef } = useThree(canvasRef)
+  // Sky layer: infinitely far deco.
+  useSkybox(skySceneRef)
+  const stars = useStarField(skySceneRef)
+  const galaxies = useGalaxies(skySceneRef)
+  const comets = useComets(skySceneRef)
+  // World layer: km, floating origin.
   useLights(sceneRef)
-  // Independent background systems
-  const stars = useStarField(sceneRef)
   const solarSystem = useSolarSystem(sceneRef, routePath === '/explore')
-  const galaxies = useGalaxies(sceneRef)
-  const comets = useComets(sceneRef)
   const scrollCam = useScrollCamera(cameraRef, routePath)
 
-  // Store update functions in refs so the animation loop never re-creates
+  // Refs so the loop never re-creates.
   const scrollCamRef = useRef(scrollCam)
   scrollCamRef.current = scrollCam
   const starsRef = useRef(stars)
@@ -47,22 +48,30 @@ export default function BackgroundCanvas() {
       const deltaSeconds = Math.min((now - lastTime) / 1000, 0.05)
       lastTime = now
 
+      const camera = cameraRef.current
       starsRef.current.update?.(deltaSeconds)
-      solarSystemRef.current.update?.(deltaSeconds)
       galaxiesRef.current.update?.(deltaSeconds)
       cometsRef.current.update?.(deltaSeconds)
+      solarSystemRef.current.update?.(deltaSeconds, camera)
       scrollCamRef.current.update?.(deltaSeconds)
+      syncAnchors()
 
       const scene = sceneRef.current
-      const camera = cameraRef.current
+      const skyScene = skySceneRef.current
+      const skyCamera = skyCameraRef.current
       const renderer = rendererRef.current
-      if (scene && camera && renderer) {
+      if (scene && skyScene && camera && skyCamera && renderer) {
+        camera.updateMatrixWorld()
+        syncSkyCamera(camera, skyCamera)
+        renderer.clear()
+        renderer.render(skyScene, skyCamera)
+        renderer.clearDepth()
         renderer.render(scene, camera)
       }
     }
     animate()
     return () => cancelAnimationFrame(animationId)
-  }, [sceneRef, cameraRef, rendererRef]) // stable deps only
+  }, [sceneRef, skySceneRef, cameraRef, skyCameraRef, rendererRef]) // stable deps only
 
   return (
     <>

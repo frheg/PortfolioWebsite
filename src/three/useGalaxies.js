@@ -8,11 +8,11 @@ function rand(min, max) { return Math.random() * (max - min) + min }
 
 function spawnGalaxy(scene, galaxies, spawnRadius) {
   if (!scene || galaxies.length === undefined) return
-  const pos = new THREE.Vector3(
-    rand(-spawnRadius, spawnRadius),
-    rand(-spawnRadius, spawnRadius),
-    rand(-spawnRadius, spawnRadius)
-  )
+  // Sky cam sits at 0 → keep galaxies off center.
+  const pos = new THREE.Vector3()
+  do {
+    pos.set(rand(-spawnRadius, spawnRadius), rand(-spawnRadius, spawnRadius), rand(-spawnRadius, spawnRadius))
+  } while (pos.length() < spawnRadius * 0.5)
   const theme = spaceConfig.galaxies.colorThemes[Math.floor(Math.random() * spaceConfig.galaxies.colorThemes.length)]
   const g = createGalaxy({ position: pos, colorBase: theme, scene })
   galaxies.push(g)

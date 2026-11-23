@@ -1,14 +1,13 @@
-// PlanetLabels — screen-space HUD labels for each solar-system body.
-// Only visible in explore mode. Positions are updated every frame by a
-// requestAnimationFrame loop via direct DOM mutation (no React state churn).
+// PlanetLabels — screen-space HUD labels per body. Explore only.
+// rAF loop, direct DOM mutation (no React churn). Positions: world km - floating origin.
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { getSolarCollisionBodies } from '../three/solarSystemRuntime'
+import { origin } from '../three/floatingOrigin'
 import { planetFacts } from '../data/planetFacts'
 import { spaceConfig } from '../three/spaceConfig'
 
-// Expand the single 'ufo' entry in planetFacts into one entry per UFO instance
-// so each craft gets its own DOM label element.
+// One label per UFO instance.
 const ufoBase = planetFacts.find((p) => p.key === 'ufo')
 const allPlanetFacts = [
   ...planetFacts.filter((p) => p.key !== 'ufo'),
@@ -19,13 +18,18 @@ const allPlanetFacts = [
   })),
 ]
 
-// Distance thresholds expressed as multiples of the body's effective radius.
-// MIN_R so tiny bodies (Moon, Mercury) still have a useful visibility range.
-const MIN_R = 14
-const NAME_FULL_FACTOR = 5    // fully bright at this distance × eff radius
-const NAME_FADE_FACTOR = 55   // invisible beyond this × eff radius
-const FACTS_FULL_FACTOR = 5   // facts fully visible at this × body.radius
-const FACTS_SHOW_FACTOR = 12  // facts start appearing at this × body.radius
+// True scale → bodies mostly sub-pixel → names = nav aid, shown at any range
+// (unless body.labelRange). Fade name once disc fills screen. Facts: × radius.
+const NAME_HIDE_START = 0.3 // × viewport height, disc radius
+const NAME_HIDE_END = 0.55
+const RANGE_FADE = 0.25     // last fraction of labelRange fades
+const FACTS_FULL_FACTOR = 5
+const FACTS_SHOW_FACTOR = 12
+
+function smoothstep(edge0, edge1, x) {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
+}
 
 export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
   const containerRef = useRef(null)
@@ -33,55 +37,50 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
   useEffect(() => {
     if (!isExplore) return undefined
 
+    const rel = new THREE.Vector3()
     const vec = new THREE.Vector3()
-    const bodyPos = new THREE.Vector3()
+    const forward = new THREE.Vector3()
     let frameId
 
     const tick = () => {
+      frameId = requestAnimationFrame(tick)
       const camera = cameraRef.current
       const renderer = rendererRef.current
       const container = containerRef.current
+      if (!camera || !renderer || !container) return
 
-      if (!camera || !renderer || !container) {
-        frameId = requestAnimationFrame(tick)
-        return
-      }
-
-      const bodies = getSolarCollisionBodies()
       const w = renderer.domElement.clientWidth
       const h = renderer.domElement.clientHeight
+      const focalPx = h / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
+      camera.getWorldDirection(forward)
 
-      bodies.forEach((body) => {
+      getSolarCollisionBodies().forEach((body) => {
         const el = container.querySelector(`[data-planet="${body.key}"]`)
         if (!el) return
 
-        // Project a point just above the top of the body — tighter offset than before
-        vec.copy(body.position)
-        vec.y += body.radius * 0.55 + 2
-        vec.project(camera)
-
-        const sx = (vec.x * 0.5 + 0.5) * w
-        const sy = (-vec.y * 0.5 + 0.5) * h
-
-        if (vec.z > 1.0 || sx < -120 || sx > w + 120 || sy < -120 || sy > h + 120) {
+        rel.subVectors(body.position, origin)
+        const dist = rel.length()
+        if (rel.dot(forward) <= 0 || dist > body.labelRange) {
           el.style.opacity = '0'
           return
         }
 
+        vec.copy(rel).project(camera)
+        const radiusPx = (body.radius / dist) * focalPx
+        const sx = (vec.x * 0.5 + 0.5) * w
+        const sy = (-vec.y * 0.5 + 0.5) * h - radiusPx - 6
+        if (sx < -120 || sx > w + 120 || sy < -120 || sy > h + 120) {
+          el.style.opacity = '0'
+          return
+        }
         el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -100%)`
 
-        bodyPos.copy(body.position)
-        const dist = camera.position.distanceTo(bodyPos)
-        const eff = Math.max(body.radius, MIN_R)
+        const rangeFade = Number.isFinite(body.labelRange)
+          ? 1 - smoothstep(body.labelRange * (1 - RANGE_FADE), body.labelRange, dist)
+          : 1
+        const sizeFade = 1 - smoothstep(NAME_HIDE_START * h, NAME_HIDE_END * h, radiusPx)
+        el.style.opacity = (rangeFade * sizeFade).toFixed(3)
 
-        // Name opacity
-        const nameFull = eff * NAME_FULL_FACTOR
-        const nameFade = eff * NAME_FADE_FACTOR
-        const nameOpacity =
-          dist <= nameFull ? 1 : Math.max(0, 1 - (dist - nameFull) / (nameFade - nameFull))
-        el.style.opacity = nameOpacity.toFixed(3)
-
-        // Facts opacity — reveals only when close
         const factsEl = el.querySelector('[data-facts]')
         if (factsEl) {
           const factsFull = body.radius * FACTS_FULL_FACTOR
@@ -92,8 +91,6 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
           factsEl.style.visibility = factsOpacity > 0.02 ? 'visible' : 'hidden'
         }
       })
-
-      frameId = requestAnimationFrame(tick)
     }
 
     frameId = requestAnimationFrame(tick)
@@ -126,10 +123,10 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
             · {planet.name} ·
           </p>
 
-          {/* Facts — revealed when camera is very close */}
+          {/* Facts — close range only. Out of flow, above name → name stays pinned to body */}
           <div
             data-facts
-            className="mx-auto mt-1.5 w-max max-w-[280px] rounded-xl border border-cyan-400/20 bg-slate-950/72 px-3 py-2 text-left backdrop-blur-md"
+            className="absolute bottom-full left-1/2 mb-1.5 w-max max-w-[280px] -translate-x-1/2 rounded-xl border border-cyan-400/20 bg-slate-950/72 px-3 py-2 text-left backdrop-blur-md"
             style={{ opacity: 0, visibility: 'hidden' }}
           >
             {planet.facts.map((fact, i) => (

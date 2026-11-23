@@ -6,15 +6,15 @@
 //
 // Engine (velocity-driven):
 //   Always playing, even while paused, but at a quiet idle.
-//   Volume and playbackRate track the camera's real linear speed each frame:
+//   Volume and playbackRate track camera throttle (0..1, speed vs local cap):
 //
-//     speed = 0          → idle   (vol IDLE_VOL, rate IDLE_RATE)
-//     speed = MAX_SPEED  → max    (vol MAX_VOL,  rate MAX_RATE)
+//     throttle = 0 → idle   (vol IDLE_VOL, rate IDLE_RATE)
+//     throttle = 1 → max    (vol MAX_VOL,  rate MAX_RATE)
 //
 //   Transitions use per-frame lerp with a configurable smoothing factor so
 //   the engine spools up and down smoothly with the ship's inertia.
 import { useEffect } from 'react'
-import { getCameraSpeed } from '../three/cameraRuntime'
+import { getCameraThrottle } from '../three/cameraRuntime'
 import ambientUrl from '../assets/Sounds/audiopapkin-ambient-soundscapes-007-space-atmosphere-304974.mp3'
 import engineUrl from '../assets/Sounds/fronbondi_skegs-sfx-growling-pulsating-engine-sound-effect-359943.mp3'
 
@@ -23,7 +23,7 @@ const IDLE_VOL   = 0.40   // volume at rest
 const MAX_VOL    = 2.92   // volume at full speed
 const IDLE_RATE  = 0.90   // playbackRate at rest  (low rumble)
 const MAX_RATE   = 5   // playbackRate at max speed (high roar)
-const MAX_SPEED  = 100    // world-units/sec (≈ new moveSpeed × boostMultiplier)
+const MAX_THROTTLE = 1  // cameraRuntime throttle: ~0.33 cruise, 1 full boost
 const LERP       = 3.5    // smoothing factor (higher = tighter tracking)
 
 export function useExploreAudio(isExplore) {
@@ -54,8 +54,8 @@ export function useExploreAudio(isExplore) {
       const dt = Math.min((now - lastTs) / 1000, 0.1)
       lastTs = now
 
-      // Map actual camera speed to a 0–1 ratio
-      const ratio = Math.min(getCameraSpeed() / MAX_SPEED, 1)
+      // Throttle, not raw speed — speed spans ~12 decades at true scale
+      const ratio = Math.min(getCameraThrottle() / MAX_THROTTLE, 1)
 
       const targetVol  = IDLE_VOL  + (MAX_VOL  - IDLE_VOL)  * ratio
       const targetRate = IDLE_RATE + (MAX_RATE  - IDLE_RATE) * ratio
@@ -65,7 +65,7 @@ export function useExploreAudio(isExplore) {
       currentVol  += (targetVol  - currentVol)  * t
       currentRate += (targetRate - currentRate) * t
 
-      engine.volume       = currentVol
+      engine.volume       = Math.min(currentVol, 1) // >1 throws
       engine.playbackRate = currentRate
     }
 

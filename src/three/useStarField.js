@@ -104,11 +104,16 @@ export function useStarField(
       const l = spaceConfig.starfield.lRange.min + Math.random() * (spaceConfig.starfield.lRange.max - spaceConfig.starfield.lRange.min)
       color.setHSL(h, s, l)
 
-      const radius = Math.random() * fieldRadius - fieldRadius / 2
+      // Sky cam sits at 0 → keep stars off center, else giant blobs.
+      let radius
+      let y
+      do {
+        radius = Math.random() * fieldRadius - fieldRadius / 2
+        y = Math.random() * fieldRadius - fieldRadius / 2
+      } while (Math.hypot(radius, y) < fieldRadius * 0.2)
       const theta = Math.random() * Math.PI * 2
       const x = radius * Math.cos(theta)
       const z = radius * Math.sin(theta)
-      const y = Math.random() * fieldRadius - fieldRadius / 2
       const speed = Math.random() * rotationSpeed
 
       const index = i * 3
