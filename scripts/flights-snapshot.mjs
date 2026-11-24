@@ -2,7 +2,11 @@
 // → compact rows → POST to relay Worker (/flights/snapshot). Cloudflare IPs are blocked by ADS-B APIs; GitHub's aren't (hopefully).
 // Env: OPENSKY_CLIENT_ID, OPENSKY_CLIENT_SECRET, RELAY_URL, SNAPSHOT_KEY.
 // Row: [hex, callsign, lat, lon, altFt (−1 = ground), gsKn, track, vrateFtMin, tPos (unix s)]
-const { OPENSKY_CLIENT_ID, OPENSKY_CLIENT_SECRET, RELAY_URL, SNAPSHOT_KEY } = process.env
+// Pasted secrets often carry whitespace/newlines or quotes → normalize.
+const clean = (v) => (v ?? '').trim().replace(/^["']|["']$/g, '')
+const [OPENSKY_CLIENT_ID, OPENSKY_CLIENT_SECRET, RELAY_URL, SNAPSHOT_KEY] = ['OPENSKY_CLIENT_ID', 'OPENSKY_CLIENT_SECRET', 'RELAY_URL', 'SNAPSHOT_KEY'].map((k) => clean(process.env[k]))
+// Lengths only (never values) → debug mismatched secrets. Expected: id 16, secret 32, key 64.
+console.log(`lengths: id=${OPENSKY_CLIENT_ID.length} secret=${OPENSKY_CLIENT_SECRET.length} key=${SNAPSHOT_KEY.length}`)
 const M_FT = 3.28084
 const MS_KN = 1.943844
 
@@ -21,7 +25,7 @@ const tokenRes = await fetch('https://auth.opensky-network.org/auth/realms/opens
   body: new URLSearchParams({ grant_type: 'client_credentials', client_id: OPENSKY_CLIENT_ID, client_secret: OPENSKY_CLIENT_SECRET }),
   signal: timeout(20_000),
 })
-if (!tokenRes.ok) throw new Error(`token ${tokenRes.status}`)
+if (!tokenRes.ok) throw new Error(`token ${tokenRes.status}: ${(await tokenRes.text()).slice(0, 200)}`)
 const { access_token: token } = await tokenRes.json()
 
 const statesRes = await fetch('https://opensky-network.org/api/states/all', { headers: { Authorization: `Bearer ${token}` }, signal: timeout(60_000) })

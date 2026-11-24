@@ -64,7 +64,9 @@ async function flights(url, ctx, env) {
 }
 
 async function flightSnapshot(request, env) {
-  if (!env.SNAPSHOT_KEY || request.headers.get('X-Snapshot-Key') !== env.SNAPSHOT_KEY) return new Response('forbidden', { status: 403 })
+  // Trim: secrets piped via echo carry a newline.
+  const key = (env.SNAPSHOT_KEY ?? '').trim()
+  if (!key || (request.headers.get('X-Snapshot-Key') ?? '').trim() !== key) return new Response('forbidden', { status: 403 })
   return env.FLIGHTS.get(env.FLIGHTS.idFromName('world')).fetch('https://flights/put', { method: 'POST', body: request.body })
 }
 
