@@ -32,6 +32,9 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # Public relay URL (worker/). Repo variable overrides; .env files are gitignored.
+          VITE_RELAY_URL: ${{ vars.VITE_RELAY_URL || 'https://space-relay.space-relay.workers.dev' }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

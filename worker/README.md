@@ -27,6 +27,19 @@ VITE_RELAY_URL=https://space-relay.<you>.workers.dev
 
 Empty → planes + multiplayer off, satellites straight from CelesTrak.
 
+## Flights: OpenSky account (optional)
+
+Shared Cloudflare IPs get rate-limited by public ADS-B APIs. Failing → `/flights` returns
+`{"error":…, "upstream":"adsb.lol=429,adsb.fi=429,opensky=504"}`. Fix: free OpenSky account → API client
+(Account → API client → client id + secret), then:
+
+```sh
+npx wrangler secret put OPENSKY_CLIENT_ID
+npx wrangler secret put OPENSKY_CLIENT_SECRET
+```
+
+Site build (GitHub Actions) gets `VITE_RELAY_URL` from `.github/workflows/deploy.yml` (repo variable overrides).
+
 ## Local test
 
 ```sh

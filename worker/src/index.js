@@ -41,7 +41,7 @@ async function cached(ctx, key, ttl, fetchUpstream, staleTtl = ttl) {
   if (!res.ok) {
     const stale = await cache.match(staleReq)
     if (stale) return stale
-    return new Response(JSON.stringify({ error: res.status }), { status: 502, headers: { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: res.status, upstream: res.headers.get('X-Upstream') }), { status: 502, headers: { 'Content-Type': 'application/json' } })
   }
   const body = await res.arrayBuffer()
   const make = (age) => new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${age}` } })
@@ -49,9 +49,28 @@ async function cached(ctx, key, ttl, fetchUpstream, staleTtl = ttl) {
   return make(ttl)
 }
 
-const UA = () => ({ headers: { 'User-Agent': 'space-relay (fredrichegland.no portfolio)' }, signal: AbortSignal.timeout(15_000) })
+const UA = () => ({ headers: { 'User-Agent': 'space-relay (fredrichegland.no portfolio)' }, signal: AbortSignal.timeout(8_000) })
 
-async function flights(url, ctx) {
+// OpenSky OAuth2 (client credentials), optional: secrets OPENSKY_CLIENT_ID / OPENSKY_CLIENT_SECRET.
+// Token cached per isolate (~30 min). No secrets → anonymous (small shared quota).
+let osToken = null
+async function openSkyAuth(env) {
+  if (!env.OPENSKY_CLIENT_ID || !env.OPENSKY_CLIENT_SECRET) return {}
+  if (!osToken || Date.now() > osToken.exp) {
+    const res = await fetch('https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'client_credentials', client_id: env.OPENSKY_CLIENT_ID, client_secret: env.OPENSKY_CLIENT_SECRET }),
+      signal: AbortSignal.timeout(8_000),
+    })
+    if (!res.ok) return {}
+    const j = await res.json()
+    osToken = { value: j.access_token, exp: Date.now() + ((j.expires_in ?? 1800) - 60) * 1000 }
+  }
+  return { Authorization: `Bearer ${osToken.value}` }
+}
+
+async function flights(url, ctx, env) {
   const lat = Math.round(Number(url.searchParams.get('lat')))
   const lon = Math.round(Number(url.searchParams.get('lon')))
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 85 || Math.abs(lon) > 180) return new Response('bad', { status: 400 })
@@ -64,23 +83,27 @@ async function flights(url, ctx) {
       const sources = [
         () => fetch(`https://api.adsb.lol/v2/point/${lat}/${lon}/${FLIGHT_RADIUS_NM}`, UA()),
         () => fetch(`https://opendata.adsb.fi/api/v2/lat/${lat}/lon/${lon}/dist/${FLIGHT_RADIUS_NM}`, UA()),
-        () => openSky(lat, lon),
+        () => openSky(lat, lon, env),
       ]
-      let last = new Response(null, { status: 504 })
+      // All fail → per-source statuses in X-Upstream (debug: which provider refuses).
+      const seen = []
       for (const src of sources) {
-        last = await src().catch(() => new Response(null, { status: 504 }))
-        if (last.ok) return last
+        const res = await src().catch((e) => new Response(null, { status: e?.name === 'TimeoutError' ? 504 : 503 }))
+        if (res.ok) return res
+        seen.push(res.status)
       }
-      return last
+      return new Response(null, { status: seen.at(-1) ?? 504, headers: { 'X-Upstream': `adsb.lol=${seen[0]},adsb.fi=${seen[1]},opensky=${seen[2]}` } })
     },
     STALE_S
   )
 }
 
 // OpenSky (anonymous) → readsb-shaped { ac: [...] }. Small box (±2°) → small JSON, cheap parse.
-async function openSky(lat, lon) {
+async function openSky(lat, lon, env) {
   const q = `lamin=${lat - 2}&lamax=${lat + 2}&lomin=${lon - 4}&lomax=${lon + 4}`
-  const res = await fetch(`https://opensky-network.org/api/states/all?${q}`, UA())
+  const opts = UA()
+  opts.headers = { ...opts.headers, ...(await openSkyAuth(env)) }
+  const res = await fetch(`https://opensky-network.org/api/states/all?${q}`, opts)
   if (!res.ok) return res
   const j = await res.json()
   const now = j.time ?? Date.now() / 1000
@@ -128,7 +151,7 @@ export default {
       return room.fetch(request)
     }
     if (request.method !== 'GET') return new Response('method', { status: 405 })
-    if (url.pathname === '/flights') return withCors(await flights(url, ctx), origin)
+    if (url.pathname === '/flights') return withCors(await flights(url, ctx, env), origin)
     const m = /^\/sats\/([a-z-]+)$/.exec(url.pathname)
     if (m) return withCors(await sats(m[1], ctx), origin)
     return new Response('space-relay', { status: 404 })
