@@ -11,6 +11,7 @@ import { quality } from './qualityRuntime'
 import { createBuildings } from './buildings'
 import { createShips } from './ships'
 import { createFlights } from './flights'
+import { tileFetch } from './tileStore'
 
 const cfg = spaceConfig.solarSystem.earthTerrain
 
@@ -27,6 +28,16 @@ const _v = new THREE.Vector3()
 const _camLocal = new THREE.Vector3()
 
 let terrainActive = false
+// Virtual eye (world km) for tile selection, e.g. intro preloading the home stop while the camera is far away.
+let focusEye = null
+export function setTerrainFocus(worldPos) {
+  focusEye = worldPos
+}
+// Loading gate: tiles wanted but not ready (+ buildings in flight). Read by sceneLoadingManager.
+const loadState = { active: false, pending: 0, loaded: 0 }
+export function getTerrainLoadState() {
+  return loadState
+}
 // Earth frame (world quaternion of the spinning surface, center, radius) for name layers. Updated every frame.
 let earthFrame = null
 export function getEarthFrame() {
@@ -210,7 +221,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
 
     const template = t.z > cfg.imageryMaxZoom ? cfg.closeImageryUrl : cfg.imageryUrl
     const url = template.replace('{z}', t.z).replace('{x}', t.x).replace('{y}', t.y)
-    fetch(url, { signal: t.abort.signal, priority: high ? 'high' : 'low' })
+    tileFetch(url, t, { signal: t.abort.signal, priority: high ? 'high' : 'low' })
       .then((res) => {
         if (!res.ok) throw new Error(`imagery ${res.status}`)
         return res.blob()
@@ -334,10 +345,13 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     group.updateWorldMatrix(true, false)
     group.getWorldQuaternion(frameState.quaternion)
     earthFrame = explore ? frameState : null
-    _v.subVectors(origin, earth.world)
+    const eye = focusEye ?? origin
+    _v.subVectors(eye, earth.world)
     const distWorld = _v.length()
-    const active = explore && distWorld < R * cfg.activeRadii
+    // Scroll pages too (home stop = Bergen, fully rendered).
+    const active = distWorld < R * cfg.activeRadii
     terrainActive = active
+    if (!active) loadState.active = false
     group.visible = active
     // Sink base sphere under tiles while active.
     earth.mesh.scale.setScalar(active ? R - cfg.baseSinkKm : R)
@@ -349,7 +363,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     _q.copy(frameState.quaternion)
     _qi.copy(_q).invert()
     normalRot.value.setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(_q))
-    _camLocal.subVectors(origin, earth.world).applyQuaternion(_qi)
+    _camLocal.subVectors(eye, earth.world).applyQuaternion(_qi)
     camDist = _camLocal.length()
     horizonCos = R / camDist
     buildings.update(_camLocal, camDist - R)
@@ -386,6 +400,9 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     }
 
     flushUploads()
+    loadState.active = true
+    loadState.pending = queue.size + inFlight + buildings.pending()
+    loadState.loaded = visible.length
 
     // Unrequested bookkeeping tiles nobody visits → drop (keeps the map small).
     tiles.forEach((t) => {

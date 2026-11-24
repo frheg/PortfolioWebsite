@@ -1,11 +1,11 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { Route, Routes, useLocation } from 'react-router-dom'
-import ExploreBoostOverlay from './components/ExploreBoostOverlay'
 import ExploreDateHud from './components/ExploreDateHud'
 import ExploreHelpHint from './components/ExploreHelpHint'
 import ExplorePauseButton from './components/ExplorePauseButton'
 import ExplorePauseOverlay from './components/ExplorePauseOverlay'
 import ExploreSpeedHud from './components/ExploreSpeedHud'
+import ExplorePointers from './components/ExplorePointers'
 import { useExploreAudio } from './hooks/useExploreAudio'
 import { RouteProvider } from './context/RouteProvider'
 import ExploreMobileControls from './components/ExploreMobileControls'
@@ -84,10 +84,10 @@ export default function App() {
       </RouteProvider>
       <div className={routeVeilClassName} aria-hidden="true" />
       <div className={routeScanClassName} aria-hidden="true" />
-      {isExploreRoute ? <ExploreBoostOverlay /> : null}
       {isExploreRoute ? <ExplorePauseOverlay /> : null}
       {isExploreRoute ? <ExplorePauseButton /> : null}
       {isExploreRoute ? <ExploreSpeedHud /> : null}
+      {isExploreRoute ? <ExplorePointers /> : null}
       {isExploreRoute ? <ExploreDateHud /> : null}
       <div className={routeStageClassName}>
         <Suspense fallback={<div className="route-loading" />}>

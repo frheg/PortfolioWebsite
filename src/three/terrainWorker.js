@@ -4,6 +4,7 @@
 // In:  { id, z, x, y, grid, radius, terrainUrl, terrainMaxZ, skirtKm }
 // Out: { id, center[3], positions, normals, uvs, indices, heights, normalMap (128² RG8 slopes) } | { id, error }
 // In { cancel: id } → drop result if still pending (mesh build skipped).
+import { tileFetch } from './tileStore'
 
 const mercatorLat = (yFrac) => Math.atan(Math.sinh(Math.PI * (1 - 2 * yFrac)))
 
@@ -16,22 +17,22 @@ function dirFromLatLon(lat, lon) {
 const heightCache = new Map()
 const HEIGHT_CACHE_MAX = 48
 
-async function loadHeightsCached(url) {
+async function loadHeightsCached(url, tile) {
   const hit = heightCache.get(url)
   if (hit) {
     heightCache.delete(url)
     heightCache.set(url, hit)
     return hit
   }
-  const promise = loadHeights(url)
+  const promise = loadHeights(url, tile)
   heightCache.set(url, promise)
   if (heightCache.size > HEIGHT_CACHE_MAX) heightCache.delete(heightCache.keys().next().value)
   promise.catch(() => heightCache.delete(url))
   return promise
 }
 
-async function loadHeights(url) {
-  const res = await fetch(url) // shared by many tiles → not aborted per tile
+async function loadHeights(url, tile) {
+  const res = await tileFetch(url, tile) // shared by many tiles → not aborted per tile
   if (!res.ok) throw new Error(`terrain ${res.status}`)
   const bitmap = await createImageBitmap(await res.blob())
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
@@ -78,7 +79,7 @@ self.onmessage = async (event) => {
     const span = 1 / (1 << shift)
     const offU = (x - (tx << shift)) * span
     const offV = (y - (ty << shift)) * span
-    const src = await loadHeightsCached(terrainUrl.replace('{z}', tz).replace('{x}', tx).replace('{y}', ty))
+    const src = await loadHeightsCached(terrainUrl.replace('{z}', tz).replace('{x}', tx).replace('{y}', ty), { z: tz, x: tx, y: ty })
     if (cancelled.delete(id)) return
 
     const n = grid

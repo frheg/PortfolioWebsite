@@ -46,3 +46,14 @@ export function setWarp(strength, x, y, z) {
 export function getWarp() {
   return _warp
 }
+
+// Boost tunnel vision 0..1 (eased boost blend). Written by camera, read by post composite.
+let _tunnel = 0
+
+export function setTunnel(value) {
+  _tunnel = value
+}
+
+export function getTunnel() {
+  return _tunnel
+}

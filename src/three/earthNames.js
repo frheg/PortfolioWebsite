@@ -110,6 +110,7 @@ export function collectEarthNames(camera, width, height) {
     _p.set(dirs[i * 3], dirs[i * 3 + 1], dirs[i * 3 + 2]).applyQuaternion(frame.quaternion)
     _g.copy(_p).multiplyScalar(R).add(frame.world)
     _p.multiplyScalar(R + getEarthHeightAt(_g) + 0.002).add(frame.world).sub(origin)
+    const dist = _p.length()
     _p.project(camera)
     if (_p.z > 1 || Math.abs(_p.x) > 1.05 || Math.abs(_p.y) > 1.05) continue
     const x = (_p.x * 0.5 + 0.5) * width
@@ -120,7 +121,7 @@ export function collectEarthNames(camera, width, height) {
     if (placed.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) continue
     placed.push(box)
     const opacity = 1 - THREE.MathUtils.smoothstep(camAlt, minAlt[i] * 0.6, minAlt[i])
-    out.push({ name, kind: data.kind[i], x, y, opacity })
+    out.push({ name, kind: data.kind[i], x, y, opacity, dist })
   }
   return out
 }

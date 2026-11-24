@@ -59,6 +59,8 @@ uniform sampler2D uBloom;
 uniform float uBloomStrength;
 uniform vec2 uWarpCenter;
 uniform float uWarp;
+uniform float uTunnel;  // boost tunnel vision 0..1
+uniform float uAspect;
 varying vec2 vUv;
 void main() {
   vec3 c = texture2D(uSrc, vUv).rgb;
@@ -70,6 +72,14 @@ void main() {
     c = mix(c, acc / 10.0 * 1.15, smoothstep(0.0, 0.25, length(vUv - uWarpCenter)));
   }
   c += texture2D(uBloom, vUv).rgb * uBloomStrength;
+  if (uTunnel > 0.001) {
+    // Tunnel vision: soft radial dim + faint cool edge glow (aspect-correct, 0 center → 1 corner).
+    vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
+    float r = length(q) / length(vec2(uAspect, 1.0) * 0.5);
+    float v = smoothstep(0.3, 1.05, r);
+    c *= 1.0 - uTunnel * 0.55 * v * v;
+    c += vec3(0.45, 0.5, 1.0) * uTunnel * 0.03 * v;
+  }
   gl_FragColor = vec4(c, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -123,6 +133,8 @@ export function createPostFx(quality) {
     uBloomStrength: { value: 0 },
     uWarpCenter: { value: new THREE.Vector2(0.5, 0.5) },
     uWarp: { value: 0 },
+    uTunnel: { value: 0 },
+    uAspect: { value: 1 },
   })
   const black = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1)
   black.needsUpdate = true
@@ -161,7 +173,7 @@ export function createPostFx(quality) {
 
   /**
    * passes: [{ material, prepare(srcTexture, depthTexture) }] applied in order (ping-pong).
-   * warp: { strength, center: Vector2 uv }.
+   * warp: { strength, center: Vector2 uv, tunnel 0..1 }.
    */
   const finish = (renderer, passes, warp) => {
     let src = sceneTarget.texture
@@ -200,6 +212,8 @@ export function createPostFx(quality) {
     compositeMat.uniforms.uBloomStrength.value = quality.bloom ? cfg.bloomStrength : 0
     compositeMat.uniforms.uWarp.value = warp.strength
     compositeMat.uniforms.uWarpCenter.value.copy(warp.center)
+    compositeMat.uniforms.uTunnel.value = warp.tunnel ?? 0
+    compositeMat.uniforms.uAspect.value = size.x / Math.max(size.y, 1)
     fs.draw(renderer, compositeMat, null)
   }
 

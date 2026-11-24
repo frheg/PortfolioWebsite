@@ -7,6 +7,7 @@
 import { VectorTile } from '@mapbox/vector-tile'
 import { PbfReader } from 'pbf'
 import earcut from 'earcut'
+import { tileFetch } from './tileStore'
 
 const mercatorLat = (yFrac) => Math.atan(Math.sinh(Math.PI * (1 - 2 * yFrac)))
 const dirFromLatLon = (lat, lon) => {
@@ -16,8 +17,8 @@ const dirFromLatLon = (lat, lon) => {
 const DEFAULT_HEIGHT_M = 7
 const SINK_KM = 0.004 // base below ground → no gap on slopes
 
-async function loadHeights(url) {
-  const res = await fetch(url)
+async function loadHeights(url, tile) {
+  const res = await tileFetch(url, tile)
   if (!res.ok) return null
   const bitmap = await createImageBitmap(await res.blob())
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
@@ -49,7 +50,7 @@ async function loadImagery(template, z, x, y, imgZ) {
     for (let i = 0; i < k; i += 1) {
       const u = template.replace('{z}', z + Math.log2(k)).replace('{x}', x * k + i).replace('{y}', y * k + j)
       jobs.push(
-        fetch(u)
+        tileFetch(u, { z: z + Math.log2(k), x: x * k + i, y: y * k + j })
           .then((r) => (r.ok ? r.blob() : null))
           .then((b) => (b ? createImageBitmap(b) : null))
           .then((bmp) => {
@@ -124,7 +125,7 @@ function roof(seed, areaM2, heightM) {
 self.onmessage = async (event) => {
   const { id, z, x, y, url, terrainUrl, terrainZ, radius, imageryUrl, imgZ } = event.data
   try {
-    const res = await fetch(url.replace('{z}', z).replace('{x}', x).replace('{y}', y))
+    const res = await tileFetch(url.replace('{z}', z).replace('{x}', x).replace('{y}', y), { z, x, y })
     if (!res.ok) throw new Error(`tile ${res.status}`)
     const tile = new VectorTile(new PbfReader(new Uint8Array(await res.arrayBuffer())))
     const layer = tile.layers.building
@@ -134,7 +135,7 @@ self.onmessage = async (event) => {
     const shift = Math.max(0, z - terrainZ)
     const tz = z - shift
     const imageryJob = loadImagery(imageryUrl, z, x, y, imgZ)
-    const heights = await loadHeights(terrainUrl.replace('{z}', tz).replace('{x}', x >> shift).replace('{y}', y >> shift))
+    const heights = await loadHeights(terrainUrl.replace('{z}', tz).replace('{x}', x >> shift).replace('{y}', y >> shift), { z: tz, x: x >> shift, y: y >> shift })
     const span = 1 / (1 << shift)
     const offU = (x - ((x >> shift) << shift)) * span
     const offV = (y - ((y >> shift) << shift)) * span

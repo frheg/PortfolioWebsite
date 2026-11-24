@@ -27,12 +27,16 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
   const radiusKm = isMobile ? cfg.radiusKmMobile : cfg.radiusKm
 
   // Tile URL is versioned → read from TileJSON once.
+  let tileJsonDone = false
   fetch(cfg.tileJsonUrl)
     .then((r) => r.json())
     .then((j) => {
       urlTemplate = j.tiles?.[0] ?? null
     })
     .catch(() => {})
+    .finally(() => {
+      tileJsonDone = true
+    })
 
   worker.onmessage = (event) => {
     const { id, error, empty, center, positions, normals, colors, uvs, indices, imagery } = event.data
@@ -138,5 +142,8 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
     buildingsActive = false
   }
 
-  return { update, dispose }
+  /** Loading gate: TileJSON not yet in + tiles in flight. */
+  const pendingCount = () => (tileJsonDone ? inFlight : 1)
+
+  return { update, dispose, pending: pendingCount }
 }

@@ -191,48 +191,7 @@ summary {
   animation: explore-forward-boost 180ms ease-in-out infinite alternate;
 }
 
-.explore-boost {
-  position: fixed;
-  inset: -12%;
-  z-index: 5;
-  pointer-events: none;
-  opacity: 0;
-  background:
-    radial-gradient(ellipse at left center, rgba(180, 190, 254, 0.2), transparent 38%),
-    radial-gradient(ellipse at right center, rgba(203, 166, 247, 0.16), transparent 38%),
-    linear-gradient(
-      90deg,
-      rgba(180, 190, 254, 0.16) 0%,
-      rgba(180, 190, 254, 0.05) 7%,
-      transparent 18%,
-      transparent 82%,
-      rgba(203, 166, 247, 0.05) 93%,
-      rgba(203, 166, 247, 0.16) 100%
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(205, 214, 244, 0.16) 0,
-      rgba(205, 214, 244, 0.16) 2px,
-      transparent 2px,
-      transparent 24px
-    );
-  mix-blend-mode: screen;
-  background-size: auto, auto, auto, 220% 100%;
-  background-position: center, center, center, 0 0;
-  filter: blur(10px) saturate(1.28);
-  transform: scale(1.04);
-  transition: opacity 140ms ease, transform 140ms ease, filter 140ms ease;
-}
 
-.explore-boost--active {
-  opacity: 0.92;
-  filter: blur(7px) saturate(1.8);
-  transform: scale(1);
-  animation:
-    explore-boost-sweep 220ms linear infinite,
-    explore-boost-jitter 90ms steps(2, end) infinite,
-    explore-boost-pulse 180ms ease-in-out infinite alternate;
-}
 
 .hero-glow {
   position: absolute;
@@ -408,14 +367,6 @@ summary {
   }
 }
 
-@keyframes explore-boost-sweep {
-  from {
-    background-position: center, center, center, 0 0;
-  }
-  to {
-    background-position: center, center, center, 280px 0;
-  }
-}
 
 @keyframes explore-forward-boost {
   from {
@@ -436,28 +387,7 @@ summary {
   }
 }
 
-@keyframes explore-boost-jitter {
-  0% {
-    transform: translate3d(-0.8%, 0.2%, 0) scale(1.01);
-  }
-  50% {
-    transform: translate3d(0.9%, -0.3%, 0) scale(0.998);
-  }
-  100% {
-    transform: translate3d(-0.4%, 0.15%, 0) scale(1.005);
-  }
-}
 
-@keyframes explore-boost-pulse {
-  from {
-    opacity: 0.74;
-    filter: blur(8px) saturate(1.55);
-  }
-  to {
-    opacity: 0.96;
-    filter: blur(6px) saturate(1.95);
-  }
-}
 
 @keyframes route-phase-in {
   from {
@@ -542,6 +472,31 @@ summary {
   transition: opacity 600ms cubic-bezier(0.35, 0, 0.65, 1), filter 600ms cubic-bezier(0.35, 0, 0.65, 1);
 }
 
+/* Intro: page UI hidden while the camera holds on the Milky Way + glides to the first stop. */
+.route-stage,
+[data-floating-nav] {
+  transition: opacity 1.4s ease;
+}
+
+body.intro-active .route-stage,
+body.intro-active [data-floating-nav] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 3D intro (Milky Way + neighbours) visible behind: backdrop fades out, text moves to the bottom. */
+.loading-screen--see-through {
+  justify-content: flex-end;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 3.5rem);
+  background: linear-gradient(to top, rgba(17, 17, 27, 0.55), transparent 35%);
+  transition: background 1.6s ease, opacity 900ms cubic-bezier(0.35, 0, 0.65, 1), filter 900ms cubic-bezier(0.35, 0, 0.65, 1);
+}
+
+.loading-screen--see-through .loading-screen-glow,
+.loading-screen--see-through .loading-orbit {
+  display: none;
+}
+
 .loading-screen--exit {
   opacity: 0;
   filter: blur(12px);
@@ -624,7 +579,6 @@ summary {
   .route-stage,
   .route-veil,
   .route-scan,
-  .explore-boost,
   .hero-glow,
   .scroll-indicator,
   .loading-orbit,

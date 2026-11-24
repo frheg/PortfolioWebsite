@@ -10,7 +10,7 @@ import { createLensPass } from './lensPass'
 import { createPostFx } from './postFx'
 import { createAtmospheres } from './atmosphere'
 import { quality } from './qualityRuntime'
-import { getWarp } from './cameraRuntime'
+import { getTunnel, getWarp } from './cameraRuntime'
 import { getSolarCollisionBodies } from './solarSystemRuntime'
 import { createStarPromoter } from './starPromoter'
 import { createFadeOverlay } from './fadeOverlay'
@@ -24,6 +24,7 @@ import { LY_KM, PC_KM, SUN_ABS_MAG, SUN_RADIUS_KM, spectralClass } from './galax
 
 const cfg = spaceConfig.galaxy.stars
 const CHUNK_AT_SUN = { x: 0, y: 0, z: 0 }
+const _center = new THREE.Vector2()
 
 function isMobileDevice() {
   if (typeof navigator === 'undefined') return false
@@ -176,6 +177,7 @@ export function useGalaxy(sceneRef, rendererRef) {
 
   const warpCenter = useRef(new THREE.Vector2(0.5, 0.5))
   const warpDir = useRef(new THREE.Vector3())
+  const warpSmooth = useRef({ strength: 0, tunnel: 0 })
 
   /** Full frame (HDR): sky glow → world → atmospheres → lens → bloom → composite (warp, tone map) → fade. */
   const render = (renderer, scene, camera, deltaSeconds) => {
@@ -191,20 +193,26 @@ export function useGalaxy(sceneRef, rendererRef) {
     const lensStage = state.lens.collect(renderer, camera, state.deepSpace.blackHoles)
     if (lensStage) stages.push(lensStage)
 
-    // Warp vanishing point = travel direction on screen. Behind cam → fade out.
+    // Warp vanishing point = travel direction on screen. Behind cam → fade out. Strength + center eased (no pops).
     const warp = getWarp()
-    let strength = warp.strength
-    warpDir.current.set(warp.x, warp.y, warp.z).applyMatrix4(camera.matrixWorldInverse.clone().setPosition(0, 0, 0))
-    if (warpDir.current.z < 0) {
+    const sm = warpSmooth.current
+    const dt = Math.min(deltaSeconds ?? 1 / 60, 0.1)
+    let warpTarget = warp.strength
+    warpDir.current.set(warp.x, warp.y, warp.z).transformDirection(camera.matrixWorldInverse)
+    if (warpDir.current.z < -0.05) {
       const tanY = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
-      warpCenter.current.set(
-        0.5 + (warpDir.current.x / -warpDir.current.z) / (tanY * camera.aspect) / 2,
-        0.5 + (warpDir.current.y / -warpDir.current.z) / tanY / 2
-      )
+      const cx = 0.5 + (warpDir.current.x / -warpDir.current.z) / (tanY * camera.aspect) / 2
+      const cy = 0.5 + (warpDir.current.y / -warpDir.current.z) / tanY / 2
+      // Center far off-screen → streaks fade instead of jumping.
+      warpTarget *= 1 - THREE.MathUtils.smoothstep(Math.max(Math.abs(cx - 0.5), Math.abs(cy - 0.5)), 0.6, 1.2)
+      if (sm.strength < 0.01) warpCenter.current.set(cx, cy)
+      else warpCenter.current.lerp(_center.set(cx, cy), 1 - Math.exp(-10 * dt))
     } else {
-      strength = 0
+      warpTarget = 0
     }
-    state.post.finish(renderer, stages, { strength, center: warpCenter.current })
+    sm.strength += (warpTarget - sm.strength) * (1 - Math.exp(-5 * dt))
+    sm.tunnel += (getTunnel() - sm.tunnel) * (1 - Math.exp(-8 * dt))
+    state.post.finish(renderer, stages, { strength: sm.strength, center: warpCenter.current, tunnel: sm.tunnel })
     state.fade.render(renderer)
   }
 

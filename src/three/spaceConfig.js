@@ -19,15 +19,35 @@ export const spaceConfig = {
   },
 
   camera: {
-    transitionLerp: 0.025,
+    transitionLerp: 0.012, // explore ↔ page flight, per frame (~1.4 s)
     scroll: {
       rotLerp: 0.08,
       lockFrames: 8,
-      // Segment progress remap: hold at stop until holdStart, arrive by holdEnd.
+      // Fallback (no travel ranges yet): hold at stop until holdStart, arrive by holdEnd.
       holdStart: 0.3,
       holdEnd: 0.95,
-      // Travel arc lift above ecliptic, × segment length. Avoids flying thru sun.
-      arcLift: 0.3,
+      // Empty scroll between chapters (LongPage spacers) = the journey, per gap (vh). Longer where more scales are crossed:
+      // Bergen→Earth ~4 decades, Earth→Sgr A* ~13, Sgr A*→Milky Way ~10, Milky Way→Andromeda ~1.
+      travelVh: [420, 900, 760, 600],
+      // While reading a page: scroll orbits the camera round the stop's subject (± deg, about stop up) → never static.
+      orbitDeg: 12,
+      // Camera follows a smoothed scroll position (1/s) → wheel steps glide instead of jump.
+      scrollSmoothing: 6,
+      // Path bulge, × segment length, along the stops' up vectors → no flying through bodies.
+      arcLift: 0.12,
+      // Look: keep facing what we leave until lookTurn[0] of the leg, face destination by lookTurn[1].
+      lookTurn: [0.25, 0.85],
+      rotRate: 3.5,         // 1/s, camera orientation ease toward path orientation (lag → turns easy to follow)
+      // Intro (behind loading screen): slow orbit round the Milky Way (galaxy kpc), M31 + M33 in frame;
+      // when loaded → glide to the route's stop.
+      introPos: [-12.6, 34.6, 25.8],
+      introSway: 0.18,      // rad, orbit sway amplitude
+      introSwayRate: 0.07,  // rad/s
+      introGlideS: 9,
+      introLookTurn: [0, 0.3],
+      // Earth spin offset in scroll mode → Bergen shown at this local solar hour (never a black home page).
+      localHour: 12.5,
+      localHourLon: 5.32,
       // Scroll speed (fraction of page height / s) → full warp visual.
       velocityBoostThreshold: 2.2,
       velocityLerp: 0.08,
@@ -40,13 +60,14 @@ export const spaceConfig = {
       minSpeed: 0.02,       // km/s
       maxSpeed: 1e17,       // km/s (~3 kpc/s)
       boostMultiplier: 8,
-      boostBlendRate: 3,    // 1/s, speed cap eases 1× ↔ boost
+      boostBlendRate: 2.2,  // 1/s, boost level eases 0 ↔ 1 (drives speed cap, FOV, tunnel)
       acceleration: 2.2,    // 1/s, exp approach to target vel
       brakeAcceleration: 6, // 1/s, reversing
       coastDamping: 0.55,   // 1/s, no input. low = long glide
       keyTurnSpeed: 0.55,
       keyPitchSpeed: 0.45,
-      boostFovIncrease: 16,
+      boostFovIncrease: 14,
+      fovSpring: 30,        // 1/s², critically damped (settle ~0.6 s)
       fovRate: 5,           // 1/s, FOV ease (frame-rate independent)
       boostShakeRotation: 0.003, // × boost blend; subtle rumble, not jitter
       boostShakeFrequency: 11,
@@ -73,17 +94,18 @@ export const spaceConfig = {
       capDownRate: 8,       // 1/s, falls (approach braking stays crisp)
       jetSoften: 0.35,      // low level: accel + boost ramp × (1 − this)
     },
-    // Order must match chapterOrder (src/content/chapters.js).
-    // body: target key. distance: × body radius, from center.
-    // azimuth: rad from body→sun dir (0 = full lit, π = backlit).
-    // elevation: rad above ecliptic. lookShiftX/Y: aim offset, × radius
-    // (+X aim right → body sits left).
+    // Order must match chapterOrder (src/content/chapters.js). type:
+    //   surface:   Earth lat/lon (deg), alt km, heading (deg from N), pitch (deg), lookKm (aim distance)
+    //   body:      body key, distance × radius, azimuth (rad from body→sun), elevation (rad), lookShiftX/Y × radius
+    //   blackhole: deep body key, distanceRs, inclination (deg from disk normal), azimuth (deg in disk plane)
+    //   galactic:  pos / look in galaxy kpc (gx → sun, gz = north galactic pole)
+    //   galaxy:    neighbor key, distanceKpc, inclination (deg from disk normal), azimuth (deg)
     pageStops: [
-      { path: '/',         body: 'earth',   distance: 3.4, azimuth: 0.75, elevation: 0.2,  lookShiftX: 0.5,  lookShiftY: 0 },
-      { path: '/projects', body: 'mars',    distance: 3.2, azimuth: -0.8, elevation: 0.15, lookShiftX: -0.5, lookShiftY: 0 },
-      { path: '/journey',  body: 'jupiter', distance: 3.6, azimuth: 0.9,  elevation: 0.1,  lookShiftX: 0.55, lookShiftY: 0 },
-      { path: '/contact',  body: 'saturn',  distance: 6.5, azimuth: -0.7, elevation: 0.38, lookShiftX: -0.9, lookShiftY: 0 },
-      { path: '/chat',     body: 'neptune', distance: 3.4, azimuth: 1.1,  elevation: 0.12, lookShiftX: 0.5,  lookShiftY: 0 },
+      { path: '/',         type: 'surface',   lat: 60.372, lon: 5.288, alt: 0.75, heading: 42, pitch: -9, lookKm: 6 }, // Bergen
+      { path: '/projects', type: 'body',      body: 'earth', distance: 3.4, azimuth: 0.75, elevation: 0.2, lookShiftX: 0.5, lookShiftY: 0 },
+      { path: '/journey',  type: 'blackhole', key: 'sgra', distanceRs: 30, inclination: 80, azimuth: 25 },
+      { path: '/contact',  type: 'galactic',  pos: [30, -14, 32], look: [0, 0, 0] }, // whole Milky Way
+      { path: '/chat',     type: 'galaxy',    key: 'm31', distanceKpc: 95, inclination: 55, azimuth: 20 }, // Andromeda
     ],
   },
 

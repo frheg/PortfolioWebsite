@@ -12,3 +12,14 @@ export function setChapterOffsets(offsets) {
 export function getChapterOffsets() {
   return _offsets
 }
+
+// Travel ranges [startY, endY] per gap between chapters (LongPage spacers). Camera flies only inside these.
+let _travel = []
+
+export function setTravelRanges(ranges) {
+  _travel = ranges
+}
+
+export function getTravelRanges() {
+  return _travel
+}

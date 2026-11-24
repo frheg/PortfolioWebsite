@@ -184,6 +184,7 @@ export function collectFlightLabels(camera, width, height) {
     out.push({
       name: `${a.call}${a.type ? ` · ${a.type}` : ''}`,
       kind: 'plane',
+      dist,
       x: (_p.x * 0.5 + 0.5) * width,
       y: (-_p.y * 0.5 + 0.5) * height - 1,
       opacity: 1 - THREE.MathUtils.smoothstep(dist, cfg.labelRangeKm * 0.6, cfg.labelRangeKm),

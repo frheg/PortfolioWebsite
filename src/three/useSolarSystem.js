@@ -468,6 +468,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
   const placesRef = useRef([])
   const satellitesRef = useRef(null)
   const multiplayerRef = useRef(null)
+  const earthSpinOffsetRef = useRef(0) // rad; scroll mode → Bergen at a fixed local hour (eased)
   const sunGlowRef = useRef(null)
   const timeRef = useRef(0)
   const isExploreRef = useRef(isExplore)
@@ -703,7 +704,17 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
 
       if (def.realSpin) {
         // Greenwich (lon 0 = local +x) at RA = GMST. Same fn as satellite propagation → ground tracks match.
-        mesh.rotation.y = gstime(new Date(dateMsFromDaysSinceJ2000(simDays)))
+        // Scroll mode: + offset so the home stop (Bergen) sits at scroll.localHour (no black page at night). Explore: real.
+        const date = new Date(dateMsFromDaysSinceJ2000(simDays))
+        let target = 0
+        if (!explore) {
+          const sc = spaceConfig.camera.scroll
+          const localNow = date.getUTCHours() + date.getUTCMinutes() / 60 + sc.localHourLon / 15
+          const dh = ((((sc.localHour - localNow) % 24) + 36) % 24) - 12
+          target = (dh / 24) * TWO_PI
+        }
+        earthSpinOffsetRef.current += (target - earthSpinOffsetRef.current) * (1 - Math.exp(-1.5 * deltaSeconds))
+        mesh.rotation.y = gstime(date) + earthSpinOffsetRef.current
       } else if (!def.tidallyLocked && ROTATION_PERIOD_DAYS[def.key]) {
         mesh.rotation.y = def.rotationSign * ((spinDays / ROTATION_PERIOD_DAYS[def.key]) % 1) * TWO_PI
       }

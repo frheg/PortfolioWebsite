@@ -40,6 +40,7 @@ export default function FloatingNav() {
 
   return (
     <div
+      data-floating-nav
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)]"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >

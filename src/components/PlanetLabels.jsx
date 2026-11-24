@@ -32,6 +32,16 @@ const RANGE_FADE = 0.25     // last fraction of labelRange fades
 const FACTS_FULL_FACTOR = 5 // × radius (or factsRange × 0.4)
 const FACTS_SHOW_FACTOR = 12
 
+// Nearness 0..1 on a log scale between near and far (km) → bolder, larger, more opaque when close.
+function nearness(dist, near, far) {
+  const t = Math.log(Math.max(dist, near) / near) / Math.log(far / near)
+  return 1 - Math.min(1, Math.max(0, t))
+}
+const WEIGHTS = [400, 500, 600, 700, 800]
+const weightOf = (n) => WEIGHTS[Math.min(4, Math.round(n * 4))]
+// Per kind: [near, far] km (bodies: × radius).
+const NEAR_RANGE = { place: [3, 3000], player: [1, 1e7], satellite: [5, 30000], ufo: [5, 30000] }
+
 function smoothstep(edge0, edge1, x) {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)))
   return t * t * (3 - 2 * t)
@@ -107,7 +117,7 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
   const poolRef = useRef([]) // dense Earth names: reused label elements
 
   const register = (key, el) => {
-    if (el) elementsRef.current.set(key, { el, factsEl: el.querySelector('[data-facts]') })
+    if (el) elementsRef.current.set(key, { el, factsEl: el.querySelector('[data-facts]'), nameEl: el.querySelector('p') })
     else elementsRef.current.delete(key)
   }
 
@@ -138,7 +148,7 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
     const place = (body, w, h, focalPx) => {
       const refs = elementsRef.current.get(body.key)
       if (!refs) return
-      const { el, factsEl } = refs
+      const { el, factsEl, nameEl } = refs
       const hide = () => {
         if (el.style.opacity !== '0') el.style.opacity = '0'
       }
@@ -156,11 +166,15 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       const sx = (vec.x * 0.5 + 0.5) * w
       const sy = (-vec.y * 0.5 + 0.5) * h - radiusPx - (body.kind === 'place' ? 1 : 6)
       if (sx < -120 || sx > w + 120 || sy < -120 || sy > h + 120) return hide()
-      el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -100%)`
+      const [nr, fr] = NEAR_RANGE[body.kind] ?? (body.radius > 0 ? [body.radius * 4, body.radius * 4000] : [1e6, 1e14])
+      const n = nearness(dist, nr, fr)
+      el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -100%) scale(${(0.86 + 0.3 * n).toFixed(3)})`
+      const weight = String(weightOf(n))
+      if (nameEl && nameEl.style.fontWeight !== weight) nameEl.style.fontWeight = weight
 
       const rangeFade = Number.isFinite(range) ? 1 - smoothstep(range * (1 - RANGE_FADE), range, dist) : 1
       const sizeFade = 1 - smoothstep(NAME_HIDE_START * h, NAME_HIDE_END * h, radiusPx)
-      el.style.opacity = (rangeFade * sizeFade * extra).toFixed(3)
+      el.style.opacity = (rangeFade * sizeFade * extra * (0.6 + 0.4 * n)).toFixed(3)
 
       if (factsEl) {
         const factsFull = body.factsRange ? body.factsRange * 0.4 : body.radius * FACTS_FULL_FACTOR
@@ -201,8 +215,12 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
         if (el.textContent !== text) el.textContent = text
         el.dataset.kind = item.kind
         el.title = item.title ?? ''
-        el.style.transform = `translate(${item.x}px, ${item.y}px) translate(-50%, -100%)`
-        el.style.opacity = (item.opacity * earthWeight).toFixed(3)
+        // Close names: bolder + bigger (2 km → 400 km log scale).
+        const n = item.dist === undefined ? 0.5 : nearness(item.dist, 2, 400)
+        el.style.transform = `translate(${item.x}px, ${item.y}px) translate(-50%, -100%) scale(${(0.88 + 0.3 * n).toFixed(3)})`
+        const weight = String(weightOf(n))
+        if (el.style.fontWeight !== weight) el.style.fontWeight = weight
+        el.style.opacity = (item.opacity * earthWeight * (0.6 + 0.4 * n)).toFixed(3)
       })
     }
 

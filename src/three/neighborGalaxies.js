@@ -74,7 +74,7 @@ function buildUnit(def, count) {
 }
 
 // Disk basis in scene: major axis from PA on sky, normal tilted by inclination from line of sight.
-function diskBasis(def) {
+export function diskBasis(def) {
   const c = new THREE.Vector3(...raDecToScene(def.ra, def.dec, 1))
   const north = new THREE.Vector3(...raDecToScene(def.ra, def.dec + 0.05, 1)).sub(c).normalize()
   const east = new THREE.Vector3(...raDecToScene(def.ra + 0.05, def.dec, 1)).sub(c).normalize()

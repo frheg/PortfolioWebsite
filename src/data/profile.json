@@ -13,11 +13,11 @@
     "Masterstudent i programvareutvikling",
     "Backend, frontend, anvendt AI",
     "Agentic AI, LLM-rammeverk, lokale modeller",
-    "Student Software Engineer i Amitec"
+    "Fullstack-utvikler i TV 2 (deltid)"
   ],
   "currently": [
     "Master i programvareutvikling, UiB/HVL",
-    "Bygger en chatbot for internbruk hos Amitec",
+    "Jobber med anvendt AI i TV 2",
     "Utforsker agentic AI og lokale modelloppsett på fritiden"
   ],
   "interests": [
@@ -33,6 +33,12 @@
   "about": "Har en bachelorgrad i Informatikk: Datateknologi, tar en mastergrad i programvareutvikling. Bruker store deler av fritiden i ulike kaninhull om kvantedatamaskiner, AI/ML modeller og arkitekturer, low-level-programmering og mye mer. Jeg har som regel alltid noe jeg holder på med av teknologisk interesse.",
   "experience": [
     {
+      "title": "Fullstack Utvikler",
+      "company": "TV 2 Digital / Redaksjonell Utvikling",
+      "period": "september 2026 - nå",
+      "details": ["Jobber med å utvikle AI løsninger for interne verktøy."]
+    }, 
+    {
       "title": "Fullstack Utvikler - Sommer Internship",
       "company": "TV 2 Digital / Redaksjonell Utvikling",
       "period": "juni 2026 - august 2026",
@@ -41,7 +47,7 @@
     {
       "title": "Student Software Engineer",
       "company": "Amitec AS",
-      "period": "november 2024 - nå",
+      "period": "november 2024 - oktober 2026",
       "details": [
         "Hovedansvar for utvikling av en intern AI-chatbot og andre verktøy for behandling av sensitive data og bedrifts-kunnskapsbasen. Ansvar for hele tech-stacken samt oppsett av produksjonsmiljø på lokal produksjonsserver.",
         "Tidsseriedata-behandling via. AVEVA PI-systemer for ulike kunder i olje- og energisektoren."
