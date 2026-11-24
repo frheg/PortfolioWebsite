@@ -238,11 +238,11 @@ export const spaceConfig = {
       maxModels: 800,
       modelMinPx: 14,       // boat length on screen ≥ this (icon-ish when far)
     },
-    // Live flights via relay (ADS-B: adsb.fi / ADSB.lol). Polled for 1° grid point under camera.
+    // Flights: OpenSky snapshot via relay (GitHub Actions, ~5 min) → dead-reckoned; else simulated routes.
     flights: {
       maxAltKm: 1500,
       pollMs: 10_000,
-      maxExtrapolateS: 60,
+      maxExtrapolateS: 900, // snapshot age ≤ ~15 min (straight-line guess beyond the fix)
       modelKm: 0.04,        // ~airliner length
       modelMinPx: 16,
       maxModels: 600,

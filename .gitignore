@@ -44,3 +44,7 @@ src/assets/Models/**/*.pdf
 .env
 .env.*
 !.env.example
+
+# Local secrets (never commit)
+credentials.json
+*.credentials.json

@@ -640,8 +640,8 @@ export default function ExploreHud() {
             Satellitter: CelesTrak
           </a>
           {' · '}
-          <a href="https://adsb.fi" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
-            Fly: adsb.fi, ADSB.lol (ODbL)
+          <a href="https://opensky-network.org" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
+            Fly: OpenSky Network (øyeblikksbilde, ellers simulert)
           </a>
         </p>
       </div>

@@ -1,5 +1,5 @@
-// Live flights: ADS-B (adsb.fi open data / ADSB.lol, ODbL) via relay (CORS + 8 s edge cache).
-// Polls the 1° grid point under the camera (~220 km radius). Dead reckoning: ground speed, track, vertical rate.
+// Flights: OpenSky snapshot (GitHub Actions → relay, ~5 min old) or, if missing/stale/offline, simulated traffic.
+// Polls the 1° grid point under the camera (~250 km radius). Dead reckoning: ground speed, track, vertical rate.
 // Instanced low-poly planes in terrain's Earth-local group (spin with Earth), min on-screen size.
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
@@ -7,6 +7,7 @@ import { origin } from './floatingOrigin'
 import { getEarthFrame, getEarthHeightAt } from './earthTerrain'
 import { createVertexColorMaterial } from './bodyLod'
 import { getPlaneGeometry } from './vehicleModels'
+import { simulateFlights } from './flightSim'
 
 const cfg = spaceConfig.solarSystem.flights
 const KNOT_KMS = 0.000514444
@@ -15,6 +16,11 @@ const DEG = Math.PI / 180
 
 let state = null
 let flightsActive = false
+let simulated = false
+/** HUD / labels: current planes are simulated (no fresh live snapshot). */
+export function areFlightsSimulated() {
+  return simulated
+}
 /** HUD: attribution while planes render. */
 export function areFlightsActive() {
   return flightsActive
@@ -53,14 +59,26 @@ export function createFlights(group, R, sunDir, planetCenter) {
   let lastPoll = -Infinity
   let polling = false
 
+  const fetchLive = async (lat, lon) => {
+    if (!relay) return null
+    try {
+      const r = await fetch(`${relay}/flights?lat=${lat}&lon=${lon}`)
+      if (!r.ok) return null
+      const j = await r.json()
+      return j.stale ? null : (j.aircraft ?? j.ac ?? [])
+    } catch {
+      return null
+    }
+  }
+
   const poll = async (lat, lon) => {
     polling = true
     try {
-      const r = await fetch(`${relay}/flights?lat=${lat}&lon=${lon}`)
-      if (!r.ok) throw new Error(`flights ${r.status}`) // keep last list
-      const j = await r.json()
-      const rows = j.aircraft ?? j.ac ?? []
+      // Live snapshot if fresh, else simulated (same clock for everyone).
+      const live = await fetchLive(lat, lon)
       const now = Date.now()
+      simulated = live === null
+      const rows = live ?? simulateFlights(lat, lon, now)
       list.length = 0
       for (const a of rows) {
         if (typeof a.lat !== 'number' || typeof a.lon !== 'number') continue
@@ -81,8 +99,6 @@ export function createFlights(group, R, sunDir, planetCenter) {
         })
         if (list.length >= cfg.maxModels) break
       }
-    } catch {
-      // relay down / offline → keep last
     } finally {
       polling = false
     }
@@ -90,7 +106,7 @@ export function createFlights(group, R, sunDir, planetCenter) {
 
   /** camLocal: Earth-local km. camAlt: km. focalPx: px at 1 km. */
   const update = (camLocal, camAlt, focalPx) => {
-    const on = Boolean(relay) && camAlt < cfg.maxAltKm
+    const on = camAlt < cfg.maxAltKm
     planes.visible = on
     flightsActive = on && list.length > 0
     if (!on) return
@@ -99,6 +115,7 @@ export function createFlights(group, R, sunDir, planetCenter) {
     const lon = Math.round(Math.atan2(-d.z, d.x) / DEG)
     const now = Date.now()
     const key = `${lat}/${lon}`
+    const maxExtra = simulated ? cfg.pollMs / 1000 + 5 : cfg.maxExtrapolateS
     if (!polling && (key !== cell || now - lastPoll > cfg.pollMs)) {
       cell = key
       lastPoll = now
@@ -109,7 +126,7 @@ export function createFlights(group, R, sunDir, planetCenter) {
     const minScale = cfg.modelMinPx / Math.max(focalPx, 1)
     for (let i = 0; i < list.length; i += 1) {
       const a = list[i]
-      const dt = Math.min(Math.max((now - a.t) / 1000, 0), cfg.maxExtrapolateS)
+      const dt = Math.min(Math.max((now - a.t) / 1000, 0), maxExtra)
       const dist = a.gs * KNOT_KMS * dt
       const la = (a.lat + (dist * Math.cos(a.trk * DEG)) / R / DEG) * DEG
       const lo = (a.lon + (dist * Math.sin(a.trk * DEG)) / (R * Math.cos(a.lat * DEG)) / DEG) * DEG
@@ -170,7 +187,7 @@ export function collectFlightLabels(camera, width, height) {
       x: (_p.x * 0.5 + 0.5) * width,
       y: (-_p.y * 0.5 + 0.5) * height - 1,
       opacity: 1 - THREE.MathUtils.smoothstep(dist, cfg.labelRangeKm * 0.6, cfg.labelRangeKm),
-      title: `${alt < 1 ? `${Math.round(alt * 1000)} m` : `${alt.toFixed(1)} km`} · ${Math.round(a.gs)} kn`,
+      title: `${alt < 1 ? `${Math.round(alt * 1000)} m` : `${alt.toFixed(1)} km`} · ${Math.round(a.gs)} kn${simulated ? ' · simulert' : ''}`,
     })
   }
   return out

@@ -1,15 +1,16 @@
 // space-relay: tiny Cloudflare Worker (free tier). Relay + edge cache only, no heavy compute (10 ms CPU cap).
-//   GET /flights?lat=&lon=  → ADS-B aircraft round a 1° grid point (ADSB.lol → adsb.fi → OpenSky), cache 8 s, stale ≤ 5 min
+//   GET /flights?lat=&lon=  → aircraft within ~250 km of a 1° grid point, from the latest snapshot, cache 20 s
+//   POST /flights/snapshot  → snapshot from GitHub Actions (X-Snapshot-Key), stored in Flights DO
 //   GET /sats/:group        → CelesTrak GP JSON (whitelisted groups), cache 2 h → users never hit CelesTrak
 //   GET /mp (WebSocket)     → multiplayer room (Durable Object, hibernating)
 // Bodies streamed through untouched (no JSON parse → ~0 CPU).
 import { DurableObject } from 'cloudflare:workers'
 
 const SAT_GROUPS = new Set(['stations', 'visual', 'gps-ops', 'galileo', 'starlink'])
-const FLIGHT_RADIUS_NM = 120
-const FLIGHT_TTL_S = 8
+const FLIGHT_RADIUS_KM = 250
+const FLIGHT_TTL_S = 20
+const SNAPSHOT_STALE_S = 30 * 60 // older → { stale: true } → client simulates
 const SAT_TTL_S = 7200
-const STALE_S = 300 // all upstreams down → last good copy this long
 
 function allowedOrigin(origin, env) {
   if (!origin) return null
@@ -51,78 +52,20 @@ async function cached(ctx, key, ttl, fetchUpstream, staleTtl = ttl) {
 
 const UA = () => ({ headers: { 'User-Agent': 'space-relay (fredrichegland.no portfolio)' }, signal: AbortSignal.timeout(8_000) })
 
-// OpenSky OAuth2 (client credentials), optional: secrets OPENSKY_CLIENT_ID / OPENSKY_CLIENT_SECRET.
-// Token cached per isolate (~30 min). No secrets → anonymous (small shared quota).
-let osToken = null
-async function openSkyAuth(env) {
-  if (!env.OPENSKY_CLIENT_ID || !env.OPENSKY_CLIENT_SECRET) return {}
-  if (!osToken || Date.now() > osToken.exp) {
-    const res = await fetch('https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'client_credentials', client_id: env.OPENSKY_CLIENT_ID, client_secret: env.OPENSKY_CLIENT_SECRET }),
-      signal: AbortSignal.timeout(8_000),
-    })
-    if (!res.ok) return {}
-    const j = await res.json()
-    osToken = { value: j.access_token, exp: Date.now() + ((j.expires_in ?? 1800) - 60) * 1000 }
-  }
-  return { Authorization: `Bearer ${osToken.value}` }
-}
-
+// Flights: snapshot pushed by GitHub Actions (OpenSky, every ~5 min; Cloudflare IPs are blocked upstream).
+// Snapshot lives in the Flights Durable Object; GET filters round the 1° cell. Edge cache 20 s per cell.
 async function flights(url, ctx, env) {
   const lat = Math.round(Number(url.searchParams.get('lat')))
   const lon = Math.round(Number(url.searchParams.get('lon')))
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 85 || Math.abs(lon) > 180) return new Response('bad', { status: 400 })
-  return cached(
-    ctx,
-    `https://relay.cache/flights/${lat}/${lon}`,
-    FLIGHT_TTL_S,
-    async () => {
-      // Shared Cloudflare egress IPs get rate-limited → try each source in turn.
-      const sources = [
-        () => fetch(`https://api.adsb.lol/v2/point/${lat}/${lon}/${FLIGHT_RADIUS_NM}`, UA()),
-        () => fetch(`https://opendata.adsb.fi/api/v2/lat/${lat}/lon/${lon}/dist/${FLIGHT_RADIUS_NM}`, UA()),
-        () => openSky(lat, lon, env),
-      ]
-      // All fail → per-source statuses in X-Upstream (debug: which provider refuses).
-      const seen = []
-      for (const src of sources) {
-        const res = await src().catch((e) => new Response(null, { status: e?.name === 'TimeoutError' ? 504 : 503 }))
-        if (res.ok) return res
-        seen.push(res.status)
-      }
-      return new Response(null, { status: seen.at(-1) ?? 504, headers: { 'X-Upstream': `adsb.lol=${seen[0]},adsb.fi=${seen[1]},opensky=${seen[2]}` } })
-    },
-    STALE_S
+  return cached(ctx, `https://relay.cache/flights/${lat}/${lon}`, FLIGHT_TTL_S, () =>
+    env.FLIGHTS.get(env.FLIGHTS.idFromName('world')).fetch(`https://flights/near?lat=${lat}&lon=${lon}`)
   )
 }
 
-// OpenSky (anonymous) → readsb-shaped { ac: [...] }. Small box (±2°) → small JSON, cheap parse.
-async function openSky(lat, lon, env) {
-  const q = `lamin=${lat - 2}&lamax=${lat + 2}&lomin=${lon - 4}&lomax=${lon + 4}`
-  const opts = UA()
-  opts.headers = { ...opts.headers, ...(await openSkyAuth(env)) }
-  const res = await fetch(`https://opensky-network.org/api/states/all?${q}`, opts)
-  if (!res.ok) return res
-  const j = await res.json()
-  const now = j.time ?? Date.now() / 1000
-  const M_FT = 3.28084
-  const ac = (j.states ?? [])
-    .filter((s) => s[5] !== null && s[6] !== null)
-    .map((s) => ({
-      hex: s[0],
-      flight: s[1],
-      lon: s[5],
-      lat: s[6],
-      alt_baro: s[8] ? 'ground' : s[7] !== null ? Math.round(s[7] * M_FT) : undefined,
-      alt_geom: s[13] !== null ? Math.round(s[13] * M_FT) : undefined,
-      gs: s[9] !== null ? s[9] * 1.943844 : 0,
-      track: s[10] ?? 0,
-      geom_rate: s[11] !== null ? s[11] * M_FT * 60 : 0,
-      seen_pos: s[3] ? Math.max(0, now - s[3]) : 0,
-    }))
-  return new Response(JSON.stringify({ ac }), { headers: { 'Content-Type': 'application/json' } })
+async function flightSnapshot(request, env) {
+  if (!env.SNAPSHOT_KEY || request.headers.get('X-Snapshot-Key') !== env.SNAPSHOT_KEY) return new Response('forbidden', { status: 403 })
+  return env.FLIGHTS.get(env.FLIGHTS.idFromName('world')).fetch('https://flights/put', { method: 'POST', body: request.body })
 }
 
 async function sats(group, ctx) {
@@ -150,6 +93,7 @@ export default {
       const room = env.ROOM.get(env.ROOM.idFromName('global'))
       return room.fetch(request)
     }
+    if (url.pathname === '/flights/snapshot' && request.method === 'POST') return flightSnapshot(request, env)
     if (request.method !== 'GET') return new Response('method', { status: 405 })
     if (url.pathname === '/flights') return withCors(await flights(url, ctx, env), origin)
     const m = /^\/sats\/([a-z-]+)$/.exec(url.pathname)
@@ -243,5 +187,78 @@ export class Room extends DurableObject {
     } catch {
       // already closed
     }
+  }
+}
+
+// ─── Flights snapshot store ──────────────────────────────────────────────────
+// One instance. Snapshot { t, ac: [[hex, call, lat, lon, altFt (−1 = ground), gsKn, trk, vrateFtMin, tPos]] }
+// kept in memory, persisted in ≤ 1.9 MB chunks (SQLite value cap 2 MB) → survives eviction.
+const CHUNK = 1_900_000
+const KM_PER_DEG = 111.32
+
+export class Flights extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env)
+    this.snap = null
+  }
+
+  async load() {
+    if (this.snap) return this.snap
+    const n = await this.ctx.storage.get('n')
+    if (!n) return null
+    const parts = await this.ctx.storage.get(Array.from({ length: n }, (_, i) => `c${i}`))
+    this.snap = JSON.parse(Array.from({ length: n }, (_, i) => parts.get(`c${i}`)).join(''))
+    return this.snap
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url)
+    if (url.pathname === '/put') {
+      const text = await request.text()
+      let snap
+      try {
+        snap = JSON.parse(text)
+      } catch {
+        return new Response('bad json', { status: 400 })
+      }
+      if (!Array.isArray(snap.ac) || typeof snap.t !== 'number') return new Response('bad shape', { status: 400 })
+      const n = Math.ceil(text.length / CHUNK)
+      const entries = { n }
+      for (let i = 0; i < n; i += 1) entries[`c${i}`] = text.slice(i * CHUNK, (i + 1) * CHUNK)
+      await this.ctx.storage.put(entries)
+      this.snap = snap
+      return new Response(JSON.stringify({ ok: true, aircraft: snap.ac.length }), { headers: { 'Content-Type': 'application/json' } })
+    }
+
+    // /near: readsb-shaped { ac, now, snapshot, stale }. seen_pos = age of each fix (client dead-reckons).
+    const lat = Number(url.searchParams.get('lat'))
+    const lon = Number(url.searchParams.get('lon'))
+    const snap = await this.load()
+    const nowS = Date.now() / 1000
+    const head = { 'Content-Type': 'application/json' }
+    if (!snap || nowS - snap.t > SNAPSHOT_STALE_S) return new Response(JSON.stringify({ ac: [], stale: true, snapshot: snap?.t ?? null }), { headers: head })
+    const cosLat = Math.cos((lat * Math.PI) / 180)
+    const r2 = (FLIGHT_RADIUS_KM / KM_PER_DEG) ** 2
+    const ac = []
+    for (const [hex, call, la, lo, alt, gs, trk, vr, tPos] of snap.ac) {
+      let dLon = lo - lon
+      if (dLon > 180) dLon -= 360
+      if (dLon < -180) dLon += 360
+      const dLat = la - lat
+      if (dLat * dLat + (dLon * cosLat) ** 2 > r2) continue
+      ac.push({
+        hex,
+        flight: call,
+        lat: la,
+        lon: lo,
+        alt_baro: alt < 0 ? 'ground' : alt,
+        alt_geom: alt < 0 ? undefined : alt,
+        gs,
+        track: trk,
+        geom_rate: vr,
+        seen_pos: Math.max(0, nowS - tPos),
+      })
+    }
+    return new Response(JSON.stringify({ ac, now: nowS, snapshot: snap.t, stale: false }), { headers: head })
   }
 }
