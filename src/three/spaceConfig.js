@@ -166,6 +166,49 @@ export const spaceConfig = {
       workersMobile: 2,
       activeRadii: 12,      // render distance: × Earth radius from center
       baseSinkKm: 3,        // base sphere sinks under tiles (no z-fight)
+      // 3D buildings: OpenFreeMap (OpenMapTiles schema, OSM ODbL). z14 tiles around nadir.
+      buildings: {
+        tileJsonUrl: 'https://tiles.openfreemap.org/planet',
+        maxAltKm: 8,
+        radiusKm: 4,
+        radiusKmMobile: 2.5,
+        maxInFlight: 4,
+      },
+    },
+    // Live satellites: CelesTrak GP groups → SGP4 (satellite.js) at simulated time.
+    satellites: {
+      groups: [
+        { group: 'stations', color: 0xfab387, sizePx: 5 },
+        { group: 'visual', color: 0xffffff, sizePx: 3 },
+        { group: 'gps-ops', color: 0x89dceb, sizePx: 3 },
+        { group: 'galileo', color: 0x94e2d5, sizePx: 3 },
+        { group: 'starlink', color: 0xb4befe, sizePx: 2, lazy: true, loadWithinKm: 60_000, mobileLimit: 2500 },
+      ],
+      labeled: [
+        { key: 'iss', match: '^ISS \\(ZARYA\\)', name: 'ISS', facts: ['Den internasjonale romstasjonen', '~420 km høyde, ~7,66 km/s', 'Ett omløp ≈ 92 min', 'Bemannet siden 2000'] },
+        { key: 'css', match: '^CSS \\(TIANHE\\)', name: 'Tiangong', facts: ['Kinas romstasjon', '~390 km høyde'] },
+        { key: 'hst', match: '^HST$', name: 'Hubble', facts: ['Romteleskop, skutt opp 1990', '~530 km høyde'] },
+      ],
+      visibleKm: 400_000,   // from Earth center
+      labelRangeKm: 60_000,
+      trackPoints: 180,
+      trackVisibleKm: 120_000,
+      budget: 2500,         // SGP4 propagations per frame (rest extrapolated)
+      budgetMobile: 900,
+    },
+    // Live ships: Fintraffic Digitraffic AIS (Finnish/Baltic waters), CC BY 4.0.
+    ships: {
+      baseUrl: 'https://meri.digitraffic.fi/api/ais/v1',
+      bbox: [53.5, 9, 66, 31], // lat0, lon0, lat1, lon1
+      maxAltKm: 1500,
+      pollMs: 60_000,
+      windowMs: 15 * 60_000, // positions newer than this
+      metaEveryMs: 10 * 60_000,
+      maxShips: 20_000,
+      sizePx: 4,
+      maxExtrapolateS: 900,
+      labelRangeKm: 25,
+      maxLabels: 20,
     },
     // UFOs roam LEO-ish shell round Earth.
     ufo: {

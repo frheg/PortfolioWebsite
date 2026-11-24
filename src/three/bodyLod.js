@@ -191,6 +191,54 @@ export function createSurfaceMaterial(map, sunDir, options = {}) {
   })
 }
 
+const VCOLOR_VERT = /* glsl */ `
+#include <common>
+#include <logdepthbuf_pars_vertex>
+varying vec3 vNormalW;
+varying vec3 vColor;
+void main() {
+  vColor = color;
+  vNormalW = normalize(mat3(modelMatrix) * normal);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  #include <logdepthbuf_vertex>
+}
+`
+
+const VCOLOR_FRAG = /* glsl */ `
+#include <common>
+#include <logdepthbuf_pars_fragment>
+${SHADE_GLSL}
+varying vec3 vNormalW;
+varying vec3 vColor;
+void main() {
+  #include <logdepthbuf_fragment>
+  // Normals explicit from worker → no back-face flip (winding varies).
+  gl_FragColor = vec4(shadeBody(vColor, normalize(vNormalW)), 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}
+`
+
+/** Vertex-colored lit material (3D buildings). Same sun/ambient as bodies. */
+export function createVertexColorMaterial(sunDir) {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      map: { value: null },
+      uSunDir: sunDir,
+      uEmissive: { value: 0 },
+      uTint: { value: new THREE.Color(1, 1, 1) },
+      uTintMix: { value: 0 },
+      uNightMap: { value: null },
+      uNightGain: { value: 0 },
+      ...sharedLight,
+    },
+    vertexShader: VCOLOR_VERT,
+    fragmentShader: VCOLOR_FRAG,
+    vertexColors: true,
+    side: THREE.DoubleSide,
+  })
+}
+
 // ─── Shared GPU resources (module cache, reused across remounts) ─────────────
 
 const sphereCache = new Map()

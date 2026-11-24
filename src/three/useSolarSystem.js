@@ -9,6 +9,8 @@ import { sceneLoadingManager } from './sceneLoadingManager'
 import { origin, trackAnchor, untrackAnchor } from './floatingOrigin'
 import { createBodyLod } from './bodyLod'
 import { createEarthTerrain } from './earthTerrain'
+import { createSatellites } from './satellites'
+import { gstime } from 'satellite.js'
 import {
   daysSinceJ2000,
   dateMsFromDaysSinceJ2000,
@@ -550,6 +552,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
   const ufosRef = useRef([])
   const terrainRef = useRef(null)
   const placesRef = useRef([])
+  const satellitesRef = useRef(null)
   const sunGlowRef = useRef(null)
   const timeRef = useRef(0)
   const isExploreRef = useRef(isExplore)
@@ -700,6 +703,8 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
       () => rendererRef?.current?.getPixelRatio() ?? 1
     )
     terrainRef.current = terrain
+    const satellites = createSatellites(bodyMap.get('earth'), isMobileDevice())
+    satellitesRef.current = satellites
     const earthEntry = collisions.find((c) => c.key === 'earth')
     earthEntry.heightAt = terrain.heightAt
 
@@ -720,6 +725,8 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
       Object.values(textures).forEach((t) => t.dispose())
       terrain.dispose()
       terrainRef.current = null
+      satellites.dispose()
+      satellitesRef.current = null
       setPoiGroup('places', [])
       placesRef.current = []
       bodyMapRef.current = new Map()
@@ -772,8 +779,8 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
       }
 
       if (def.realSpin) {
-        // Greenwich (lon 0 = local +x) at RA = GMST (Earth rotation angle, IERS).
-        mesh.rotation.y = ((0.779057273264 + 1.0027378119113546 * simDays) % 1) * TWO_PI
+        // Greenwich (lon 0 = local +x) at RA = GMST. Same fn as satellite propagation → ground tracks match.
+        mesh.rotation.y = gstime(new Date(dateMsFromDaysSinceJ2000(simDays)))
       } else if (!def.tidallyLocked && ROTATION_PERIOD_DAYS[def.key]) {
         mesh.rotation.y = def.rotationSign * ((spinDays / ROTATION_PERIOD_DAYS[def.key]) % 1) * TWO_PI
       }
@@ -801,6 +808,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
       const focalPx = window.innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
       bodyMap.forEach(({ world, lod }) => lod.update(world, origin, focalPx))
       terrainRef.current?.update(focalPx, explore)
+      satellitesRef.current?.update()
     }
 
     // Sun glow pulse + slow spike spin.

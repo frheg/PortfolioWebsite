@@ -8,6 +8,8 @@ import { spaceConfig } from './spaceConfig'
 import { createSurfaceMaterial } from './bodyLod'
 import { origin } from './floatingOrigin'
 import { quality } from './qualityRuntime'
+import { createBuildings } from './buildings'
+import { createShips } from './ships'
 
 const cfg = spaceConfig.solarSystem.earthTerrain
 
@@ -59,6 +61,8 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
   const group = new THREE.Group()
   group.visible = false
   earth.tiltGroup.add(group)
+  const buildings = createBuildings(group, earth.lod.sunDir, R, isMobile)
+  const ships = createShips(group, R)
 
   // Pool: decode + normal maps are CPU-heavy → spread over cores. Same-parent tiles → same worker (cache hits).
   const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4
@@ -330,7 +334,10 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     group.visible = active
     // Sink base sphere under tiles while active.
     earth.mesh.scale.setScalar(active ? R - cfg.baseSinkKm : R)
-    if (!active) return
+    if (!active) {
+      buildings.update(_camLocal, Infinity) // drops all
+      return
+    }
 
     _q.copy(frameState.quaternion)
     _qi.copy(_q).invert()
@@ -338,6 +345,8 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     _camLocal.subVectors(origin, earth.world).applyQuaternion(_qi)
     camDist = _camLocal.length()
     horizonCos = R / camDist
+    buildings.update(_camLocal, camDist - R)
+    ships.update(_camLocal, camDist - R)
     focal = focalPx * pixelRatio() // SSE in device px (HiDPI → finer tiles)
 
     visible.length = 0
@@ -444,6 +453,8 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
   const dispose = () => {
     if (import.meta.env.DEV) delete window.__earth
     workers.forEach((w) => w.terminate())
+    buildings.dispose()
+    ships.dispose()
     ;[...tiles.values()].forEach(disposeTile)
     earth.tiltGroup.remove(group)
     earth.mesh.scale.setScalar(R)

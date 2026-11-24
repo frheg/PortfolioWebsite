@@ -7,9 +7,10 @@ import { origin } from '../three/floatingOrigin'
 import { planetFacts } from '../data/planetFacts'
 import { spaceConfig } from '../three/spaceConfig'
 import { collectEarthNames } from '../three/earthNames'
+import { collectShipLabels } from '../three/ships'
 
 const NAME_POOL = 70
-const NAME_MARK = { city: '•', mountain: '▲', landmark: '◆' }
+const NAME_MARK = { city: '•', mountain: '▲', landmark: '◆', ship: '⛴' }
 
 // One label per UFO instance.
 const ufoBase = planetFacts.find((p) => p.key === 'ufo')
@@ -186,7 +187,8 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       getPoiBodies().forEach((body) => place(body, w, h, focalPx))
 
       // Dense names: only while Earth is (part of) the focus.
-      const names = focus.key === 'earth' || focus.f < 0.5 ? collectEarthNames(cam, w, h) : []
+      const names =
+        focus.key === 'earth' || focus.f < 0.5 ? [...collectShipLabels(cam, w, h), ...collectEarthNames(cam, w, h)].slice(0, NAME_POOL) : []
       const earthWeight = focus.key === 'earth' ? 1 : 1 - focus.f
       poolRef.current.forEach((el, i) => {
         const item = names[i]
@@ -197,6 +199,7 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
         const text = (NAME_MARK[item.kind] ? NAME_MARK[item.kind] + ' ' : '') + item.name
         if (el.textContent !== text) el.textContent = text
         el.dataset.kind = item.kind
+        el.title = item.title ?? ''
         el.style.transform = `translate(${item.x}px, ${item.y}px) translate(-50%, -100%)`
         el.style.opacity = (item.opacity * earthWeight).toFixed(3)
       })
@@ -220,7 +223,7 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
         <p
           key={`name_${i}`}
           ref={(el) => (poolRef.current[i] = el)}
-          className="absolute left-0 top-0 select-none whitespace-nowrap text-[0.62rem] font-medium tracking-[0.03em] text-white/85 data-[kind=water]:italic data-[kind=water]:text-sky-200/75 data-[kind=region]:uppercase data-[kind=region]:tracking-[0.3em] data-[kind=region]:text-white/65"
+          className="absolute left-0 top-0 select-none whitespace-nowrap text-[0.62rem] font-medium tracking-[0.03em] text-white/85 data-[kind=water]:italic data-[kind=water]:text-sky-200/75 data-[kind=region]:uppercase data-[kind=region]:tracking-[0.3em] data-[kind=region]:text-white/65 data-[kind=ship]:text-cyan-100"
           style={{ opacity: 0, textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.6)' }}
         />
       ))}

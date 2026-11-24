@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [react()],
   // Custom domain deployment (fredrichegland.no): use root base so assets resolve at domain root
   base: '/',
+  // ES workers (all ours are type: 'module'; satellite.js' optional wasm worker uses top-level await).
+  worker: { format: 'es' },
   // Dev only: tailnet access via MagicDNS (kratos, kratos.<tailnet>.ts.net).
   server: {
     allowedHosts: ['kratos', '.ts.net'],

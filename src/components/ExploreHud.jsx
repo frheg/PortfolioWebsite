@@ -570,6 +570,18 @@ export default function ExploreHud() {
           <a href="https://www.geonames.org" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
             Stedsnavn: GeoNames (CC BY 4.0), Natural Earth
           </a>
+          {' · '}
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
+            Bygninger: © OpenStreetMap, OpenMapTiles (OpenFreeMap)
+          </a>
+          {' · '}
+          <a href="https://www.digitraffic.fi" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
+            Skip: Fintraffic Digitraffic (CC BY 4.0)
+          </a>
+          {' · '}
+          <a href="https://celestrak.org" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
+            Satellitter: CelesTrak
+          </a>
         </p>
       </div>
 

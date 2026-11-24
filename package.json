@@ -11,11 +11,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mapbox/vector-tile": "^3.0.0",
     "@mlc-ai/web-llm": "^0.2.84",
+    "earcut": "^3.2.4",
     "gsap": "^3.15.0",
+    "pbf": "^5.2.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.17.0",
+    "satellite.js": "^7.2.0",
     "three": "^0.170.0"
   },
   "devDependencies": {
