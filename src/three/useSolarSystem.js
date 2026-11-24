@@ -513,7 +513,7 @@ function buildPlaces(bodyMap) {
     if (!body) return
     list.forEach((def, i) => {
       const lat = THREE.MathUtils.degToRad(def.lat)
-      const lon = THREE.MathUtils.degToRad(def.lon)
+      const lon = THREE.MathUtils.degToRad(def.lon + (body.def.textureLonOffset ?? 0))
       const place = {
         key: `place_${key}_${i}`,
         kind: 'place',
