@@ -1,6 +1,7 @@
 // Live satellites: CelesTrak GP (OMM JSON) → SGP4 (satellite.js) at the *simulated* time.
 // Frame: Earth tilt group (equatorial, no spin). TEME/ECI (x, y, z=north) → local (x, z, -y).
 // Round-robin propagation budget per frame + velocity extrapolation → thousands at 60 fps.
+// Earth shadow: cylinder behind Earth (sun-ward axis), soft edge → sats fade into eclipse.
 // Data cached 6 h in localStorage (CelesTrak asks: don't re-download more often than needed).
 import * as THREE from 'three'
 import { json2satrec, propagate } from 'satellite.js'
@@ -56,6 +57,8 @@ const eciToLocal = (p, out, i) => {
 }
 
 const _q = new THREE.Quaternion()
+const _sun = new THREE.Vector3()
+const SHADOW_FLOOR = 0.06 // eclipsed brightness (earthshine-ish)
 
 /** earth: bodyMap entry (world, tiltGroup). */
 export function createSatellites(earth, isMobile) {
@@ -84,6 +87,8 @@ export function createSatellites(earth, isMobile) {
     const geometry = new THREE.BufferGeometry()
     const attr = new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage)
     geometry.setAttribute('position', attr)
+    const light = new THREE.BufferAttribute(new Float32Array(n * 3).fill(1), 3).setUsage(THREE.DynamicDrawUsage)
+    geometry.setAttribute('color', light)
     geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6)
     const points = new THREE.Points(
       geometry,
@@ -92,6 +97,7 @@ export function createSatellites(earth, isMobile) {
         size: def.sizePx,
         sizeAttenuation: false,
         map: getDot(),
+        vertexColors: true,
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
@@ -99,7 +105,7 @@ export function createSatellites(earth, isMobile) {
     )
     points.frustumCulled = false
     root.add(points)
-    sets.push({ def, recs, names, pos, vel, tSat, attr, points, cursor: 0 })
+    sets.push({ def, recs, names, pos, vel, tSat, attr, light, points, cursor: 0 })
 
     for (const spec of cfg.labeled) {
       const i = names.findIndex((nm) => new RegExp(spec.match).test(nm))
@@ -157,6 +163,13 @@ export function createSatellites(earth, isMobile) {
 
     const nowMs = getSimulatedDateMs()
     const date = new Date(nowMs)
+    // Sun dir in tilt-local frame (lod.sunDir: world, Earth → Sun).
+    earth.tiltGroup.getWorldQuaternion(_q)
+    _sun.copy(earth.lod.sunDir.value).applyQuaternion(_q.invert())
+    const R = earth.def.radius
+    const sx = _sun.x
+    const sy = _sun.y
+    const sz = _sun.z
     let budget = isMobile ? cfg.budgetMobile : cfg.budget
     for (const s of sets) {
       const n = s.recs.length
@@ -173,6 +186,7 @@ export function createSatellites(earth, isMobile) {
       }
       // Everyone: extrapolate from last fix (km/s · s).
       const out = s.attr.array
+      const { light } = s
       for (let i = 0; i < n; i += 1) {
         if (Number.isNaN(s.tSat[i])) {
           out[i * 3] = out[i * 3 + 1] = out[i * 3 + 2] = 0
@@ -182,8 +196,21 @@ export function createSatellites(earth, isMobile) {
         out[i * 3] = s.pos[i * 3] + s.vel[i * 3] * dt
         out[i * 3 + 1] = s.pos[i * 3 + 1] + s.vel[i * 3 + 1] * dt
         out[i * 3 + 2] = s.pos[i * 3 + 2] + s.vel[i * 3 + 2] * dt
+        // Eclipse: behind Earth + inside shadow cylinder.
+        const x = out[i * 3]
+        const y = out[i * 3 + 1]
+        const z = out[i * 3 + 2]
+        const along = x * sx + y * sy + z * sz
+        let b = 1
+        if (along < 0) {
+          const perp = Math.sqrt(Math.max(0, x * x + y * y + z * z - along * along))
+          const t = Math.min(1, Math.max(0, (perp - R * 0.985) / (R * 0.03)))
+          b = SHADOW_FLOOR + (1 - SHADOW_FLOOR) * t * t * (3 - 2 * t)
+        }
+        light.array[i * 3] = light.array[i * 3 + 1] = light.array[i * 3 + 2] = b
       }
       s.attr.needsUpdate = true
+      light.needsUpdate = true
       s.points.geometry.setDrawRange(0, n)
     }
 

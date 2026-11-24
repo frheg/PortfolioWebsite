@@ -209,11 +209,22 @@ uniform vec3 uPlanetCenter; // render space
 varying vec3 vNormalW;
 varying vec3 vColor;
 varying vec3 vUpW;
+varying vec2 vUv;
 void main() {
+  vec4 p = vec4(position, 1.0);
+  vUv = uv;
+  vec3 n = normal;
   vColor = color;
-  vNormalW = normalize(mat3(modelMatrix) * normal);
-  vUpW = normalize((modelMatrix * vec4(position, 1.0)).xyz - uPlanetCenter);
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  #ifdef USE_INSTANCING
+    p = instanceMatrix * p;
+    n = mat3(instanceMatrix) * n;
+  #endif
+  #ifdef USE_INSTANCING_COLOR
+    vColor *= instanceColor;
+  #endif
+  vNormalW = normalize(mat3(modelMatrix) * n);
+  vUpW = normalize((modelMatrix * p).xyz - uPlanetCenter);
+  gl_Position = projectionMatrix * modelViewMatrix * p;
   #include <logdepthbuf_vertex>
 }
 `
@@ -225,20 +236,35 @@ ${SHADE_GLSL}
 varying vec3 vNormalW;
 varying vec3 vColor;
 varying vec3 vUpW;
+varying vec2 vUv;
+uniform sampler2D uImagery;
+uniform float uImageryMix; // 0 = vertex colors only
 void main() {
   #include <logdepthbuf_fragment>
   // Normals explicit from worker → no back-face flip (winding varies).
-  gl_FragColor = vec4(shadeBodyShadowed(vColor, normalize(vNormalW), normalize(vUpW)), 1.0);
+  vec3 nW = normalize(vNormalW);
+  vec3 upW = normalize(vUpW);
+  vec3 albedo = vColor;
+  if (uImageryMix > 0.0) {
+    // Draped orthophoto: roofs = imagery, walls = facade tinted by imagery (Google-Earth-ish).
+    vec3 img = texture2D(uImagery, vUv).rgb;
+    float roof = smoothstep(0.5, 0.8, dot(nW, upW));
+    vec3 wall = mix(vColor * 0.7, img * 1.5, 0.45);
+    albedo = mix(albedo, mix(wall, img * 1.1, roof), uImageryMix);
+  }
+  gl_FragColor = vec4(shadeBodyShadowed(albedo, nW, upW), 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }
 `
 
-/** Vertex-colored lit material (3D buildings). Same sun/ambient as bodies. */
-export function createVertexColorMaterial(sunDir, planetCenter) {
+/** Vertex-colored lit material (3D buildings, instanced vehicles). Same sun/ambient as bodies. imagery: draped texture (uv). */
+export function createVertexColorMaterial(sunDir, planetCenter, imagery = null) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uPlanetCenter: { value: planetCenter }, // live ref (anchor.position, render space)
+      uImagery: { value: imagery },
+      uImageryMix: { value: imagery ? 1 : 0 },
       map: { value: null },
       uSunDir: sunDir,
       uEmissive: { value: 0 },

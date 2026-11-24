@@ -36,6 +36,11 @@ let latLonFn = null
 export function getEarthLatLon(worldPos) {
   return terrainActive && latLonFn ? latLonFn(worldPos) : null
 }
+let heightFn = null
+/** Ground height (km above R) under a world pos; 0 while tiles off. Labels sit on this. */
+export function getEarthHeightAt(worldPos) {
+  return terrainActive && heightFn ? heightFn(worldPos) : 0
+}
 /** HUD: show attribution while tiles are on. */
 export function isEarthTerrainActive() {
   return terrainActive
@@ -62,7 +67,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
   group.visible = false
   earth.tiltGroup.add(group)
   const buildings = createBuildings(group, earth.lod.sunDir, earth.anchor.position, R, isMobile)
-  const ships = createShips(group, R)
+  const ships = createShips(group, R, earth.lod.sunDir, earth.anchor.position)
 
   // Pool: decode + normal maps are CPU-heavy → spread over cores. Same-parent tiles → same worker (cache hits).
   const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4
@@ -346,7 +351,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     camDist = _camLocal.length()
     horizonCos = R / camDist
     buildings.update(_camLocal, camDist - R)
-    ships.update(_camLocal, camDist - R)
+    ships.update(_camLocal, camDist - R, focalPx)
     focal = focalPx * pixelRatio() // SSE in device px (HiDPI → finer tiles)
 
     visible.length = 0
@@ -462,5 +467,6 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     earthFrame = null
   }
 
+  heightFn = heightAt
   return { update, heightAt, dispose }
 }

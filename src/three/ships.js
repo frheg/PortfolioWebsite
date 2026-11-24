@@ -1,7 +1,10 @@
 // Live Baltic ships: Fintraffic Digitraffic AIS (CC BY 4.0), polled ~1/min while you're near the region.
 // Dead reckoning (speed + course) between polls → smooth, real-time motion.
 // Points live in terrain's Earth-local group (spin with Earth). Names via pooled labels up close.
+// Near camera: instanced low-poly boats (AIS length, heading), min on-screen size → readable icons.
 import * as THREE from 'three'
+import { createVertexColorMaterial } from './bodyLod'
+import { getBoatGeometry } from './vehicleModels'
 import { spaceConfig } from './spaceConfig'
 import { origin } from './floatingOrigin'
 import { getEarthFrame } from './earthTerrain'
@@ -30,7 +33,17 @@ export function areShipsActive() {
   return shipsActive
 }
 
-export function createShips(group, R) {
+const _m = new THREE.Matrix4()
+const _f = new THREE.Vector3()
+const _u = new THREE.Vector3()
+const _e = new THREE.Vector3()
+const _up = new THREE.Vector3()
+const _n = new THREE.Vector3()
+const _s = new THREE.Vector3()
+const _c = new THREE.Color()
+
+/** sunDir / planetCenter: shared lighting (see createVertexColorMaterial). */
+export function createShips(group, R, sunDir, planetCenter) {
   const max = cfg.maxShips
   const geometry = new THREE.BufferGeometry()
   const pos = new THREE.BufferAttribute(new Float32Array(max * 3), 3).setUsage(THREE.DynamicDrawUsage)
@@ -44,6 +57,14 @@ export function createShips(group, R) {
   )
   points.frustumCulled = false
   group.add(points)
+
+  const boats = new THREE.InstancedMesh(getBoatGeometry(), createVertexColorMaterial(sunDir, planetCenter), cfg.maxModels)
+  boats.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
+  boats.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cfg.maxModels * 3), 3)
+  boats.count = 0
+  boats.frustumCulled = false
+  group.add(boats)
+  const near = [] // scratch: { i, d }
 
   const ships = [] // { mmsi, lat, lon, sog, cog, t, type, name, dest }
   const meta = new Map()
@@ -73,6 +94,8 @@ export function createShips(group, R) {
           lat: f.geometry.coordinates[1],
           sog: p.sog > 102 ? 0 : p.sog, // 102.3 = n/a
           cog: p.cog >= 360 ? 0 : p.cog,
+          hdg: p.heading < 360 ? p.heading : p.cog >= 360 ? 0 : p.cog,
+          lenM: m && m.referencePointA + m.referencePointB > 0 ? m.referencePointA + m.referencePointB : 40,
           t: p.timestampExternal,
           type: m?.shipType ?? 0,
           name: m?.name?.trim() || `MMSI ${p.mmsi}`,
@@ -93,16 +116,17 @@ export function createShips(group, R) {
   const local = new Float32Array(max * 3)
   state = { ships, local, R }
 
-  /** camLocal: Earth-local km. camAlt: km. */
-  const update = (camLocal, camAlt) => {
+  /** camLocal: Earth-local km. camAlt: km. focalPx: px per unit at 1 km. */
+  const update = (camLocal, camAlt, focalPx) => {
     const d = camLocal.clone().normalize()
     const lat = Math.asin(d.y) / DEG
     const lon = Math.atan2(-d.z, d.x) / DEG
     const [la0, lo0, la1, lo1] = cfg.bbox
-    const near = camAlt < cfg.maxAltKm && lat > la0 - 5 && lat < la1 + 5 && lon > lo0 - 8 && lon < lo1 + 8
-    points.visible = near
-    shipsActive = near && ships.length > 0
-    if (!near) return
+    const inRegion = camAlt < cfg.maxAltKm && lat > la0 - 5 && lat < la1 + 5 && lon > lo0 - 8 && lon < lo1 + 8
+    points.visible = inRegion
+    boats.visible = inRegion
+    shipsActive = inRegion && ships.length > 0
+    if (!inRegion) return
     const now = Date.now()
     if (!polling && now - lastPoll > cfg.pollMs) {
       lastPoll = now
@@ -123,13 +147,49 @@ export function createShips(group, R) {
       arr[i * 3 + 2] = -Math.sin(lo) * c * r
     }
     local.set(arr.subarray(0, ships.length * 3))
+
+    // Models: nearest within range (cap). Their points parked at Earth center (depth-hidden).
+    near.length = 0
+    const r2 = cfg.modelRangeKm * cfg.modelRangeKm
+    for (let i = 0; i < ships.length; i += 1) {
+      const dx = local[i * 3] - camLocal.x
+      const dy = local[i * 3 + 1] - camLocal.y
+      const dz = local[i * 3 + 2] - camLocal.z
+      const d2 = dx * dx + dy * dy + dz * dz
+      if (d2 < r2) near.push({ i, d: Math.sqrt(d2) })
+    }
+    if (near.length > cfg.maxModels) near.sort((a, b) => a.d - b.d).length = cfg.maxModels
+    const minScale = cfg.modelMinPx / Math.max(focalPx, 1) // km per km of distance
+    near.forEach(({ i, d }, k) => {
+      const s = ships[i]
+      _u.set(local[i * 3], local[i * 3 + 1], local[i * 3 + 2])
+      const up = _up.copy(_u).normalize()
+      // Heading: 0 = north (toward +y pole), 90 = east. East = north × up... ENU: e = n̂pole × up.
+      _e.set(0, 1, 0).cross(up).normalize()
+      const north = _n.copy(up).cross(_e)
+      const h = s.hdg * DEG
+      _f.copy(north).multiplyScalar(Math.cos(h)).addScaledVector(_e, Math.sin(h))
+      const side = _s.copy(_f).cross(up)
+      const scale = Math.max(s.lenM / 1000, d * minScale)
+      _m.makeBasis(_f.multiplyScalar(scale), up.multiplyScalar(scale), side.multiplyScalar(scale)).setPosition(_u)
+      boats.setMatrixAt(k, _m)
+      const tc = typeColor(s.type)
+      boats.setColorAt(k, _c.setRGB(tc[0], tc[1], tc[2]))
+      arr[i * 3] = arr[i * 3 + 1] = arr[i * 3 + 2] = 0
+    })
+    boats.count = near.length
+    boats.instanceMatrix.needsUpdate = true
+    if (boats.instanceColor) boats.instanceColor.needsUpdate = true
     pos.needsUpdate = true
   }
 
   const dispose = () => {
     group.remove(points)
+    group.remove(boats)
     geometry.dispose()
     points.material.dispose()
+    boats.material.dispose()
+    boats.dispose()
     state = null
     shipsActive = false
   }
@@ -156,7 +216,7 @@ export function collectShipLabels(camera, width, height) {
       name: `${s.name}${speed}`,
       kind: 'ship',
       x: (_p.x * 0.5 + 0.5) * width,
-      y: (-_p.y * 0.5 + 0.5) * height - 4,
+      y: (-_p.y * 0.5 + 0.5) * height - 1,
       opacity: 1 - THREE.MathUtils.smoothstep(dist, cfg.labelRangeKm * 0.6, cfg.labelRangeKm),
       title: `${TYPE_NAME(s.type)}${s.dest ? ` → ${s.dest}` : ''}`,
     })

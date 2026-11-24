@@ -153,7 +153,7 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       vec.copy(rel).project(camera())
       const radiusPx = (body.radius / dist) * focalPx
       const sx = (vec.x * 0.5 + 0.5) * w
-      const sy = (-vec.y * 0.5 + 0.5) * h - radiusPx - 6
+      const sy = (-vec.y * 0.5 + 0.5) * h - radiusPx - (body.kind === 'place' ? 1 : 6)
       if (sx < -120 || sx > w + 120 || sy < -120 || sy > h + 120) return hide()
       el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -100%)`
 

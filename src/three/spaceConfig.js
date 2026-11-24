@@ -172,6 +172,7 @@ export const spaceConfig = {
         maxAltKm: 8,
         radiusKm: 4,
         radiusKmMobile: 2.5,
+        imageryNearKm: 1.5,  // roof imagery z16 inside, z15 beyond
         maxInFlight: 4,
       },
     },
@@ -209,6 +210,9 @@ export const spaceConfig = {
       maxExtrapolateS: 900,
       labelRangeKm: 25,
       maxLabels: 20,
+      modelRangeKm: 80,     // instanced boats within this of camera
+      maxModels: 800,
+      modelMinPx: 14,       // boat length on screen ≥ this (icon-ish when far)
     },
     // UFOs roam LEO-ish shell round Earth.
     ufo: {

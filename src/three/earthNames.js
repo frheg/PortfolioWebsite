@@ -3,7 +3,7 @@
 // screen-space declutter → ≤ MAX labels. Rendered by a fixed DOM pool (PlanetLabels).
 import * as THREE from 'three'
 import { origin } from './floatingOrigin'
-import { getEarthFrame } from './earthTerrain'
+import { getEarthFrame, getEarthHeightAt } from './earthTerrain'
 import { surfacePlaces } from '../data/surfacePlaces'
 
 const MAX_LABELS = 70
@@ -62,6 +62,7 @@ async function load() {
 const _qi = new THREE.Quaternion()
 const _camLocal = new THREE.Vector3()
 const _p = new THREE.Vector3()
+const _g = new THREE.Vector3()
 const candidates = []
 const placed = []
 
@@ -105,7 +106,10 @@ export function collectEarthNames(camera, width, height) {
   const out = []
   for (const i of candidates) {
     if (out.length >= MAX_LABELS) break
-    _p.set(dirs[i * 3], dirs[i * 3 + 1], dirs[i * 3 + 2]).multiplyScalar(R + 0.05).applyQuaternion(frame.quaternion).add(frame.world).sub(origin)
+    // On the ground (terrain height) → no float above surface when low.
+    _p.set(dirs[i * 3], dirs[i * 3 + 1], dirs[i * 3 + 2]).applyQuaternion(frame.quaternion)
+    _g.copy(_p).multiplyScalar(R).add(frame.world)
+    _p.multiplyScalar(R + getEarthHeightAt(_g) + 0.002).add(frame.world).sub(origin)
     _p.project(camera)
     if (_p.z > 1 || Math.abs(_p.x) > 1.05 || Math.abs(_p.y) > 1.05) continue
     const x = (_p.x * 0.5 + 0.5) * width

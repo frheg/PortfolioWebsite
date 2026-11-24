@@ -1,6 +1,7 @@
 // 3D buildings around the camera (Earth, low altitude). OpenFreeMap vector tiles (OSM, ODbL).
 // z14 tiles within radiusKm of nadir, nearest first, unload beyond 1.5× → small, steady memory.
 // Lives in terrain's Earth-local group (spins with Earth). Worker extrudes + seats on ground.
+// Roofs draped with Esri orthophoto (z16 near, z15 farther) → per-tile texture + material (shared program).
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { createVertexColorMaterial } from './bodyLod'
@@ -34,11 +35,14 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
     .catch(() => {})
 
   worker.onmessage = (event) => {
-    const { id, error, empty, center, positions, normals, colors, indices } = event.data
+    const { id, error, empty, center, positions, normals, colors, uvs, indices, imagery } = event.data
     const t = pending.get(id)
     pending.delete(id)
     inFlight -= 1
-    if (!t || t.state !== 'loading') return
+    if (!t || t.state !== 'loading') {
+      imagery?.close()
+      return
+    }
     if (error || empty) {
       t.state = 'empty'
       return
@@ -47,9 +51,19 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3, true))
+    geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
     geometry.setIndex(new THREE.BufferAttribute(indices, 1))
     geometry.computeBoundingSphere()
-    t.mesh = new THREE.Mesh(geometry, material)
+    let mat = material
+    if (imagery) {
+      const tex = new THREE.Texture(imagery)
+      tex.flipY = false // ImageBitmap: rows top-down = uv.y down
+      tex.colorSpace = THREE.SRGBColorSpace
+      tex.anisotropy = 4
+      tex.needsUpdate = true
+      mat = createVertexColorMaterial(sunDir, planetCenter, tex)
+    }
+    t.mesh = new THREE.Mesh(geometry, mat)
     t.mesh.position.set(center[0], center[1], center[2])
     group.add(t.mesh)
     t.state = 'ready'
@@ -59,6 +73,12 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
     if (t.mesh) {
       group.remove(t.mesh)
       t.mesh.geometry.dispose()
+      if (t.mesh.material !== material) {
+        const tex = t.mesh.material.uniforms.uImagery.value
+        tex.image?.close?.()
+        tex.dispose()
+        t.mesh.material.dispose()
+      }
     }
     t.state = 'dropped'
     tiles.delete(key)
@@ -103,7 +123,7 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
       tiles.set(w.key, t)
       pending.set(id, t)
       inFlight += 1
-      worker.postMessage({ id, z: Z, x: w.x, y: w.y, url: urlTemplate, terrainUrl: terrainCfg.terrainUrl, terrainZ: terrainCfg.terrainMaxZoom, radius: R })
+      worker.postMessage({ id, z: Z, x: w.x, y: w.y, url: urlTemplate, terrainUrl: terrainCfg.terrainUrl, terrainZ: terrainCfg.terrainMaxZoom, radius: R, imageryUrl: terrainCfg.closeImageryUrl, imgZ: w.distKm < cfg.imageryNearKm ? 16 : 15 })
     }
     // Unload outside reach (hysteresis: only when not wanted at all).
     tiles.forEach((t, k) => {

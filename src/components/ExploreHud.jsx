@@ -1,4 +1,4 @@
-// Explore HUD: minimap (sol / lokal / galakse), attitude indicator (horizon + heading tape), flight stats.
+// Explore HUD: minimap (planet / sol / lokal / galakse / gruppe), attitude indicator (horizon + heading tape), flight stats.
 // One rAF loop → canvas draws + DOM text, no per-frame React renders. Lazy-loaded (pulls 3D runtime).
 // Ref frame auto: local horizon near a surface (compass + climb), ecliptic near Sun, galactic beyond.
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
@@ -10,13 +10,16 @@ import { isExplorePaused, subscribeExplorePause } from '../three/exploreState'
 import { AU_KM, GALAXY_AXES, LY_KM, PC_KM, sceneToGalaxyKpc, spectralClass } from '../three/galaxyFrame'
 import { galaxyMapColor } from '../three/galaxyModel'
 import { planetFacts } from '../data/planetFacts'
-import { getEarthLatLon, isEarthTerrainActive } from '../three/earthTerrain'
+import { getEarthHeightAt, getEarthLatLon, isEarthTerrainActive } from '../three/earthTerrain'
+import { drawGroupMap, drawPlanetMap } from './hudMaps'
 
 const SOLAR_FRAME_KM = 0.05 * PC_KM // inside → ecliptic frame
 const LOCAL_FRAME_RATIO = 0.8 // altitude / radius below → local horizon frame
 const SOL_MAP_KM = 2000 * AU_KM // auto: sol map inside this
 const LOCAL_MAP_PC = 1000 // auto: local map inside this (catalog region)
 const GALAXY_MAP_KPC = 20 // half-extent
+const PLANET_MAP_RATIO = 3 // altitude / radius below → planet map (auto)
+const GROUP_MAP_KPC = 40 // auto: Local Group map beyond this from galactic center
 const C_KM_S = 299_792.458
 
 const nameByKey = Object.fromEntries(planetFacts.map((p) => [p.key, p.name]))
@@ -39,9 +42,11 @@ const COL = {
 
 const MAP_MODES = [
   { id: 'auto', label: 'Auto' },
+  { id: 'planet', label: 'Klode' },
   { id: 'sol', label: 'Sol' },
   { id: 'lokal', label: 'Lokal' },
   { id: 'galakse', label: 'Galakse' },
+  { id: 'gruppe', label: 'Lokal gruppe' },
 ]
 
 // ─── math ────────────────────────────────────────────────────────────────────
@@ -87,6 +92,8 @@ const nb = (n, digits = 0) => n.toLocaleString('nb-NO', { maximumFractionDigits:
 function formatDistance(km) {
   const a = Math.abs(km)
   const sign = km < 0 ? '−' : ''
+  if (a < 1) return `${sign}${nb(a * 1000)} m`
+  if (a < 100) return `${sign}${nb(a, a < 10 ? 2 : 1)} km`
   if (a < 1e7) return `${sign}${nb(a)} km`
   if (a < 2000 * AU_KM) return `${sign}${nb(a / AU_KM, a < 10 * AU_KM ? 2 : 0)} AU`
   if (a < 1000 * LY_KM) return `${sign}${nb(a / LY_KM, a < 10 * LY_KM ? 2 : 1)} ly`
@@ -95,6 +102,8 @@ function formatDistance(km) {
 }
 
 function formatSpeed(kmS) {
+  if (kmS < 0.0003) return `${nb(kmS * 1000, 1)} m/s`
+  if (kmS < 1) return `${nb(kmS * 3600)} km/t`
   if (kmS < 1e4) return `${nb(kmS, kmS < 10 ? 2 : 0)} km/s`
   if (kmS < 1000 * C_KM_S) return `${nb(kmS / C_KM_S, 1)} c`
   return `${nb(kmS / LY_KM, kmS < 10 * LY_KM ? 2 : 0)} ly/s`
@@ -433,9 +442,11 @@ const panelClass =
 // [key, label, on mobile]
 const STAT_ROWS = [
   ['speed', 'Fart', true],
+  ['alt', 'Høyde', true],
+  ['agl', 'Bakke', false],
   ['sun', 'Solen', true],
   ['center', 'Sentrum', false],
-  ['height', 'Høyde', false],
+  ['height', 'Gal. plan', false],
   ['star', 'Stjerne', true],
   ['body', 'Nærmest', false],
   ['dir', 'Retning', false],
@@ -478,17 +489,37 @@ export default function ExploreHud() {
       const att = attitude(camera, frame)
       const camG = sceneToGalaxyKpc(origin.x / PC_KM, origin.y / PC_KM, origin.z / PC_KM)
 
-      // Minimap.
-      const autoMode = dSunKm < SOL_MAP_KM ? 'sol' : dSunKm < LOCAL_MAP_PC * PC_KM ? 'lokal' : 'galakse'
-      const mode = mapModeRef.current === 'auto' ? autoMode : mapModeRef.current
+      // Minimap. Nearest textured body by altitude/radius → planet map.
+      let mapBody = null
+      getSolarCollisionBodies().forEach((body) => {
+        if (body.kind !== 'body' || !body.frameQ || body.key === 'sun') return
+        const ratio = (Math.hypot(origin.x - body.position.x, origin.y - body.position.y, origin.z - body.position.z) - body.radius) / body.radius
+        if (!mapBody || ratio < mapBody.ratio) mapBody = { body, ratio }
+      })
+      const autoMode =
+        mapBody && mapBody.ratio < PLANET_MAP_RATIO
+          ? 'planet'
+          : dSunKm < SOL_MAP_KM
+            ? 'sol'
+            : dSunKm < LOCAL_MAP_PC * PC_KM
+              ? 'lokal'
+              : Math.hypot(...camG) < GROUP_MAP_KPC
+                ? 'galakse'
+                : 'gruppe'
+      let mode = mapModeRef.current === 'auto' ? autoMode : mapModeRef.current
+      if (mode === 'planet' && !mapBody) mode = 'sol'
       const map = fitCanvas(mapRef.current)
       map.ctx.clearRect(0, 0, map.w, map.h)
       const foot =
-        mode === 'sol'
-          ? drawSolMap(map.ctx, map.w, map.h, att)
-          : mode === 'lokal'
-            ? drawLocalMap(map.ctx, map.w, map.h, att, camG)
-            : drawGalaxyMap(map.ctx, map.w, map.h, att, camG)
+        mode === 'planet'
+          ? drawPlanetMap(map.ctx, map.w, map.h, mapBody.body, att.forward, getPoiBodies(), drawMarker, COL.accent, formatDistance)
+          : mode === 'sol'
+            ? drawSolMap(map.ctx, map.w, map.h, att)
+            : mode === 'lokal'
+              ? drawLocalMap(map.ctx, map.w, map.h, att, camG)
+              : mode === 'galakse'
+                ? drawGalaxyMap(map.ctx, map.w, map.h, att, camG)
+                : drawGroupMap(map.ctx, map.w, map.h, att.forward, camG, drawMarker, COL.accent)
 
       const attC = fitCanvas(attRef.current)
       attC.ctx.clearRect(0, 0, attC.w, attC.h)
@@ -499,7 +530,8 @@ export default function ExploreHud() {
       last = now
       if (statTimer > 0) return
       statTimer = 125
-      if (mapLabelRef.current) mapLabelRef.current.textContent = MAP_MODES.find((m) => m.id === mode).label
+      if (mapLabelRef.current)
+        mapLabelRef.current.textContent = mode === 'planet' ? nameByKey[mapBody.body.key] ?? mapBody.body.key : MAP_MODES.find((m) => m.id === mode).label
       if (mapFootRef.current) mapFootRef.current.textContent = foot
       if (frameRef.current) frameRef.current.textContent = frame.name
       if (terrainCreditRef.current) terrainCreditRef.current.style.display = isEarthTerrainActive() ? '' : 'none'
@@ -529,6 +561,16 @@ export default function ExploreHud() {
         })
       }
       set('body', best ? `${best.name} · ${formatDistance(best.alt)}` : '—')
+      // Near a surface: above sea level (moh.) + above ground (Earth tiles). Else: altitude over nearest body.
+      if (surface) {
+        const ground = surface.body.key === 'earth' ? getEarthHeightAt(origin) : 0
+        const msl = surface.body.key === 'earth' ? 'moh.' : 'o.o.'
+        set('alt', `${formatDistance(surface.alt)} ${msl}`)
+        set('agl', ground > 0 ? `${formatDistance(surface.alt - ground)} over` : '—')
+      } else {
+        set('alt', best ? `${formatDistance(best.alt)} over ${best.name}` : '—')
+        set('agl', '—')
+      }
       set('dir', `${frame.hLabel} ${nb(att.heading)}° · ${frame.pLabel} ${nb(att.pitch)}°`)
       const ll = getEarthLatLon(origin)
       set('pos', ll ? `${nb(Math.abs(ll[0]), 3)}° ${ll[0] >= 0 ? 'N' : 'S'} · ${nb(Math.abs(ll[1]), 3)}° ${ll[1] >= 0 ? 'Ø' : 'V'}` : '—')

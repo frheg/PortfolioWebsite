@@ -8,7 +8,7 @@ import { surfacePlaces } from '../data/surfacePlaces'
 import { sceneLoadingManager } from './sceneLoadingManager'
 import { origin, trackAnchor, untrackAnchor } from './floatingOrigin'
 import { createBodyLod } from './bodyLod'
-import { createEarthTerrain } from './earthTerrain'
+import { createEarthTerrain, getEarthHeightAt as earthHeightAt } from './earthTerrain'
 import { createSatellites } from './satellites'
 import { gstime } from 'satellite.js'
 import {
@@ -529,8 +529,9 @@ function buildPlaces(bodyMap) {
         factsRange: Math.max(body.def.radius * 0.01, 20),
         // Body-local dir (same convention as textures/terrain): lon 0 → +x, north → +y.
         local: new THREE.Vector3(Math.cos(lon) * Math.cos(lat), Math.sin(lat), -Math.sin(lon) * Math.cos(lat)).multiplyScalar(
-          body.def.radius + (def.alt ?? 0) + 0.05
+          body.def.radius + (def.alt ?? 0) + 0.005
         ),
+        alt: def.alt ?? 0,
         position: new THREE.Vector3(),
       }
       place.labelVisibility = placeVisibility(place, body)
@@ -651,6 +652,10 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
         // Per-frame motion → camera co-moving frame (useScrollCamera carry).
         delta: new THREE.Vector3(),
         spinDelta: 0,
+        // HUD minimap: body-fixed frame (tilt · spin), equirect texture (lon 0 = u 0.5), texture lon shift (deg).
+        frameQ: new THREE.Quaternion(),
+        mapImage: () => textures[def.texture]?.image ?? null,
+        lonOffset: def.textureLonOffset ?? 0,
       }
       collisions.push(entry)
       bodyMap.set(def.key, { def, world, anchor, tiltGroup, mesh: lod.mesh, lod, entry, prev: new THREE.Vector3(), prevSpin: null })
@@ -791,7 +796,14 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
       const body = bodyMap.get(place.bodyKey)
       _placeQ.multiplyQuaternions(body.tiltGroup.quaternion, body.mesh.quaternion)
       place.position.copy(place.local).applyQuaternion(_placeQ).add(body.world)
+      // Earth tiles on: sit on real ground (sea-level defaults float/sink inland).
+      if (place.bodyKey === 'earth' && earthHeightAt) {
+        const h = earthHeightAt(place.position)
+        if (h > 0) place.position.sub(body.world).setLength(body.def.radius + Math.max(h, place.alt) + 0.002).add(body.world)
+      }
     })
+
+    bodyMap.forEach((body) => body.entry.frameQ.multiplyQuaternions(body.tiltGroup.quaternion, body.mesh.quaternion))
 
     // Frame motion for co-moving camera. First frame: no delta.
     bodyMap.forEach((body) => {
