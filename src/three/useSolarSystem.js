@@ -10,6 +10,7 @@ import { origin, trackAnchor, untrackAnchor } from './floatingOrigin'
 import { createBodyLod } from './bodyLod'
 import { createEarthTerrain, getEarthHeightAt as earthHeightAt } from './earthTerrain'
 import { createSatellites } from './satellites'
+import { createMultiplayer } from './multiplayer'
 import { gstime } from 'satellite.js'
 import {
   daysSinceJ2000,
@@ -554,6 +555,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
   const terrainRef = useRef(null)
   const placesRef = useRef([])
   const satellitesRef = useRef(null)
+  const multiplayerRef = useRef(null)
   const sunGlowRef = useRef(null)
   const timeRef = useRef(0)
   const isExploreRef = useRef(isExplore)
@@ -710,6 +712,8 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
     terrainRef.current = terrain
     const satellites = createSatellites(bodyMap.get('earth'), isMobileDevice())
     satellitesRef.current = satellites
+    const multiplayer = createMultiplayer(scene)
+    multiplayerRef.current = multiplayer
     const earthEntry = collisions.find((c) => c.key === 'earth')
     earthEntry.heightAt = terrain.heightAt
 
@@ -732,6 +736,8 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
       terrainRef.current = null
       satellites.dispose()
       satellitesRef.current = null
+      multiplayer.dispose()
+      multiplayerRef.current = null
       setPoiGroup('places', [])
       placesRef.current = []
       bodyMapRef.current = new Map()
@@ -821,6 +827,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
       bodyMap.forEach(({ world, lod }) => lod.update(world, origin, focalPx))
       terrainRef.current?.update(focalPx, explore)
       satellitesRef.current?.update()
+      multiplayerRef.current?.update(camera, focalPx, explore)
     }
 
     // Sun glow pulse + slow spike spin.

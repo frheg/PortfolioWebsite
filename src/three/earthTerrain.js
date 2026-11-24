@@ -10,6 +10,7 @@ import { origin } from './floatingOrigin'
 import { quality } from './qualityRuntime'
 import { createBuildings } from './buildings'
 import { createShips } from './ships'
+import { createFlights } from './flights'
 
 const cfg = spaceConfig.solarSystem.earthTerrain
 
@@ -68,6 +69,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
   earth.tiltGroup.add(group)
   const buildings = createBuildings(group, earth.lod.sunDir, earth.anchor.position, R, isMobile)
   const ships = createShips(group, R, earth.lod.sunDir, earth.anchor.position)
+  const flights = createFlights(group, R, earth.lod.sunDir, earth.anchor.position)
 
   // Pool: decode + normal maps are CPU-heavy → spread over cores. Same-parent tiles → same worker (cache hits).
   const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4
@@ -352,6 +354,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     horizonCos = R / camDist
     buildings.update(_camLocal, camDist - R)
     ships.update(_camLocal, camDist - R, focalPx)
+    flights.update(_camLocal, camDist - R, focalPx)
     focal = focalPx * pixelRatio() // SSE in device px (HiDPI → finer tiles)
 
     visible.length = 0
@@ -460,6 +463,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     workers.forEach((w) => w.terminate())
     buildings.dispose()
     ships.dispose()
+    flights.dispose()
     ;[...tiles.values()].forEach(disposeTile)
     earth.tiltGroup.remove(group)
     earth.mesh.scale.setScalar(R)

@@ -38,7 +38,9 @@ async function loadGroup(name) {
   } catch {
     // no storage → fetch
   }
-  const res = await fetch(`https://celestrak.org/NORAD/elements/gp.php?GROUP=${name}&FORMAT=json`)
+  // Relay: edge-cached copy (no CelesTrak rate limits). Else direct.
+  const relay = spaceConfig.relay.url
+  const res = await fetch(relay ? `${relay}/sats/${name}` : `https://celestrak.org/NORAD/elements/gp.php?GROUP=${name}&FORMAT=json`)
   if (!res.ok) throw new Error(`celestrak ${res.status}`)
   const data = await res.json()
   try {

@@ -12,6 +12,8 @@ import { galaxyMapColor } from '../three/galaxyModel'
 import { planetFacts } from '../data/planetFacts'
 import { getEarthHeightAt, getEarthLatLon, isEarthTerrainActive } from '../three/earthTerrain'
 import { drawGroupMap, drawPlanetMap } from './hudMaps'
+import { getMultiplayerStatus } from '../three/multiplayer'
+import { spaceConfig } from '../three/spaceConfig'
 
 const SOLAR_FRAME_KM = 0.05 * PC_KM // inside → ecliptic frame
 const LOCAL_FRAME_RATIO = 0.8 // altitude / radius below → local horizon frame
@@ -247,7 +249,7 @@ function drawLocalMap(ctx, w, h, att, camG) {
   }
 
   let labelled = 0
-  ctx.font = '600 8px ui-sans-serif, system-ui'
+  ctx.font = '600 9px ui-sans-serif, system-ui'
   getPoiBodies().forEach((poi) => {
     if (poi.kind !== 'star') return
     const p = [poi.position.x / PC_KM, poi.position.y / PC_KM, poi.position.z / PC_KM]
@@ -339,7 +341,7 @@ function drawAttitude(ctx, w, h, att, frame) {
   ctx.lineTo(r * 2, horizon)
   ctx.stroke()
 
-  ctx.font = '600 8px ui-sans-serif, system-ui'
+  ctx.font = '600 9px ui-sans-serif, system-ui'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   for (let p = -80; p <= 80; p += 10) {
@@ -409,7 +411,7 @@ function drawAttitude(ctx, w, h, att, frame) {
   ctx.rect(0, 0, w, tapeH)
   ctx.clip()
   const pxPerHdg = w / 120
-  ctx.font = '600 8px ui-sans-serif, system-ui'
+  ctx.font = '600 9px ui-sans-serif, system-ui'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
   for (let d = Math.floor((att.heading - 60) / 10) * 10; d <= att.heading + 60; d += 10) {
@@ -451,6 +453,7 @@ const STAT_ROWS = [
   ['body', 'Nærmest', false],
   ['dir', 'Retning', false],
   ['pos', 'Posisjon', false],
+  ['mp', 'Online', true],
 ]
 
 export default function ExploreHud() {
@@ -572,6 +575,8 @@ export default function ExploreHud() {
         set('agl', '—')
       }
       set('dir', `${frame.hLabel} ${nb(att.heading)}° · ${frame.pLabel} ${nb(att.pitch)}°`)
+      const mp = getMultiplayerStatus()
+      set('mp', !spaceConfig.relay.url ? 'av' : mp.connected ? `${mp.n} · du: ${mp.name}` : 'kobler til…')
       const ll = getEarthLatLon(origin)
       set('pos', ll ? `${nb(Math.abs(ll[0]), 3)}° ${ll[0] >= 0 ? 'N' : 'S'} · ${nb(Math.abs(ll[1]), 3)}° ${ll[1] >= 0 ? 'Ø' : 'V'}` : '—')
     }
@@ -585,22 +590,22 @@ export default function ExploreHud() {
   return (
     <div className="pointer-events-none fixed z-30 right-3 top-16 flex flex-col items-end gap-2 md:bottom-5 md:left-5 md:right-5 md:top-auto md:flex-row md:items-end md:justify-between">
       {/* Minimap */}
-      <div className={`${panelClass} pointer-events-auto w-[7.5rem] p-1.5 md:w-[13rem] md:p-2`}>
-        <div className="flex items-center justify-between px-1 pb-1 text-[0.55rem] font-semibold uppercase tracking-[0.18em] text-cyan-200/90 md:text-[0.6rem]">
+      <div className={`${panelClass} pointer-events-auto w-[8.5rem] p-1.5 md:w-[14rem] md:p-2`}>
+        <div className="flex items-center justify-between px-1 pb-1 text-[0.63rem] font-semibold uppercase tracking-[0.18em] text-cyan-200/90 md:text-[0.68rem]">
           <span>Kart · <span ref={mapLabelRef}>Auto</span></span>
           <button
             type="button"
             data-explore-control
-            className="rounded-full border border-white/10 px-1.5 py-0.5 text-[0.5rem] tracking-[0.12em] text-cyan-100/80 transition hover:border-cyan-300/40"
+            className="rounded-full border border-white/10 px-1.5 py-0.5 text-[0.58rem] tracking-[0.12em] text-cyan-100/80 transition hover:border-cyan-300/40"
             onClick={() => setMapMode((m) => MAP_MODES[(MAP_MODES.findIndex((x) => x.id === m) + 1) % MAP_MODES.length].id)}
           >
             {MAP_MODES.find((m) => m.id === mapMode).label}
           </button>
         </div>
         <canvas ref={mapRef} className="block aspect-square w-full rounded-xl bg-[#11111b]" />
-        <p ref={mapFootRef} className="px-1 pt-1 text-[0.55rem] uppercase tracking-[0.12em] text-cyan-100/60" />
+        <p ref={mapFootRef} className="px-1 pt-1 text-[0.63rem] uppercase tracking-[0.12em] text-cyan-100/60" />
         {/* Required attribution while Earth tiles render. */}
-        <p ref={terrainCreditRef} style={{ display: 'none' }} className="px-1 pt-1 text-[0.45rem] leading-snug text-cyan-100/45">
+        <p ref={terrainCreditRef} style={{ display: 'none' }} className="px-1 pt-1 text-[0.52rem] leading-snug text-cyan-100/45">
           <a href="https://s2maps.eu" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
             Sentinel-2 cloudless – s2maps.eu by EOX (Copernicus Sentinel data 2020) · Esri, Maxar, Earthstar Geographics
           </a>
@@ -624,13 +629,17 @@ export default function ExploreHud() {
           <a href="https://celestrak.org" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
             Satellitter: CelesTrak
           </a>
+          {' · '}
+          <a href="https://adsb.fi" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
+            Fly: adsb.fi, ADSB.lol (ODbL)
+          </a>
         </p>
       </div>
 
       <div className="flex flex-col items-end gap-2 md:flex-row md:items-end">
         {/* Stats */}
-        <div className={`${panelClass} w-[11rem] px-2.5 py-2 md:w-[15rem] md:px-3 md:py-2.5`}>
-          <dl className="grid grid-cols-[3.4rem_1fr] gap-x-2 gap-y-1 text-[0.55rem] uppercase tracking-[0.1em] md:grid-cols-[4.5rem_1fr] md:text-[0.62rem]">
+        <div className={`${panelClass} w-[12.5rem] px-2.5 py-2 md:w-[17rem] md:px-3 md:py-2.5`}>
+          <dl className="grid grid-cols-[3.9rem_1fr] gap-x-2 gap-y-1 text-[0.63rem] uppercase tracking-[0.1em] md:grid-cols-[5.2rem_1fr] md:text-[0.7rem]">
             {STAT_ROWS.map(([key, label, mobile]) => (
               <div key={key} className={mobile ? 'contents' : 'hidden md:contents'}>
                 <dt className="text-cyan-200/55">{label}</dt>
@@ -645,16 +654,16 @@ export default function ExploreHud() {
             target="_blank"
             rel="noreferrer"
             data-explore-control
-            className="pointer-events-auto mt-2 hidden text-[0.5rem] uppercase tracking-[0.12em] text-cyan-100/35 hover:text-cyan-100/70 md:block"
+            className="pointer-events-auto mt-2 hidden text-[0.58rem] uppercase tracking-[0.12em] text-cyan-100/35 hover:text-cyan-100/70 md:block"
           >
             Stjernedata: HYG v4.1 · CC BY-SA 4.0
           </a>
         </div>
 
         {/* Attitude */}
-        <div className={`${panelClass} w-[7.5rem] p-1.5 md:w-[11rem] md:p-2`}>
+        <div className={`${panelClass} w-[8.5rem] p-1.5 md:w-[12rem] md:p-2`}>
           <canvas ref={attRef} className="block aspect-[1/1.12] w-full" />
-          <p className="px-1 pt-0.5 text-center text-[0.55rem] uppercase tracking-[0.16em] text-cyan-100/60">
+          <p className="px-1 pt-0.5 text-center text-[0.63rem] uppercase tracking-[0.16em] text-cyan-100/60">
             <span ref={frameRef}>—</span>
           </p>
         </div>

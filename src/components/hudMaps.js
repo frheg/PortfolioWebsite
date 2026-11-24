@@ -216,10 +216,10 @@ export function drawPlanetMap(ctx, w, h, body, forward, places, drawMarker, colo
   }
 
   // Places: dots + a few names (lowest rank first).
-  ctx.font = '600 8px ui-sans-serif, system-ui'
+  ctx.font = '600 9px ui-sans-serif, system-ui'
   ctx.textBaseline = 'middle'
   let named = 0
-  const list = places.filter((pl) => pl.bodyKey === body.key).sort((a, b) => (a.rank ?? 9) - (b.rank ?? 9))
+  const list = places.filter((pl) => pl.kind === 'place' && pl.bodyKey === body.key).sort((a, b) => (a.rank ?? 9) - (b.rank ?? 9))
   for (const pl of list) {
     const l = Math.hypot(pl.local.x, pl.local.y, pl.local.z)
     const s = project([pl.local.x / l, pl.local.y / l, pl.local.z / l])
@@ -278,7 +278,7 @@ export function drawGroupMap(ctx, w, h, forward, camG, drawMarker, color) {
     ctx.arc(cx, cy, R * f, 0, Math.PI * 2)
     ctx.stroke()
   }
-  ctx.font = '600 8px ui-sans-serif, system-ui'
+  ctx.font = '600 9px ui-sans-serif, system-ui'
   ctx.textBaseline = 'middle'
   // MW satellites cluster near center → label only when separable.
   for (const m of groupMembers) {

@@ -39,3 +39,8 @@ src/assets/Models/**/*.mtl
 src/assets/Models/**/*.obj
 src/assets/Models/**/*.3ds
 src/assets/Models/**/*.pdf
+
+# Env files (relay URL etc). Keep .env.example only.
+.env
+.env.*
+!.env.example

@@ -91,6 +91,22 @@ export const spaceConfig = {
     sun: { color: 0xf5e0dc, intensity: 6, decay: 0 }, // rosewater
   },
 
+  // Relay (worker/, Cloudflare free tier): live flights, cached satellites, multiplayer.
+  // Empty → planes + multiplayer off, satellites straight from CelesTrak. Set VITE_RELAY_URL in .env.local / .env.production.
+  relay: {
+    url: (import.meta.env.VITE_RELAY_URL ?? '').replace(/\/$/, ''),
+  },
+
+  // Multiplayer: other explorers as ghost planes. Positions in nearest body's rotating frame (sim time differs per client).
+  multiplayer: {
+    sendHz: 4,            // while moving
+    idleSendS: 5,         // heartbeat when still
+    soiRadii: 60,         // inside R × this → body frame, else heliocentric ('sun')
+    modelKm: 0.06,        // real-ish size
+    minPx: 30,            // on-screen floor → visible from far
+    smoothing: 6,         // 1/s, catch-up toward dead-reckoned target
+  },
+
   solarSystem: {
     // Scroll mode: positions at real time (1×), spin sped up ×this. Explore: ephemerisTime.
     scrollSpinScale: 600,
@@ -213,6 +229,17 @@ export const spaceConfig = {
       modelRangeKm: 80,     // instanced boats within this of camera
       maxModels: 800,
       modelMinPx: 14,       // boat length on screen ≥ this (icon-ish when far)
+    },
+    // Live flights via relay (ADS-B: adsb.fi / ADSB.lol). Polled for 1° grid point under camera.
+    flights: {
+      maxAltKm: 1500,
+      pollMs: 10_000,
+      maxExtrapolateS: 60,
+      modelKm: 0.04,        // ~airliner length
+      modelMinPx: 16,
+      maxModels: 600,
+      labelRangeKm: 60,
+      maxLabels: 20,
     },
     // UFOs roam LEO-ish shell round Earth.
     ufo: {
