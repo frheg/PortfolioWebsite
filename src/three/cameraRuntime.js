@@ -57,3 +57,14 @@ export function setTunnel(value) {
 export function getTunnel() {
   return _tunnel
 }
+
+// Speed mist 0..1: camera moving fast relative to its surroundings → haze masks LOD pops / loading. Read by composite.
+let _mist = 0
+
+export function setMist(value) {
+  _mist = value
+}
+
+export function getMist() {
+  return _mist
+}

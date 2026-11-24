@@ -34,7 +34,7 @@ export function setTerrainFocus(worldPos) {
   focusEye = worldPos
 }
 // Loading gate: tiles wanted but not ready (+ buildings in flight). Read by sceneLoadingManager.
-const loadState = { active: false, pending: 0, loaded: 0 }
+const loadState = { active: false, pending: 0, loaded: 0, fetched: 0 } // fetched: cumulative tiles ready (only grows)
 export function getTerrainLoadState() {
   return loadState
 }
@@ -127,6 +127,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
   const uploads = []
   const makeReady = (t) => {
     if (!t.geoReady || !t.texReady) return
+    loadState.fetched += 1
     uploads.push(t)
   }
   const flushUploads = () => {
@@ -367,8 +368,10 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     camDist = _camLocal.length()
     horizonCos = R / camDist
     buildings.update(_camLocal, camDist - R)
-    ships.update(_camLocal, camDist - R, focalPx)
-    flights.update(_camLocal, camDist - R, focalPx)
+    // Live traffic only for the real camera (virtual-eye preload would draw them from light-years away).
+    const far = focusEye !== null
+    ships.update(_camLocal, far ? Infinity : camDist - R, focalPx)
+    flights.update(_camLocal, far ? Infinity : camDist - R, focalPx)
     focal = focalPx * pixelRatio() // SSE in device px (HiDPI → finer tiles)
 
     visible.length = 0

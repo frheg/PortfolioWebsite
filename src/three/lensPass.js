@@ -211,7 +211,17 @@ export function createLensPass(isMobile = false) {
     return stage
   }
 
+  // Compile the ray-trace program up front (behind the loading screen) → no hitch the first time a black hole fills the view.
+  const warm = (renderer, camera) => {
+    const sc = new THREE.Scene()
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material)
+    quad.frustumCulled = false
+    sc.add(quad)
+    renderer.compile(sc, camera)
+    quad.geometry.dispose()
+  }
+
   const dispose = () => material.dispose()
 
-  return { collect, dispose }
+  return { collect, dispose, warm }
 }

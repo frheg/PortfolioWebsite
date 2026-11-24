@@ -10,7 +10,7 @@ import { createLensPass } from './lensPass'
 import { createPostFx } from './postFx'
 import { createAtmospheres } from './atmosphere'
 import { quality } from './qualityRuntime'
-import { getTunnel, getWarp } from './cameraRuntime'
+import { getMist, getTunnel, getWarp } from './cameraRuntime'
 import { getSolarCollisionBodies } from './solarSystemRuntime'
 import { createStarPromoter } from './starPromoter'
 import { createFadeOverlay } from './fadeOverlay'
@@ -177,12 +177,18 @@ export function useGalaxy(sceneRef, rendererRef) {
 
   const warpCenter = useRef(new THREE.Vector2(0.5, 0.5))
   const warpDir = useRef(new THREE.Vector3())
-  const warpSmooth = useRef({ strength: 0, tunnel: 0 })
+  const warpSmooth = useRef({ strength: 0, tunnel: 0, mist: 0 })
 
   /** Full frame (HDR): sky glow → world → atmospheres → lens → bloom → composite (warp, tone map) → fade. */
   const render = (renderer, scene, camera, deltaSeconds) => {
     const state = stateRef.current
     if (!state) return
+    if (!state.warmed) {
+      // Shader warm-up behind the loading screen: whole scene + lazily used post stages.
+      state.warmed = true
+      renderer.compile(scene, camera)
+      state.lens.warm(renderer, camera)
+    }
     const target = state.post.begin(renderer)
     state.volume.render(renderer, camera, deltaSeconds, target)
     renderer.setRenderTarget(target)
@@ -212,7 +218,10 @@ export function useGalaxy(sceneRef, rendererRef) {
     }
     sm.strength += (warpTarget - sm.strength) * (1 - Math.exp(-5 * dt))
     sm.tunnel += (getTunnel() - sm.tunnel) * (1 - Math.exp(-8 * dt))
-    state.post.finish(renderer, stages, { strength: sm.strength, center: warpCenter.current, tunnel: sm.tunnel })
+    // Mist: quick to rise (hide a pop), slow to clear.
+    const mistT = getMist()
+    sm.mist += (mistT - sm.mist) * (1 - Math.exp(-(mistT > sm.mist ? 6 : 1.5) * dt))
+    state.post.finish(renderer, stages, { strength: sm.strength, center: warpCenter.current, tunnel: sm.tunnel, mist: sm.mist })
     state.fade.render(renderer)
   }
 

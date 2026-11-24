@@ -547,6 +547,34 @@ body.intro-active [data-floating-nav] {
   color: rgba(205, 214, 244, 0.85);
 }
 
+.loading-screen-bar {
+  position: relative;
+  width: min(16rem, 70vw);
+  height: 2px;
+  border-radius: 9999px;
+  background: rgba(148, 162, 249, 0.14);
+  overflow: hidden;
+}
+
+.loading-screen-bar > span {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: linear-gradient(90deg, rgba(148, 162, 249, 0.35), rgba(203, 214, 254, 0.95));
+  box-shadow: 0 0 10px rgba(148, 162, 249, 0.6);
+  transition: transform 400ms ease;
+}
+
+.loading-screen-status {
+  position: relative;
+  min-height: 1.2em;
+  font-size: 0.64rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(205, 214, 244, 0.6);
+  text-align: center;
+}
+
 .loading-screen-percent {
   position: relative;
   font-size: 0.72rem;

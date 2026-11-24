@@ -60,6 +60,7 @@ uniform float uBloomStrength;
 uniform vec2 uWarpCenter;
 uniform float uWarp;
 uniform float uTunnel;  // boost tunnel vision 0..1
+uniform float uMist;    // speed mist 0..1 (blurred bloom pyramid as haze)
 uniform float uAspect;
 varying vec2 vUv;
 void main() {
@@ -71,7 +72,14 @@ void main() {
     for (int i = 1; i < 10; i++) acc += texture2D(uSrc, vUv - d * float(i)).rgb;
     c = mix(c, acc / 10.0 * 1.15, smoothstep(0.0, 0.25, length(vUv - uWarpCenter)));
   }
-  c += texture2D(uBloom, vUv).rgb * uBloomStrength;
+  vec3 bloom = texture2D(uBloom, vUv).rgb;
+  c += bloom * uBloomStrength;
+  if (uMist > 0.001) {
+    // Soft veil: lean toward the blurred image + faint cool haze, edges more than center (flight-through-dust feel).
+    vec2 q = vUv - 0.5;
+    float edge = smoothstep(0.05, 0.7, length(q));
+    c = mix(c, bloom * 1.6 + vec3(0.018, 0.022, 0.035), uMist * (0.25 + 0.45 * edge));
+  }
   if (uTunnel > 0.001) {
     // Tunnel vision: soft radial dim + faint cool edge glow (aspect-correct, 0 center → 1 corner).
     vec2 q = (vUv - 0.5) * vec2(uAspect, 1.0);
@@ -134,6 +142,7 @@ export function createPostFx(quality) {
     uWarpCenter: { value: new THREE.Vector2(0.5, 0.5) },
     uWarp: { value: 0 },
     uTunnel: { value: 0 },
+    uMist: { value: 0 },
     uAspect: { value: 1 },
   })
   const black = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1)
@@ -213,6 +222,7 @@ export function createPostFx(quality) {
     compositeMat.uniforms.uWarp.value = warp.strength
     compositeMat.uniforms.uWarpCenter.value.copy(warp.center)
     compositeMat.uniforms.uTunnel.value = warp.tunnel ?? 0
+    compositeMat.uniforms.uMist.value = warp.mist ?? 0
     compositeMat.uniforms.uAspect.value = size.x / Math.max(size.y, 1)
     fs.draw(renderer, compositeMat, null)
   }

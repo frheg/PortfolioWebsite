@@ -28,11 +28,12 @@ export const spaceConfig = {
       holdEnd: 0.95,
       // Empty scroll between chapters (LongPage spacers) = the journey, per gap (vh). Longer where more scales are crossed:
       // Bergen→Earth ~4 decades, Earth→Sgr A* ~13, Sgr A*→Milky Way ~10, Milky Way→Andromeda ~1.
-      travelVh: [420, 900, 760, 600],
+      travelVh: [420, 1400, 760, 600],
       // While reading a page: scroll orbits the camera round the stop's subject (± deg, about stop up) → never static.
       orbitDeg: 12,
       // Camera follows a smoothed scroll position (1/s) → wheel steps glide instead of jump.
       scrollSmoothing: 6,
+      mistMax: 0.55,        // speed-mist strength at fast scale changes (masks LOD pops / tile loads)
       // Path bulge, × segment length, along the stops' up vectors → no flying through bodies.
       arcLift: 0.12,
       // Look: keep facing what we leave until lookTurn[0] of the leg, face destination by lookTurn[1].
@@ -45,9 +46,9 @@ export const spaceConfig = {
       introSwayRate: 0.07,  // rad/s
       introGlideS: 9,
       introLookTurn: [0, 0.3],
-      // Earth spin offset in scroll mode → Bergen shown at this local solar hour (never a black home page).
-      localHour: 12.5,
-      localHourLon: 5.32,
+      // Earth spin offset in scroll mode → Bergen time follows the home-page scroll: real sunset → night → real sunrise
+      // (sun 2° above horizon, today's declination). Polar day/night → fallback hours. Later stops keep sunrise.
+      homeTime: { lat: 60.39, lon: 5.32, sunAltDeg: 2, fallbackSet: 15, fallbackRise: 9 },
       // Scroll speed (fraction of page height / s) → full warp visual.
       velocityBoostThreshold: 2.2,
       velocityLerp: 0.08,
@@ -101,8 +102,25 @@ export const spaceConfig = {
     //   galactic:  pos / look in galaxy kpc (gx → sun, gz = north galactic pole)
     //   galaxy:    neighbor key, distanceKpc, inclination (deg from disk normal), azimuth (deg)
     pageStops: [
-      { path: '/',         type: 'surface',   lat: 60.372, lon: 5.288, alt: 0.75, heading: 42, pitch: -9, lookKm: 6 }, // Bergen
-      { path: '/projects', type: 'body',      body: 'earth', distance: 3.4, azimuth: 0.75, elevation: 0.2, lookShiftX: 0.5, lookShiftY: 0 },
+      // Bergen: spawn on Fløyen looking west (sunset) → while reading, glide to Løvstakken looking east (sunrise).
+      // Scroll also scrubs Bergen's time of day: sunset → night → sunrise (scroll.homeTime).
+      {
+        // heading 'sunset' / 'sunrise' = today's sun azimuth at that event (+ headingOffset) → sun always in frame.
+        path: '/', type: 'surface', lat: 60.3962, lon: 5.3405, alt: 0.52, heading: 'sunset', headingOffset: -14, pitch: -3, lookKm: 8, // Fløyen
+        hold: { lat: 60.3668, lon: 5.3262, alt: 0.66, heading: 'sunrise', headingOffset: -14, pitch: -3, lookKm: 8 }, // Løvstakken
+        // Leaving: over Byfjorden looking south toward south Bergen.
+        via: [{ type: 'surface', lat: 60.432, lon: 5.268, alt: 1.9, heading: 162, pitch: -15, lookKm: 10 }],
+      },
+      {
+        path: '/projects', type: 'body', body: 'earth', distance: 3.4, azimuth: 0.75, elevation: 0.2, lookShiftX: 0.5, lookShiftY: 0,
+        // Sightings on the way to Sgr A* (each = a slow-down + glance, passed from the side).
+        via: [
+          { type: 'comet', key: 'encke', viewKm: 2.6e7 },
+          { type: 'sun', viewRadii: 16 },
+          { type: 'point', ra: 219.8957, dec: -60.8383, distPc: 1.3246, viewAU: 120 }, // Alpha Centauri A + B (catalog coords)
+          { type: 'nebula', key: 'lagoon', viewRadii: 2.6 },
+        ],
+      },
       { path: '/journey',  type: 'blackhole', key: 'sgra', distanceRs: 30, inclination: 80, azimuth: 25 },
       { path: '/contact',  type: 'galactic',  pos: [30, -14, 32], look: [0, 0, 0] }, // whole Milky Way
       { path: '/chat',     type: 'galaxy',    key: 'm31', distanceKpc: 95, inclination: 55, azimuth: 20 }, // Andromeda

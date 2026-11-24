@@ -10,6 +10,7 @@ const EXIT_MS = 900
 
 export default function LoadingScreen() {
   const [progress, setProgress] = useState(0)
+  const [status, setStatus] = useState('')
   const [exiting, setExiting] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [seeThrough, setSeeThrough] = useState(false)
@@ -30,8 +31,9 @@ export default function LoadingScreen() {
       window.setTimeout(startExit, Math.max(MIN_VISIBLE_MS - elapsed, 0))
     }
 
-    const unsubscribe = subscribeSceneLoading(({ progress: nextProgress, ready, visible, introDone: nextIntroDone }) => {
+    const unsubscribe = subscribeSceneLoading(({ progress: nextProgress, ready, visible, introDone: nextIntroDone, status: nextStatus }) => {
       setProgress(nextProgress)
+      setStatus(nextStatus ?? '')
       if (visible) setSeeThrough(true)
       if (nextIntroDone) setIntroDone(true)
       if (ready) scheduleExitOnceReady()
@@ -84,7 +86,13 @@ export default function LoadingScreen() {
         <span className="loading-orbit-dot" />
       </div>
       <p className="loading-screen-label">Fredric Hegland</p>
-      <p className="loading-screen-percent">{percent}%</p>
+      <div className="loading-screen-bar" aria-hidden="true">
+        <span style={{ transform: `scaleX(${Math.max(0.02, progress)})` }} />
+      </div>
+      <p className="loading-screen-status">
+        {status}
+        <span className="loading-screen-percent"> · {percent}%</span>
+      </p>
     </div>
   )
 }

@@ -26,6 +26,23 @@ function typeColor(t) {
 const TYPE_NAME = (t) =>
   t >= 60 && t < 70 ? 'Passasjer' : t >= 70 && t < 80 ? 'Last' : t >= 80 && t < 90 ? 'Tanker' : t === 30 ? 'Fiske' : t === 36 ? 'Seil' : t === 37 ? 'Fritid' : 'Fartøy'
 
+// Soft round sprite (plain PointsMaterial = squares).
+let roundDot = null
+function getRoundDot() {
+  if (roundDot) return roundDot
+  const c = document.createElement('canvas')
+  c.width = c.height = 32
+  const ctx = c.getContext('2d')
+  const g = ctx.createRadialGradient(16, 16, 0, 16, 16, 16)
+  g.addColorStop(0, 'rgba(255,255,255,1)')
+  g.addColorStop(0.45, 'rgba(255,255,255,0.85)')
+  g.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, 32, 32)
+  roundDot = new THREE.CanvasTexture(c)
+  return roundDot
+}
+
 let state = null // module-level for label collection
 
 let shipsActive = false
@@ -53,7 +70,7 @@ export function createShips(group, R, sunDir, planetCenter) {
   geometry.setDrawRange(0, 0)
   const points = new THREE.Points(
     geometry,
-    new THREE.PointsMaterial({ size: cfg.sizePx, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false })
+    new THREE.PointsMaterial({ size: cfg.sizePx * 1.6, sizeAttenuation: false, vertexColors: true, transparent: true, depthWrite: false, map: getRoundDot() })
   )
   points.frustumCulled = false
   group.add(points)

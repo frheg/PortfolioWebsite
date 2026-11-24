@@ -11,6 +11,8 @@ import { createBodyLod } from './bodyLod'
 import { createEarthTerrain, getEarthHeightAt as earthHeightAt } from './earthTerrain'
 import { createSatellites } from './satellites'
 import { createMultiplayer } from './multiplayer'
+import { createComets } from './comets'
+import { getHomeProgress } from './scrollChapters'
 import { gstime } from 'satellite.js'
 import {
   daysSinceJ2000,
@@ -380,6 +382,22 @@ function remapRingUvRadial(geometry, inner, outer) {
 
 // Ecliptic (x, y, z=north) → scene (x, z, -y). Proper rotation, no mirror:
 // north = +y, orbits CCW seen from north, prograde spin = +rotation.y.
+const smoothstepN = (x) => {
+  const t = Math.min(1, Math.max(0, x))
+  return t * t * (3 - 2 * t)
+}
+
+// Local solar hours of sunset / sunrise (sun at altDeg) for lat on date. Polar → fallbacks.
+function sunEventHours({ lat, sunAltDeg, fallbackSet, fallbackRise }, date) {
+  const doy = (Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) - Date.UTC(date.getUTCFullYear(), 0, 0)) / 86400000
+  const decl = -23.44 * Math.cos(((2 * Math.PI) / 365) * (doy + 10)) * (Math.PI / 180)
+  const phi = lat * (Math.PI / 180)
+  const cosH = (Math.sin(sunAltDeg * (Math.PI / 180)) - Math.sin(phi) * Math.sin(decl)) / (Math.cos(phi) * Math.cos(decl))
+  if (cosH <= -1 || cosH >= 1) return { set: fallbackSet, rise: fallbackRise }
+  const H = (Math.acos(cosH) * 180) / Math.PI / 15
+  return { set: 12 + H, rise: 12 - H }
+}
+
 function eclipticToScene(au, out) {
   return out.set(au.x * AU_KM, au.z * AU_KM, -au.y * AU_KM)
 }
@@ -468,6 +486,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
   const placesRef = useRef([])
   const satellitesRef = useRef(null)
   const multiplayerRef = useRef(null)
+  const cometsRef = useRef(null)
   const earthSpinOffsetRef = useRef(0) // rad; scroll mode → Bergen at a fixed local hour (eased)
   const sunGlowRef = useRef(null)
   const timeRef = useRef(0)
@@ -627,6 +646,8 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
     satellitesRef.current = satellites
     const multiplayer = createMultiplayer(scene)
     multiplayerRef.current = multiplayer
+    const comets = createComets(scene)
+    cometsRef.current = comets
     const earthEntry = collisions.find((c) => c.key === 'earth')
     earthEntry.heightAt = terrain.heightAt
 
@@ -651,6 +672,8 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
       satellitesRef.current = null
       multiplayer.dispose()
       multiplayerRef.current = null
+      comets.dispose()
+      cometsRef.current = null
       setPoiGroup('places', [])
       placesRef.current = []
       bodyMapRef.current = new Map()
@@ -708,10 +731,24 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
         const date = new Date(dateMsFromDaysSinceJ2000(simDays))
         let target = 0
         if (!explore) {
-          const sc = spaceConfig.camera.scroll
-          const localNow = date.getUTCHours() + date.getUTCMinutes() / 60 + sc.localHourLon / 15
-          const dh = ((((sc.localHour - localNow) % 24) + 36) % 24) - 12
+          const ht = spaceConfig.camera.scroll.homeTime
+          const { set, rise } = sunEventHours(ht, date)
+          // Scroll scrubs sunset → night → next sunrise. Linger in dusk (first 35 %) and dawn (last 35 %),
+          // rush through deep night in between (it's just dark).
+          const hp = getHomeProgress()
+          const riseNext = rise + 24
+          const wantLocal =
+            hp < 0.35
+              ? set + (hp / 0.35) * 1.2
+              : hp > 0.65
+                ? riseNext - 1.2 + ((hp - 0.65) / 0.35) * 1.2
+                : set + 1.2 + (riseNext - set - 2.4) * smoothstepN((hp - 0.35) / 0.3)
+          const localNow = date.getUTCHours() + date.getUTCMinutes() / 60 + ht.lon / 15
+          const dh = ((((wantLocal - localNow) % 24) + 36) % 24) - 12
           target = (dh / 24) * TWO_PI
+          // Continuous across the ±12 h wrap (don't spin the long way round).
+          const cur = earthSpinOffsetRef.current
+          target = cur + Math.atan2(Math.sin(target - cur), Math.cos(target - cur))
         }
         earthSpinOffsetRef.current += (target - earthSpinOffsetRef.current) * (1 - Math.exp(-1.5 * deltaSeconds))
         mesh.rotation.y = gstime(date) + earthSpinOffsetRef.current
@@ -719,6 +756,8 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
         mesh.rotation.y = def.rotationSign * ((spinDays / ROTATION_PERIOD_DAYS[def.key]) % 1) * TWO_PI
       }
     })
+
+    cometsRef.current?.update(simDays)
 
     // Places follow their body's tilt + spin.
     placesRef.current.forEach((place) => {

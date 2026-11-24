@@ -8,8 +8,9 @@ import { spaceConfig } from './spaceConfig'
 import { getDeepBodies, getSolarCollisionBodies } from './solarSystemRuntime'
 import { setTerrainFocus } from './earthTerrain'
 import { isSceneLoadReady, setIntroDone, setSceneVisible } from '../utils/sceneLoadingState'
-import { getChapterOffsets, getTravelRanges } from './scrollChapters'
-import { blackHoles, galaxies } from '../data/deepSpaceObjects'
+import { getChapterOffsets, getTravelRanges, setHomeProgress } from './scrollChapters'
+import { blackHoles, galaxies, nebulae } from '../data/deepSpaceObjects'
+import { getCometWorld } from './comets'
 import { diskBasis } from './neighborGalaxies'
 import { setScrollVelocity } from './scrollVelocity'
 import {
@@ -26,11 +27,11 @@ import {
   resetExplorePauseState,
   setExplorePaused,
 } from './exploreState'
-import { setCameraSpeed, setCameraThrottle, setTunnel, setWarp } from './cameraRuntime'
+import { setCameraSpeed, setCameraThrottle, setMist, setTunnel, setWarp } from './cameraRuntime'
 import { origin } from './floatingOrigin'
 import { nearestStar } from './starRuntime'
 import { setWormholeApproach, triggerWormhole } from './wormholeRuntime'
-import { GALAXY_AXES, GALAXY_CENTER_PC, PC_KM, galaxyKpcToScene, raDecToScene } from './galaxyFrame'
+import { AU_KM, GALAXY_AXES, GALAXY_CENTER_PC, PC_KM, SUN_RADIUS_KM, galaxyKpcToScene, raDecToScene } from './galaxyFrame'
 
 const { pageStops, scroll: scrollConfig, explore: exploreConfig, transitionLerp } = spaceConfig.camera
 const EXPLORE_PATH = '/explore'
@@ -104,6 +105,18 @@ function lookQuat(dir, up, out) {
   return out.setFromRotationMatrix(_m4)
 }
 
+// Sun azimuth (deg from N) at sunrise / sunset today for latitude, sun altDeg above horizon. Polar → due S / N fallback.
+function sunEventAzimuth(event, latDeg, altDeg = 2) {
+  const now = new Date()
+  const doy = (Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - Date.UTC(now.getUTCFullYear(), 0, 0)) / 86400000
+  const decl = -23.44 * Math.cos(((2 * Math.PI) / 365) * (doy + 10)) * DEG
+  const phi = latDeg * DEG
+  const h = altDeg * DEG
+  const cosA = (Math.sin(decl) - Math.sin(phi) * Math.sin(h)) / (Math.cos(phi) * Math.cos(h))
+  const A = Math.acos(Math.min(1, Math.max(-1, cosA))) / DEG
+  return event === 'sunrise' ? A : 360 - A
+}
+
 // Bergen-style: point on Earth's spinning surface (body frameQ), heading/pitch in local ENU.
 function surfacePose(stop, out) {
   const earth = findBody('earth')
@@ -113,7 +126,8 @@ function surfacePose(stop, out) {
   const up = _e1.set(Math.cos(la) * Math.cos(lo), Math.sin(la), -Math.cos(la) * Math.sin(lo)).applyQuaternion(earth.frameQ)
   const east = _e2.set(-Math.sin(lo), 0, -Math.cos(lo)).applyQuaternion(earth.frameQ)
   const north = _e3.crossVectors(up, east)
-  const h = stop.heading * DEG
+  const headingDeg = typeof stop.heading === 'string' ? sunEventAzimuth(stop.heading, stop.lat) + (stop.headingOffset ?? 0) : stop.heading
+  const h = headingDeg * DEG
   const pt = stop.pitch * DEG
   _dir.copy(north).multiplyScalar(Math.cos(h)).addScaledVector(east, Math.sin(h)).multiplyScalar(Math.cos(pt)).addScaledVector(up, Math.sin(pt))
   out.pos.copy(earth.position).addScaledVector(up, earth.radius + stop.alt)
@@ -195,15 +209,77 @@ function galaxyPose(stop, out) {
   return true
 }
 
+// ─── Sightings (via) ──
+// Center + view distance by type; camera sits beside the leg's line (offset sideways + a bit back) → glance, not collision.
+const nebulaDefs = Object.fromEntries(nebulae.map((d) => [d.key, d]))
+const _viaC = new THREE.Vector3()
+const _viaD = new THREE.Vector3()
+const _viaS = new THREE.Vector3()
+function viaCenter(via) {
+  switch (via.type) {
+    case 'sun':
+      return { c: _viaC.set(0, 0, 0), view: SUN_RADIUS_KM * via.viewRadii, up: UP }
+    case 'comet': {
+      const w = getCometWorld(via.key)
+      return w ? { c: _viaC.copy(w), view: via.viewKm, up: UP } : null
+    }
+    case 'point':
+      return { c: _viaC.set(...raDecToScene(via.ra, via.dec, via.distPc)).multiplyScalar(PC_KM), view: via.viewAU * AU_KM, up: UP }
+    case 'nebula': {
+      const d = nebulaDefs[via.key]
+      if (!d) return null
+      return { c: _viaC.set(...raDecToScene(d.ra, d.dec, d.dist)).multiplyScalar(PC_KM), view: d.radius * via.viewRadii * PC_KM, up: _viaS.set(...GALAXY_AXES.z) }
+    }
+    default:
+      return null
+  }
+}
+function viaPose(via, from, to, out) {
+  if (via.type === 'surface') {
+    if (!surfacePose(via, out)) return false
+    lookQuat(_dir.subVectors(out.look, out.pos), out.up, out.quat)
+    return true
+  }
+  const v = viaCenter(via)
+  if (!v) return false
+  _viaD.subVectors(to, from).normalize()
+  const up = out.up.copy(v.up)
+  _right.crossVectors(_viaD, up)
+  if (_right.lengthSq() < 1e-8) _right.set(1, 0, 0)
+  _right.normalize()
+  out.look.copy(v.c)
+  out.pos.copy(v.c).addScaledVector(_right, v.view * 0.8).addScaledVector(_viaD, -v.view * 0.6)
+  out.scale = v.view
+  lookQuat(_dir.subVectors(out.look, out.pos), out.up, out.quat)
+  return true
+}
+const _viaPoses = Array.from({ length: 6 }, makePose)
+
 const POSE_BY_TYPE = { surface: surfacePose, body: bodyPose, blackhole: blackHolePose, galactic: galacticPose, galaxy: galaxyPose }
 
 const _orbitQ = new THREE.Quaternion()
 
 // Stop pose incl. orientation. h: hold progress 0..1 → orbit (h − ½)·2·orbitDeg round the subject (about up).
 // False if its target isn't ready yet.
+const _holdPose = makePose()
+const _holdQ = new THREE.Quaternion()
 function stopPose(stop, out, h = 0) {
   const fn = POSE_BY_TYPE[stop.type ?? 'body']
   if (!fn || !fn(stop, out)) return false
+  if (stop.hold) {
+    // Scripted hold: base pose → hold pose (same type), arc lifted along up, orientation slerp.
+    if (!fn({ ...stop, ...stop.hold }, _holdPose)) return false
+    lookQuat(_dir.subVectors(out.look, out.pos), out.up, out.quat)
+    lookQuat(_dir.subVectors(_holdPose.look, _holdPose.pos), _holdPose.up, _holdQ)
+    const e = h * h * (3 - 2 * h)
+    const lift = out.pos.distanceTo(_holdPose.pos) * 0.12 * Math.sin(Math.PI * e)
+    out.pos.lerp(_holdPose.pos, e).addScaledVector(out.up, lift)
+    out.look.lerp(_holdPose.look, e)
+    out.up.lerp(_holdPose.up, e).normalize()
+    out.scale += (_holdPose.scale - out.scale) * e
+    out.quat.slerp(_holdQ, e)
+    return true
+  }
   const deg = stop.orbitDeg ?? scrollConfig.orbitDeg
   if (deg) {
     const e = h * h * (3 - 2 * h)
@@ -280,10 +356,24 @@ function scrollPose(scrollY, out) {
     for (let i = 0; i < ranges.length; i += 1) {
       const start = Math.min(ranges[i][0], maxScroll)
       const end = Math.min(ranges[i][1], maxScroll)
-      if (scrollY <= start) return stopPose(pageStops[i], out, clamp01((scrollY - holdStart) / Math.max(start - holdStart, 1)))
+      if (scrollY <= start) {
+        const h = clamp01((scrollY - holdStart) / Math.max(start - holdStart, 1))
+        setHomeProgress(i === 0 ? h : 1)
+        return stopPose(pageStops[i], out, h)
+      }
+      setHomeProgress(1)
       if (scrollY < end) {
         if (!stopPose(pageStops[i], _poseA, 1) || !stopPose(pageStops[i + 1], _poseB, 0)) return false
-        return travelPose(_poseA, _poseB, clamp01((scrollY - start) / Math.max(end - start, 1)), out)
+        const t = clamp01((scrollY - start) / Math.max(end - start, 1))
+        // Sightings: leg split into equal sub-legs A → via… → B (each its own log-scale hop).
+        let m = 0 // ready sightings, packed into _viaPoses[0..m)
+        for (const v of pageStops[i].via ?? []) if (m < _viaPoses.length && viaPose(v, _poseA.pos, _poseB.pos, _viaPoses[m])) m += 1
+        if (!m) return travelPose(_poseA, _poseB, t, out)
+        const n = m + 1
+        const k = Math.min(n - 1, Math.floor(t * n))
+        const from = k === 0 ? _poseA : _viaPoses[k - 1]
+        const to = k === n - 1 ? _poseB : _viaPoses[k]
+        return travelPose(from, to, t * n - k, out)
       }
       holdStart = end
     }
@@ -374,12 +464,15 @@ export function useScrollCamera(cameraRef, routePath) {
   const lastScrollYRef = useRef(typeof window === 'undefined' ? 0 : window.scrollY || 0)
   const scrollVelocityBlendRef = useRef(0)
   const smoothScrollRef = useRef(null) // eased scrollY driving the camera pose
+  const prevPosRef = useRef(new THREE.Vector3()) // mist: relative speed
 
   const routeRef = useRef(routePath)
   const transFromRef = useRef(new THREE.Vector3())
   const transFromScaleRef = useRef(-1) // km, log-travel scale at explore → page start (lazy)
   // Intro (page loads only): 'hold' (Milky Way orbit behind loading screen, home tiles preload) → 'glide' → 'done'.
-  const introRef = useRef({ phase: isExploreRoute(routePath) ? 'done' : 'hold', t0: 0, glideT0: 0, from: makePose(), out: makePose() })
+  // Dev: ?nointro skips it (testing).
+  const skipIntro = isExploreRoute(routePath) || (import.meta.env.DEV && typeof location !== 'undefined' && location.search.includes('nointro'))
+  const introRef = useRef({ phase: skipIntro ? 'done' : 'hold', t0: 0, glideT0: 0, from: makePose(), out: makePose() })
   const transTRef = useRef(1)
   const settleFramesRef = useRef(0)
 
@@ -902,10 +995,12 @@ export function useScrollCamera(cameraRef, routePath) {
     // Intro: hold on the Milky Way while loading (terrain preloads the stop via virtual eye), then glide in.
     const intro = introRef.current
     if (intro.phase !== 'done') {
+      setMist(0)
       // Wall clock (not frame dt): glide takes introGlideS even on a slow GPU.
       pinToRoute()
-      const now = performance.now() / 1000
-      intro.t0 ||= now
+      intro.clock = (intro.clock ?? 0) + Math.min(deltaSeconds, 1 / 8) // capped → a hitch can't skip a chunk of the glide
+      const now = intro.clock
+      intro.t0 ||= now || 1e-6
       const target = chapterPose(routeRef.current, pose)
       if (intro.phase === 'hold') {
         introPose(now - intro.t0, intro.from)
@@ -969,9 +1064,15 @@ export function useScrollCamera(cameraRef, routePath) {
 
     const scrollY = window.scrollY || 0
     smoothScrollRef.current ??= scrollY
-    smoothScrollRef.current += (scrollY - smoothScrollRef.current) * expFactor(scrollConfig.scrollSmoothing, deltaSeconds)
+    // Hitch-proof: a long frame advances like a ≤ 1/20 s one → no jump after a lag spike, camera just glides on.
+    smoothScrollRef.current += (scrollY - smoothScrollRef.current) * expFactor(scrollConfig.scrollSmoothing, Math.min(deltaSeconds, 0.05))
     if (Math.abs(scrollY - smoothScrollRef.current) < 0.5) smoothScrollRef.current = scrollY
     if (scrollPose(smoothScrollRef.current, pose)) {
+      // Mist ∝ speed relative to subject distance (scale-free): fast scale changes = where LOD / tiles pop.
+      const moved = prevPosRef.current.distanceTo(pose.pos)
+      const rel = moved / Math.max(deltaSeconds, 1 / 240) / Math.max(pose.pos.distanceTo(pose.look), 1e-3)
+      setMist(smoothstep(0.6, 4, rel) * scrollConfig.mistMax)
+      prevPosRef.current.copy(pose.pos)
       origin.copy(pose.pos)
       aimScroll(camera, pose.quat, !aimedRef.current, deltaSeconds)
       aimedRef.current = true
@@ -992,6 +1093,7 @@ export function useScrollCamera(cameraRef, routePath) {
     clearAppliedShake(camera)
 
     if (isExploreRoute(routeRef.current)) {
+      setMist(0)
       if (updateExplore(camera, deltaSeconds)) applyBoostShake(camera, deltaSeconds)
       else boostTimeRef.current = 0
       return
