@@ -88,11 +88,11 @@ function Label({ item, register }) {
       {/* Facts — close range only. Out of flow, above name → name stays pinned to body */}
       <div
         data-facts
-        className="absolute bottom-full left-1/2 mb-1.5 w-max max-w-[280px] -translate-x-1/2 rounded-xl border border-cyan-400/20 bg-slate-950/72 px-3 py-2 text-left backdrop-blur-md"
+        className="absolute bottom-full left-1/2 mb-1.5 w-max max-w-[190px] -translate-x-1/2 rounded-xl border border-cyan-400/20 bg-slate-950/72 px-2.5 py-1.5 text-left backdrop-blur-md md:max-w-[280px] md:px-3 md:py-2 phone:max-w-[190px] phone:px-2.5 phone:py-1.5"
         style={{ opacity: 0, visibility: 'hidden' }}
       >
         {item.facts.map((fact, i) => (
-          <p key={i} className="text-[0.72rem] leading-[1.6] text-cyan-100/85">
+          <p key={i} className="text-[0.62rem] leading-[1.5] text-cyan-100/85 md:text-[0.72rem] md:leading-[1.6] phone:text-[0.62rem] phone:leading-[1.5]">
             {fact}
           </p>
         ))}

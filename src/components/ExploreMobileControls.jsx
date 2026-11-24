@@ -1,5 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { getExploreBoostSnapshot, setExploreMove, subscribeExploreInput } from '../three/exploreControls'
+import { isExplorePaused, subscribeExplorePause } from '../three/exploreState'
 
 const BOOST_DRAG_THRESHOLD = 22
 
@@ -59,6 +60,7 @@ function ExploreButton({ direction, label, children, enableBoostDrag = false, sm
 }
 
 export default function ExploreMobileControls() {
+  const paused = useSyncExternalStore(subscribeExplorePause, isExplorePaused, isExplorePaused)
   useEffect(() => () => {
     setExploreMove('forward', false)
     setExploreMove('backward', false)
@@ -69,8 +71,10 @@ export default function ExploreMobileControls() {
     setExploreMove('boost', false)
   }, [])
 
+  if (paused) return null
+
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] md:hidden">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] md:hidden phone:block">
       <div className="mx-auto flex max-w-6xl items-end justify-between gap-4">
         {/*
           D-pad layout (3×3):

@@ -41,8 +41,8 @@ export default function ExploreSpeedHud() {
   if (paused) return null
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-4 z-40 flex justify-center sm:top-5">
-      <div className="rounded-full border border-white/15 bg-slate-950/70 px-4 py-1.5 text-[0.76rem] font-semibold uppercase tracking-[0.08em] text-cyan-100 shadow-[0_10px_30px_rgba(17,17,27,0.5)] backdrop-blur-xl">
+    <div className="pointer-events-none fixed left-4 top-[3.1rem] z-40 flex justify-start md:inset-x-0 md:left-0 md:top-5 md:justify-center phone:inset-x-auto phone:left-4 phone:top-[3.1rem] phone:justify-start">
+      <div className="rounded-full border border-white/15 bg-slate-950/70 px-3 py-1 text-[0.66rem] md:px-4 md:py-1.5 md:text-[0.76rem] phone:px-3 phone:py-1 phone:text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-cyan-100 shadow-[0_10px_30px_rgba(17,17,27,0.5)] backdrop-blur-xl">
         <span ref={textRef}>0 km/t</span>
       </div>
     </div>

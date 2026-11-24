@@ -5,6 +5,11 @@ export default {
   ],
   theme: {
     extend: {
+      // Explore HUD: phone layout = narrow, or short touch screen (landscape phone ≥ md wide).
+      // Appended after md → phone: rules override md: ones.
+      screens: {
+        phone: { raw: '(max-width: 767px), (max-height: 500px) and (pointer: coarse)' },
+      },
       // Catppuccin Mocha reskin. Only the shades actually referenced in the
       // codebase are overridden — Tailwind's `extend` merges these into the
       // default palette rather than replacing it, so any shade not listed

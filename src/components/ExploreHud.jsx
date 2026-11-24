@@ -443,14 +443,14 @@ const panelClass =
 
 // [key, label, on mobile]
 const STAT_ROWS = [
-  ['speed', 'Fart', true],
+  ['speed', 'Fart', false],
   ['alt', 'Høyde', true],
   ['agl', 'Bakke', false],
-  ['sun', 'Solen', true],
+  ['sun', 'Solen', false],
   ['center', 'Sentrum', false],
   ['height', 'Gal. plan', false],
-  ['star', 'Stjerne', true],
-  ['body', 'Nærmest', false],
+  ['star', 'Stjerne', false],
+  ['body', 'Nærmest', true],
   ['dir', 'Retning', false],
   ['pos', 'Posisjon', false],
   ['mp', 'Online', true],
@@ -459,6 +459,7 @@ const STAT_ROWS = [
 export default function ExploreHud() {
   const paused = useSyncExternalStore(subscribeExplorePause, isExplorePaused, isExplorePaused)
   const [mapMode, setMapMode] = useState('auto')
+  const [showCredits, setShowCredits] = useState(false) // phone: credits behind ⓘ
   const mapModeRef = useRef(mapMode)
   mapModeRef.current = mapMode
 
@@ -588,11 +589,20 @@ export default function ExploreHud() {
   if (paused) return null
 
   return (
-    <div className="pointer-events-none fixed z-30 right-3 top-16 flex flex-col items-end gap-2 md:bottom-5 md:left-5 md:right-5 md:top-auto md:flex-row md:items-end md:justify-between">
+    <div className="pointer-events-none fixed z-30 right-3 top-16 flex flex-col items-end gap-2 md:bottom-5 md:left-5 md:right-5 md:top-auto md:flex-row md:items-end md:justify-between phone:bottom-auto phone:left-auto phone:right-3 phone:top-16 phone:flex-col phone:items-end phone:justify-start [@media(max-height:500px)]:top-3 [@media(max-height:500px)]:right-16 [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:items-start">
       {/* Minimap */}
-      <div className={`${panelClass} pointer-events-auto w-[8.5rem] p-1.5 md:w-[14rem] md:p-2`}>
-        <div className="flex items-center justify-between px-1 pb-1 text-[0.63rem] font-semibold uppercase tracking-[0.18em] text-cyan-200/90 md:text-[0.68rem]">
-          <span>Kart · <span ref={mapLabelRef}>Auto</span></span>
+      <div className={`${panelClass} pointer-events-auto w-[8.5rem] p-1.5 md:w-[14rem] md:p-2 phone:w-[8rem] phone:p-1.5 [@media(max-height:500px)]:w-[6.5rem]`}>
+        <div className="flex items-center justify-between gap-1 px-1 pb-1 text-[0.63rem] font-semibold uppercase tracking-[0.18em] text-cyan-200/90 md:text-[0.68rem] phone:px-0.5 phone:text-[0.58rem] phone:tracking-[0.06em]">
+          <span className="min-w-0 truncate"><span className="phone:hidden">Kart · </span><span ref={mapLabelRef}>Auto</span></span>
+          <button
+            type="button"
+            data-explore-control
+            aria-label="Kilder"
+            className="hidden h-4 w-4 shrink-0 items-center justify-center rounded-full border border-white/15 text-[0.55rem] normal-case tracking-normal text-cyan-100/70 phone:inline-flex"
+            onClick={() => setShowCredits((v) => !v)}
+          >
+            i
+          </button>
           <button
             type="button"
             data-explore-control
@@ -605,7 +615,7 @@ export default function ExploreHud() {
         <canvas ref={mapRef} className="block aspect-square w-full rounded-xl bg-[#11111b]" />
         <p ref={mapFootRef} className="px-1 pt-1 text-[0.63rem] uppercase tracking-[0.12em] text-cyan-100/60" />
         {/* Required attribution while Earth tiles render. */}
-        <p ref={terrainCreditRef} style={{ display: 'none' }} className="px-1 pt-1 text-[0.52rem] leading-snug text-cyan-100/45">
+        <p ref={terrainCreditRef} style={{ display: 'none' }} className={`px-1 pt-1 text-[0.52rem] leading-snug text-cyan-100/45 ${showCredits ? '' : 'phone:hidden'}`}>
           <a href="https://s2maps.eu" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
             Sentinel-2 cloudless – s2maps.eu by EOX (Copernicus Sentinel data 2020) · Esri, Maxar, Earthstar Geographics
           </a>
@@ -636,12 +646,12 @@ export default function ExploreHud() {
         </p>
       </div>
 
-      <div className="flex flex-col items-end gap-2 md:flex-row md:items-end">
+      <div className="flex flex-col items-end gap-2 md:flex-row md:items-end phone:flex-col phone:items-end">
         {/* Stats */}
-        <div className={`${panelClass} w-[12.5rem] px-2.5 py-2 md:w-[17rem] md:px-3 md:py-2.5`}>
-          <dl className="grid grid-cols-[3.9rem_1fr] gap-x-2 gap-y-1 text-[0.63rem] uppercase tracking-[0.1em] md:grid-cols-[5.2rem_1fr] md:text-[0.7rem]">
+        <div className={`${panelClass} w-[12.5rem] px-2.5 py-2 md:w-[17rem] md:px-3 md:py-2.5 phone:w-[11.5rem] phone:px-2 phone:py-1.5`}>
+          <dl className="grid grid-cols-[3.9rem_1fr] gap-x-2 gap-y-1 text-[0.63rem] uppercase tracking-[0.1em] md:grid-cols-[5.2rem_1fr] md:text-[0.7rem] phone:grid-cols-[3.6rem_1fr] phone:text-[0.6rem]">
             {STAT_ROWS.map(([key, label, mobile]) => (
-              <div key={key} className={mobile ? 'contents' : 'hidden md:contents'}>
+              <div key={key} className={mobile ? 'contents' : 'hidden md:contents phone:hidden'}>
                 <dt className="text-cyan-200/55">{label}</dt>
                 <dd ref={(el) => (statRefs.current[key] = el)} className="truncate text-right font-semibold text-cyan-50/90">
                   —
@@ -654,14 +664,14 @@ export default function ExploreHud() {
             target="_blank"
             rel="noreferrer"
             data-explore-control
-            className="pointer-events-auto mt-2 hidden text-[0.58rem] uppercase tracking-[0.12em] text-cyan-100/35 hover:text-cyan-100/70 md:block"
+            className="pointer-events-auto mt-2 hidden text-[0.58rem] uppercase tracking-[0.12em] text-cyan-100/35 hover:text-cyan-100/70 md:block phone:hidden"
           >
             Stjernedata: HYG v4.1 · CC BY-SA 4.0
           </a>
         </div>
 
         {/* Attitude */}
-        <div className={`${panelClass} w-[8.5rem] p-1.5 md:w-[12rem] md:p-2`}>
+        <div className={`${panelClass} w-[8.5rem] p-1.5 md:w-[12rem] md:p-2 phone:fixed phone:bottom-[calc(env(safe-area-inset-bottom)+0.9rem)] phone:right-3 phone:w-[6.5rem] phone:p-1`}>
           <canvas ref={attRef} className="block aspect-[1/1.12] w-full" />
           <p className="px-1 pt-0.5 text-center text-[0.63rem] uppercase tracking-[0.16em] text-cyan-100/60">
             <span ref={frameRef}>—</span>

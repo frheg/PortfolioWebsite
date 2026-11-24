@@ -26,7 +26,7 @@ export default function ExplorePauseOverlay() {
       aria-label="Utforskningsmodus satt på pause"
     >
       <div
-        className="pointer-events-auto mx-4 max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-2xl border border-white/10 bg-slate-950/88 px-8 py-8 text-center shadow-[0_24px_64px_rgba(17,17,27,0.7)] backdrop-blur-xl"
+        className="pointer-events-auto mx-4 max-h-[88dvh] w-full max-w-sm overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-slate-950/88 px-5 py-5 text-center sm:px-8 sm:py-8 phone:px-5 phone:py-4 shadow-[0_24px_64px_rgba(17,17,27,0.7)] backdrop-blur-xl"
       >
         <p className="text-[0.6rem] uppercase tracking-[0.35em] text-cyan-400/70">Utforskningsmodus</p>
         <h2 className="mt-1 text-2xl font-light uppercase tracking-[0.25em] text-cyan-100">
@@ -34,9 +34,14 @@ export default function ExplorePauseOverlay() {
         </h2>
         <ExploreDateReadout className="mt-2 block text-[0.62rem] uppercase tracking-[0.14em] text-cyan-100/55" />
 
-        <div className="my-6 h-px bg-white/8" />
+        <div className="my-4 h-px bg-white/8 sm:my-6" />
 
-        <div className="space-y-1 text-[0.68rem] uppercase tracking-[0.16em] text-cyan-100/60">
+        <div className="space-y-1 text-[0.68rem] uppercase tracking-[0.16em] text-cyan-100/60 md:hidden phone:block">
+          <p>Dra på skjermen · se deg rundt</p>
+          <p>▲ ▼ · fram / bak   ◀ ▶ · sving</p>
+          <p>↑ ↓ · tilt   Dra ▲ oppover · boost</p>
+        </div>
+        <div className="hidden space-y-1 text-[0.68rem] uppercase tracking-[0.16em] text-cyan-100/60 md:block phone:hidden">
           <p>Bevegelse · W / S · Piltaster · K / J</p>
           <p>Sving · A / D · Piltaster · H / L</p>
           <p>Se · Mus</p>
@@ -44,20 +49,20 @@ export default function ExplorePauseOverlay() {
           <p className="mt-2 text-cyan-400/50">Pause · P eller Esc</p>
         </div>
 
-        <div className="my-6 h-px bg-white/8" />
+        <div className="my-4 h-px bg-white/8 sm:my-6" />
 
         <ExploreTimeControl />
 
-        <div className="my-6 h-px bg-white/8" />
+        <div className="my-4 h-px bg-white/8 sm:my-6" />
 
         <ExploreQualityControl />
 
-        <div className="my-6 h-px bg-white/8" />
+        <div className="my-4 h-px bg-white/8 sm:my-6" />
 
         <p className="mb-3 text-[0.6rem] uppercase tracking-[0.28em] text-cyan-100/50">Gå til</p>
         <ExplorePauseNav />
 
-        <div className="my-6 h-px bg-white/8" />
+        <div className="my-4 h-px bg-white/8 sm:my-6" />
 
         <button
           type="button"
@@ -66,7 +71,7 @@ export default function ExplorePauseOverlay() {
         >
           Fortsett
         </button>
-        <p className="mt-3 text-[0.58rem] uppercase tracking-[0.18em] text-white/25">
+        <p className="mt-3 hidden text-[0.58rem] uppercase tracking-[0.18em] text-white/25 md:block phone:hidden">
           eller trykk P for å fortsette
         </p>
       </div>
