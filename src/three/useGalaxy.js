@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { createGalaxyVolume } from './galaxyVolume'
 import { createDeepSpace } from './deepSpace'
+import { createNeighborGalaxies } from './neighborGalaxies'
 import { createLensPass } from './lensPass'
 import { createPostFx } from './postFx'
 import { createAtmospheres } from './atmosphere'
@@ -85,6 +86,7 @@ export function useGalaxy(sceneRef, rendererRef) {
     const volume = createGalaxyVolume(isMobile)
     const sectors = createStarSectors(scene, magLimit)
     const deepSpace = createDeepSpace(scene, isMobile)
+    const neighbors = createNeighborGalaxies(scene, isMobile)
     const lens = createLensPass()
     const post = createPostFx(quality)
     const atmospheres = createAtmospheres()
@@ -118,6 +120,7 @@ export function useGalaxy(sceneRef, rendererRef) {
       state.disposed = true
       volume.dispose()
       sectors.dispose()
+      neighbors.dispose()
       deepSpace.dispose()
       lens.dispose()
       post.dispose()

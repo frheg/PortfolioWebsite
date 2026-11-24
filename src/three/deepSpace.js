@@ -17,7 +17,7 @@ export const SHADOW_FACTOR = 2.598 // shadow radius / Rs (3√3/2)
 
 // ─── deterministic noise (JS) ────────────────────────────────────────────────
 
-function mulberry32(seed) {
+export function mulberry32(seed) {
   let a = seed >>> 0
   return () => {
     a = (a + 0x6d2b79f5) >>> 0
@@ -51,7 +51,7 @@ function noise3(x, y, z, seed) {
   )
 }
 
-function fbm3(x, y, z, seed) {
+export function fbm3(x, y, z, seed) {
   return noise3(x, y, z, seed) * 0.5 + noise3(x * 2.1, y * 2.1, z * 2.1, seed + 1) * 0.3 + noise3(x * 4.3, y * 4.3, z * 4.3, seed + 2) * 0.2
 }
 
@@ -64,7 +64,7 @@ function randInBall(rand) {
   }
 }
 
-function gauss(rand) {
+export function gauss(rand) {
   return Math.sqrt(-2 * Math.log(rand() + 1e-12)) * Math.cos(2 * Math.PI * rand())
 }
 
@@ -184,6 +184,37 @@ void main() {
 
 const _rel = new THREE.Vector3()
 
+/**
+ * Glowing world-size sprite cloud (RTE). positions: pc local to chunk (scene pc, float64 {x,y,z}),
+ * sizes: pc, tints: rgba (a = weight). Shared by nebulae + neighbor galaxies.
+ */
+export function createSpriteCloud(positions, sizes, tints, chunk, gain) {
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1))
+  geometry.setAttribute('tint', new THREE.BufferAttribute(tints, 4))
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uCamHigh: { value: new THREE.Vector3() },
+      uCamLow: { value: new THREE.Vector3() },
+      uFocalPx: starUniforms.uFocalPx,
+      uPixelRatio: starUniforms.uPixelRatio,
+      uGain: { value: gain },
+      uMaxPx: { value: cfg.nebulaMaxPx },
+    },
+    vertexShader: NEBULA_VERT,
+    fragmentShader: NEBULA_FRAG,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+  const points = new THREE.Points(geometry, material)
+  points.frustumCulled = false
+  points.matrixAutoUpdate = false
+  rteHook(points, chunk, material.uniforms)
+  return points
+}
+
 function rteHook(points, chunk, uniforms) {
   points.onBeforeRender = () => {
     _rel.set(origin.x / PC_KM - chunk.x, origin.y / PC_KM - chunk.y, origin.z / PC_KM - chunk.z)
@@ -220,29 +251,7 @@ function buildNebula(def, isMobile) {
     sizes[i] = unit[i * 8 + 3] * def.radius
     tints.set([unit[i * 8 + 4], unit[i * 8 + 5], unit[i * 8 + 6], unit[i * 8 + 7]], i * 4)
   }
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1))
-  geometry.setAttribute('tint', new THREE.BufferAttribute(tints, 4))
-  const material = new THREE.ShaderMaterial({
-    uniforms: {
-      uCamHigh: { value: new THREE.Vector3() },
-      uCamLow: { value: new THREE.Vector3() },
-      uFocalPx: starUniforms.uFocalPx,
-      uPixelRatio: starUniforms.uPixelRatio,
-      uGain: { value: cfg.nebulaGain / Math.max(overlap, 1) },
-      uMaxPx: { value: cfg.nebulaMaxPx },
-    },
-    vertexShader: NEBULA_VERT,
-    fragmentShader: NEBULA_FRAG,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  })
-  const points = new THREE.Points(geometry, material)
-  points.frustumCulled = false
-  points.matrixAutoUpdate = false
-  rteHook(points, chunk, material.uniforms)
+  const points = createSpriteCloud(positions, sizes, tints, chunk, cfg.nebulaGain / Math.max(overlap, 1))
 
   // Embedded stars: hot young cluster (emission) or central remnant.
   const rand = mulberry32(def.seed)

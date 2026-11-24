@@ -57,7 +57,7 @@ export const spaceConfig = {
       jetCruise: 0.25,      // km/s
       jetBoostMultiplier: 2.4,
       jetBlendAltKm: [2, 100],
-      maxGalaxyDistance: 150_000 * PC_KM, // from galactic center
+      maxGalaxyDistance: 1_200_000 * PC_KM, // from galactic center (Andromeda reachable)
       wormholeFovKick: 55,  // deg, eases back after Sgr A* exit
       localUpRange: [0.15, 0.8], // altitude / radius: below near → full local vertical, above far → world up
       carryRadii: 30,       // altitude / radius: inside → camera rides with body's orbit
@@ -147,8 +147,12 @@ export const spaceConfig = {
       grid: 32,             // quads per tile edge
       splitPx: 1.25,        // refine when imagery texel > this many px (× quality.terrainSplitScale)
       splitPxMobile: 2.4,
-      maxTiles: 320,        // GPU cache (≈0.45 MB/tile)
+      maxTiles: 320,        // GPU cache cap (≈0.4 MB/tile)
       maxTilesMobile: 160,
+      tilesPerGb: 40,       // budget = device RAM (GB) × this, clamped
+      minTiles: 100,
+      idleEvictMs: 8000,    // unseen this long → freed even under budget
+      highPriorityLoads: 4, // nearest N fetches get high network priority
       uploadsPerFrame: 4,   // tiles made drawable per frame (smooth)
       cancelAfterFrames: 30, // unwanted in-flight load → aborted
       maxInFlight: 12,
@@ -234,6 +238,11 @@ export const spaceConfig = {
       labelMag: 1.5,        // named star label when brighter than this
       labelNearPc: 4,       // ...or closer than this
       promoteDistancePc: 0.05, // nearest star → real sphere + label inside this (~10 000 AU)
+    },
+    neighbors: {
+      sprites: 30000,       // × per-galaxy weight
+      mobileFactor: 0.5,
+      gain: 0.7,            // ÷ sprite overlap (M31 = faint smudge from home)
     },
     deepSpace: {
       nebulaSprites: 7000,

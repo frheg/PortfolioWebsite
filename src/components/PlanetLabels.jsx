@@ -6,6 +6,10 @@ import { getPoiBodies, getSolarCollisionBodies, subscribePoiBodies } from '../th
 import { origin } from '../three/floatingOrigin'
 import { planetFacts } from '../data/planetFacts'
 import { spaceConfig } from '../three/spaceConfig'
+import { collectEarthNames } from '../three/earthNames'
+
+const NAME_POOL = 70
+const NAME_MARK = { city: '•', mountain: '▲', landmark: '◆' }
 
 // One label per UFO instance.
 const ufoBase = planetFacts.find((p) => p.key === 'ufo')
@@ -98,6 +102,7 @@ function Label({ item, register }) {
 export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
   const pois = useSyncExternalStore(subscribePoiBodies, getPoiBodies, getPoiBodies)
   const elementsRef = useRef(new Map()) // key → { el, factsEl }
+  const poolRef = useRef([]) // dense Earth names: reused label elements
 
   const register = (key, el) => {
     if (el) elementsRef.current.set(key, { el, factsEl: el.querySelector('[data-facts]') })
@@ -179,6 +184,22 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       updateFocus()
       getSolarCollisionBodies().forEach((body) => place(body, w, h, focalPx))
       getPoiBodies().forEach((body) => place(body, w, h, focalPx))
+
+      // Dense names: only while Earth is (part of) the focus.
+      const names = focus.key === 'earth' || focus.f < 0.5 ? collectEarthNames(cam, w, h) : []
+      const earthWeight = focus.key === 'earth' ? 1 : 1 - focus.f
+      poolRef.current.forEach((el, i) => {
+        const item = names[i]
+        if (!item || !el) {
+          if (el && el.style.opacity !== '0') el.style.opacity = '0'
+          return
+        }
+        const text = (NAME_MARK[item.kind] ? NAME_MARK[item.kind] + ' ' : '') + item.name
+        if (el.textContent !== text) el.textContent = text
+        el.dataset.kind = item.kind
+        el.style.transform = `translate(${item.x}px, ${item.y}px) translate(-50%, -100%)`
+        el.style.opacity = (item.opacity * earthWeight).toFixed(3)
+      })
     }
 
     frameId = requestAnimationFrame(tick)
@@ -194,6 +215,14 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       ))}
       {pois.map((item) => (
         <Label key={item.key} item={item} register={register} />
+      ))}
+      {Array.from({ length: NAME_POOL }, (_, i) => (
+        <p
+          key={`name_${i}`}
+          ref={(el) => (poolRef.current[i] = el)}
+          className="absolute left-0 top-0 select-none whitespace-nowrap text-[0.62rem] font-medium tracking-[0.03em] text-white/85 data-[kind=water]:italic data-[kind=water]:text-sky-200/75 data-[kind=region]:uppercase data-[kind=region]:tracking-[0.3em] data-[kind=region]:text-white/65"
+          style={{ opacity: 0, textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.6)' }}
+        />
       ))}
     </div>
   )

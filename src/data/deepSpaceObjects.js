@@ -105,3 +105,40 @@ export const blackHoles = [
     facts: ['Tyngste stjernemassive i Melkeveien', 'Masse: ~33 × Solen', 'Funnet av Gaia 2024', 'Avstand: ~1 930 lysår'],
   },
 ]
+
+// Neighbor galaxies. dist + radius: pc. inclination: disk tilt vs line of sight (0 = face-on),
+// pa: position angle of major axis on sky (N→E), deg. type: spiral | barred | irregular.
+export const galaxies = [
+  {
+    key: 'm31',
+    name: 'Andromedagalaksen (M31)',
+    type: 'spiral',
+    ra: 10.6847, dec: 41.2687, dist: 765_000, radius: 30_000,
+    inclination: 77, pa: 38, arms: 2, pitch: 10, ring: 0.42, seed: 31, weight: 1,
+    facts: ['Nærmeste store spiralgalakse', 'Avstand: ~2,5 millioner lysår', '~1 billion stjerner', 'Kolliderer med Melkeveien om ~4,5 mrd. år'],
+  },
+  {
+    key: 'm33',
+    name: 'Triangelgalaksen (M33)',
+    type: 'spiral',
+    ra: 23.4621, dec: 30.6599, dist: 869_000, radius: 9_000,
+    inclination: 55, pa: 23, arms: 2, pitch: 24, seed: 33, weight: 0.45,
+    facts: ['Tredje største i Den lokale gruppen', 'Avstand: ~2,7 millioner lysår', '~40 milliarder stjerner'],
+  },
+  {
+    key: 'lmc',
+    name: 'Den store magellanske sky',
+    type: 'barred',
+    ra: 80.894, dec: -69.756, dist: 49_970, radius: 5_500,
+    inclination: 35, pa: 170, seed: 50, weight: 0.6, tarantula: [0.3, 0.2],
+    facts: ['Satellittgalakse til Melkeveien', 'Avstand: ~163 000 lysår', 'Hjem til Taranteltåken (30 Doradus)', 'Supernova 1987A eksploderte her'],
+  },
+  {
+    key: 'smc',
+    name: 'Den lille magellanske sky',
+    type: 'irregular',
+    ra: 13.187, dec: -72.829, dist: 62_100, radius: 3_200,
+    inclination: 60, pa: 45, seed: 62, weight: 0.35,
+    facts: ['Dverggalakse, satellitt til Melkeveien', 'Avstand: ~200 000 lysår', '~7 milliarder stjerner'],
+  },
+]

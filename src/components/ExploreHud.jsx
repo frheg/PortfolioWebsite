@@ -560,11 +560,15 @@ export default function ExploreHud() {
         {/* Required attribution while Earth tiles render. */}
         <p ref={terrainCreditRef} style={{ display: 'none' }} className="px-1 pt-1 text-[0.45rem] leading-snug text-cyan-100/45">
           <a href="https://s2maps.eu" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
-            Sentinel-2 cloudless – s2maps.eu by EOX (Copernicus Sentinel data 2020)
+            Sentinel-2 cloudless – s2maps.eu by EOX (Copernicus Sentinel data 2020) · Esri, Maxar, Earthstar Geographics
           </a>
           {' · '}
           <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
             Terreng: AWS Terrain Tiles
+          </a>
+          {' · '}
+          <a href="https://www.geonames.org" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
+            Stedsnavn: GeoNames (CC BY 4.0), Natural Earth
           </a>
         </p>
       </div>

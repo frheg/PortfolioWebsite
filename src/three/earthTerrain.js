@@ -24,6 +24,11 @@ const _v = new THREE.Vector3()
 const _camLocal = new THREE.Vector3()
 
 let terrainActive = false
+// Earth frame (world quaternion of the spinning surface, center, radius) for name layers. Updated every frame.
+let earthFrame = null
+export function getEarthFrame() {
+  return earthFrame
+}
 let latLonFn = null
 /** [latDeg, lonDeg] under a world pos while tiles active, else null. */
 export function getEarthLatLon(worldPos) {
@@ -42,7 +47,11 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
   const R = earth.def.radius
   const maxZ = isMobile ? cfg.maxZoomMobile : cfg.maxZoom
   const splitPx = isMobile ? cfg.splitPxMobile : cfg.splitPx
-  const maxTiles = isMobile ? cfg.maxTilesMobile : cfg.maxTiles
+  // Cache budget from device RAM (Chrome: navigator.deviceMemory, GB, ≤ 8).
+  const deviceGb = (typeof navigator !== 'undefined' && navigator.deviceMemory) || (isMobile ? 4 : 8)
+  const maxTiles = Math.round(
+    THREE.MathUtils.clamp(deviceGb * cfg.tilesPerGb, cfg.minTiles, isMobile ? cfg.maxTilesMobile : cfg.maxTiles)
+  )
   const maxInFlight = isMobile ? cfg.maxInFlightMobile : cfg.maxInFlight
 
   // Spins with Earth mesh (copy rotation each frame), lives in its tilt frame.
@@ -52,8 +61,9 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
   earth.tiltGroup.add(group)
 
   // Pool: decode + normal maps are CPU-heavy → spread over cores. Same-parent tiles → same worker (cache hits).
+  const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4
   const workers = Array.from(
-    { length: isMobile ? cfg.workersMobile : cfg.workers },
+    { length: Math.max(1, Math.min(isMobile ? cfg.workersMobile : cfg.workers, cores - 1)) },
     () => new Worker(new URL('./terrainWorker.js', import.meta.url), { type: 'module' })
   )
   const workerFor = (t) => {
@@ -135,7 +145,8 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     t.mesh.geometry = geometry
     t.mesh.position.set(center[0], center[1], center[2])
     t.mesh.material.uniforms.uTileCenter.value.set(center[0], center[1], center[2])
-    const nm = new THREE.DataTexture(normalMap, 128, 128)
+    const nm = new THREE.DataTexture(normalMap, 128, 128, THREE.RGFormat)
+    nm.unpackAlignment = 2
     nm.flipY = false
     nm.generateMipmaps = true
     nm.minFilter = THREE.LinearMipmapLinearFilter
@@ -154,7 +165,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     w.onmessage = onWorkerMessage
   })
 
-  const request = (t) => {
+  const request = (t, high) => {
     if (t.state !== 'empty') return
     t.state = 'loading'
     t.parts = 2
@@ -188,7 +199,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
 
     const template = t.z > cfg.imageryMaxZoom ? cfg.closeImageryUrl : cfg.imageryUrl
     const url = template.replace('{z}', t.z).replace('{x}', t.x).replace('{y}', t.y)
-    fetch(url, { signal: t.abort.signal })
+    fetch(url, { signal: t.abort.signal, priority: high ? 'high' : 'low' })
       .then((res) => {
         if (!res.ok) throw new Error(`imagery ${res.status}`)
         return res.blob()
@@ -272,11 +283,13 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
   // Returns after drawing this tile or its descendants. Unready → caller draws itself.
   const visit = (t) => {
     t.lastUsed = frame
+    t.lastUsedMs = nowMs
     if (culled(t)) return
     if (wantsSplit(t)) {
       const kids = children(t)
       kids.forEach((c) => {
         c.lastUsed = frame
+        c.lastUsedMs = nowMs
         if (c.state === 'empty') queue.add(c)
       })
       // Lookahead: kid nearest cam → queue its kids too (+ next level) → sharp tiles start early.
@@ -285,6 +298,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
         const grand = children(near)
         grand.forEach((g) => {
           g.lastUsed = frame
+          g.lastUsedMs = nowMs
           if (g.state === 'empty') queue.add(g)
         })
         near = grand.reduce((a, c) => (c.center.distanceTo(_camLocal) < a.center.distanceTo(_camLocal) ? c : a))
@@ -298,8 +312,17 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     visible.push(t)
   }
 
+  const frameState = { quaternion: new THREE.Quaternion(), world: earth.world, radius: R }
+
+  let nowMs = 0
+
   const update = (focalPx, explore) => {
     frame += 1
+    nowMs = performance.now()
+    group.rotation.copy(earth.mesh.rotation)
+    group.updateWorldMatrix(true, false)
+    group.getWorldQuaternion(frameState.quaternion)
+    earthFrame = explore ? frameState : null
     _v.subVectors(origin, earth.world)
     const distWorld = _v.length()
     const active = explore && distWorld < R * cfg.activeRadii
@@ -309,9 +332,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     earth.mesh.scale.setScalar(active ? R - cfg.baseSinkKm : R)
     if (!active) return
 
-    group.rotation.copy(earth.mesh.rotation)
-    group.updateWorldMatrix(true, false)
-    group.getWorldQuaternion(_q)
+    _q.copy(frameState.quaternion)
     _qi.copy(_q).invert()
     normalRot.value.setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(_q))
     _camLocal.subVectors(origin, earth.world).applyQuaternion(_qi)
@@ -325,6 +346,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
       for (let x = 0; x < 4; x += 1) {
         const root = getTile(2, x, y)
         root.lastUsed = frame
+        root.lastUsedMs = nowMs
         if (root.state === 'empty') queue.add(root)
         if (root.state === 'ready') visit(root)
       }
@@ -339,9 +361,11 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
 
     // Load: nearest surface first (big ancestors count as near → still load early), then coarse.
     const ordered = [...queue].sort((a, b) => surfaceDist(a) - surfaceDist(b) || a.z - b.z)
+    let rank = 0
     for (const t of ordered) {
       if (inFlight >= maxInFlight) break
-      request(t)
+      request(t, rank < cfg.highPriorityLoads)
+      rank += 1
     }
 
     flushUploads()
@@ -354,6 +378,11 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     // Cancel loads nobody wanted for a while (flew past).
     tiles.forEach((t) => {
       if (t.state === 'loading' && frame - t.lastUsed > cfg.cancelAfterFrames) cancelTile(t)
+    })
+
+    // Idle evict: drawn-but-unseen for a while → free now (RAM stays minimal, roots kept).
+    tiles.forEach((t) => {
+      if (t.state === 'ready' && t.z > 2 && t.lastUsed < frame && nowMs - (t.lastUsedMs ?? 0) > cfg.idleEvictMs) disposeTile(t)
     })
 
     // LRU evict (never this frame's).
@@ -419,6 +448,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     earth.tiltGroup.remove(group)
     earth.mesh.scale.setScalar(R)
     terrainActive = false
+    earthFrame = null
   }
 
   return { update, heightAt, dispose }

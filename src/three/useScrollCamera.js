@@ -469,7 +469,8 @@ export function useScrollCamera(cameraRef, routePath) {
     forEachBody((body) => {
       if (body.kind !== 'body') return
       // Portal: speed ∝ distance to singularity → horizon reachable in seconds.
-      const surface = body.portal ? 0 : body.radius + (body.heightAt ? body.heightAt(position) : 0)
+      // Portal/soft: speed ∝ distance to center (singularity / galaxy core).
+      const surface = body.portal || body.soft ? 0 : body.radius + (body.heightAt ? body.heightAt(position) : 0)
       best = Math.min(best, position.distanceTo(body.position) - surface)
     })
     if (nearestStar.valid) {
@@ -490,7 +491,7 @@ export function useScrollCamera(cameraRef, routePath) {
     }
 
     forEachBody((body) => {
-      if (body.portal) return
+      if (body.portal || body.soft) return
       const ground = body.heightAt ? body.heightAt(position) : 0
       const minDistance = body.radius + ground + (body.kind === 'body' ? exploreConfig.minAltitude : 0)
       const offset = bodyOffsetRef.current.subVectors(position, body.position)
@@ -569,7 +570,7 @@ export function useScrollCamera(cameraRef, routePath) {
   const transportUp = () => {
     let best = null
     forEachBody((body) => {
-      if (body.kind !== 'body' || body.portal) return
+      if (body.kind !== 'body' || body.portal || body.soft) return
       const alt = origin.distanceTo(body.position) - body.radius - (body.heightAt ? body.heightAt(origin) : 0)
       if (!best || alt / body.radius < best.ratio) best = { body, ratio: alt / body.radius }
     })

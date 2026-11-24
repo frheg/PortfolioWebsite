@@ -36,9 +36,9 @@ vec3 nightLights(vec3 localDir, vec3 nW) {
   vec2 g = fwidth(uv.x) <= fwidth(uvAlt.x) ? uv : uvAlt; // seam-safe grads
   vec3 lights = textureGrad(uNightMap, uv, dFdx(g), dFdy(g)).rgb;
   float dark = 1.0 - smoothstep(-0.12, 0.06, dot(nW, uSunDir));
-  // Map is ~20 km/texel: magnified past ~3 px/texel it's a blob, not lights → fade out up close.
+  // Map is ~20 km/texel: magnified past ~2 px/texel it reads as blobs, not lights → fade out.
   float texelsPerPx = max(fwidth(g.x), fwidth(g.y)) * float(textureSize(uNightMap, 0).x);
-  float far = smoothstep(0.15, 0.5, texelsPerPx);
+  float far = smoothstep(0.4, 1.0, texelsPerPx);
   return lights * lights * vec3(1.0, 0.82, 0.55) * uNightGain * dark * far;
 }
 
@@ -72,15 +72,20 @@ ${SHADE_GLSL}
 varying vec2 vUv;
 varying vec3 vNormalW;
 varying vec3 vLocalPos;
-uniform sampler2D uNormalMap;   // terrain: body-local normals, rgb = n·0.5+0.5
+uniform sampler2D uNormalMap;   // terrain: RG8 east/north slopes (±4)
 uniform float uUseNormalMap;
 uniform mat3 uNormalRot;        // body-local → world rotation
 void main() {
   #include <logdepthbuf_fragment>
   vec3 albedo = texture2D(map, vUv).rgb;
-  vec3 n = uUseNormalMap > 0.5
-    ? normalize(uNormalRot * (texture2D(uNormalMap, vUv).xyz * 2.0 - 1.0))
-    : normalize(vNormalW);
+  vec3 n = normalize(vNormalW);
+  if (uUseNormalMap > 0.5) {
+    vec2 s = (texture2D(uNormalMap, vUv).rg - 0.5) * 8.0;
+    vec3 up = normalize(vLocalPos);
+    vec3 east = normalize(vec3(up.z, 0.0, -up.x));
+    vec3 north = cross(up, east);
+    n = normalize(uNormalRot * normalize(up - east * s.x - north * s.y));
+  }
   gl_FragColor = vec4(shadeBody(albedo, n) + nightLights(vLocalPos, n), 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>

@@ -2,7 +2,7 @@
 // Frame: Earth-local km (matches SphereGeometry/equirect texture: lon 0 → +x, north → +y).
 // Positions relative to tile center (float32 precise near surface). Skirts hide LOD cracks.
 // In:  { id, z, x, y, grid, radius, terrainUrl, terrainMaxZ, skirtKm }
-// Out: { id, center[3], positions, normals, uvs, indices, heights, normalMap (128² RGBA) } | { id, error }
+// Out: { id, center[3], positions, normals, uvs, indices, heights, normalMap (128² RG8 slopes) } | { id, error }
 // In { cancel: id } → drop result if still pending (mesh build skipped).
 
 const mercatorLat = (yFrac) => Math.atan(Math.sinh(Math.PI * (1 - 2 * yFrac)))
@@ -183,30 +183,21 @@ self.onmessage = async (event) => {
     })
     const indices = new Uint16Array(idx)
 
-    // Per-pixel normal map (NM×NM) from source heights → relief shading way past mesh grid.
-    // Mercator is conformal → texel spacing equal E/W and N/S.
+    // Per-pixel slope map (NM×NM, RG8 = east/north slope) from source heights → relief shading
+    // way past mesh grid; shader rebuilds the normal. Mercator conformal → equal E/N texel spacing.
     const NM = 128
-    const normalMap = new Uint8Array(NM * NM * 4)
+    const SLOPE_RANGE = 4 // ±, ~76°
+    const normalMap = new Uint8Array(NM * NM * 2)
     const texelKm = (2 * Math.PI * radius * Math.cos(mercatorLat((y + 0.5) / tiles))) / tiles / NM
     const hAt = (i, j) => sample(src, offU + (Math.min(Math.max(i, 0), NM - 1) / (NM - 1)) * span, offV + (Math.min(Math.max(j, 0), NM - 1) / (NM - 1)) * span)
     for (let j = 0; j < NM; j += 1) {
-      const lat = mercatorLat((y + (j + 0.5) / NM) / tiles)
       for (let i = 0; i < NM; i += 1) {
-        const lon = ((x + (i + 0.5) / NM) / tiles) * 2 * Math.PI - Math.PI
-        const up = dirFromLatLon(lat, lon)
-        const east = [-Math.sin(lon), 0, -Math.cos(lon)]
-        const north = [-Math.sin(lat) * Math.cos(lon), Math.cos(lat), Math.sin(lat) * Math.sin(lon)]
         const dhE = (hAt(i + 1, j) - hAt(i - 1, j)) / (2 * texelKm)
         const dhN = (hAt(i, j - 1) - hAt(i, j + 1)) / (2 * texelKm) // row 0 = north
-        let nx = up[0] - east[0] * dhE - north[0] * dhN
-        let ny = up[1] - east[1] * dhE - north[1] * dhN
-        let nz = up[2] - east[2] * dhE - north[2] * dhN
-        const l = Math.hypot(nx, ny, nz)
-        const k = (j * NM + i) * 4
-        normalMap[k] = Math.round(((nx / l) * 0.5 + 0.5) * 255)
-        normalMap[k + 1] = Math.round(((ny / l) * 0.5 + 0.5) * 255)
-        normalMap[k + 2] = Math.round(((nz / l) * 0.5 + 0.5) * 255)
-        normalMap[k + 3] = 255
+        const enc = (s) => Math.round(Math.min(Math.max(s / (2 * SLOPE_RANGE) + 0.5, 0), 1) * 255)
+        const k = (j * NM + i) * 2
+        normalMap[k] = enc(dhE)
+        normalMap[k + 1] = enc(dhN)
       }
     }
 
