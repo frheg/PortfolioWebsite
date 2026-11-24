@@ -15,8 +15,8 @@ export function areBuildingsActive() {
   return buildingsActive
 }
 
-export function createBuildings(group, sunDir, R, isMobile) {
-  const material = createVertexColorMaterial(sunDir)
+export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
+  const material = createVertexColorMaterial(sunDir, planetCenter)
   const worker = new Worker(new URL('./buildingWorker.js', import.meta.url), { type: 'module' })
   const tiles = new Map() // key → { state, mesh, x, y, d }
   const pending = new Map()

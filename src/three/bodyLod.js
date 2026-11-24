@@ -42,6 +42,13 @@ vec3 nightLights(vec3 localDir, vec3 nW) {
   return lights * lights * vec3(1.0, 0.82, 0.55) * uNightGain * dark * far;
 }
 
+// Sun below local horizon → planet blocks it (walls/slopes facing a set sun stay dark).
+vec3 shadeBodyShadowed(vec3 albedo, vec3 nW, vec3 upW) {
+  float day = smoothstep(-0.08, 0.02, dot(upW, uSunDir));
+  float ndl = max(dot(nW, uSunDir), 0.0) * day;
+  return albedo * (uSunLight * ndl + uAmbientLight) * RECIPROCAL_PI;
+}
+
 vec3 shadeBody(vec3 albedo, vec3 nW) {
   if (uEmissive > 0.5) return mix(albedo, vec3(dot(albedo, vec3(0.3, 0.59, 0.11))) * uTint * 1.6, uTintMix);
   float ndl = max(dot(nW, uSunDir), 0.0);
@@ -79,14 +86,18 @@ void main() {
   #include <logdepthbuf_fragment>
   vec3 albedo = texture2D(map, vUv).rgb;
   vec3 n = normalize(vNormalW);
+  vec3 lit;
   if (uUseNormalMap > 0.5) {
     vec2 s = (texture2D(uNormalMap, vUv).rg - 0.5) * 8.0;
     vec3 up = normalize(vLocalPos);
     vec3 east = normalize(vec3(up.z, 0.0, -up.x));
     vec3 north = cross(up, east);
     n = normalize(uNormalRot * normalize(up - east * s.x - north * s.y));
+    lit = shadeBodyShadowed(albedo, n, normalize(uNormalRot * up));
+  } else {
+    lit = shadeBody(albedo, n);
   }
-  gl_FragColor = vec4(shadeBody(albedo, n) + nightLights(vLocalPos, n), 1.0);
+  gl_FragColor = vec4(lit + nightLights(vLocalPos, n), 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }
@@ -194,11 +205,14 @@ export function createSurfaceMaterial(map, sunDir, options = {}) {
 const VCOLOR_VERT = /* glsl */ `
 #include <common>
 #include <logdepthbuf_pars_vertex>
+uniform vec3 uPlanetCenter; // render space
 varying vec3 vNormalW;
 varying vec3 vColor;
+varying vec3 vUpW;
 void main() {
   vColor = color;
   vNormalW = normalize(mat3(modelMatrix) * normal);
+  vUpW = normalize((modelMatrix * vec4(position, 1.0)).xyz - uPlanetCenter);
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   #include <logdepthbuf_vertex>
 }
@@ -210,19 +224,21 @@ const VCOLOR_FRAG = /* glsl */ `
 ${SHADE_GLSL}
 varying vec3 vNormalW;
 varying vec3 vColor;
+varying vec3 vUpW;
 void main() {
   #include <logdepthbuf_fragment>
   // Normals explicit from worker → no back-face flip (winding varies).
-  gl_FragColor = vec4(shadeBody(vColor, normalize(vNormalW)), 1.0);
+  gl_FragColor = vec4(shadeBodyShadowed(vColor, normalize(vNormalW), normalize(vUpW)), 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }
 `
 
 /** Vertex-colored lit material (3D buildings). Same sun/ambient as bodies. */
-export function createVertexColorMaterial(sunDir) {
+export function createVertexColorMaterial(sunDir, planetCenter) {
   return new THREE.ShaderMaterial({
     uniforms: {
+      uPlanetCenter: { value: planetCenter }, // live ref (anchor.position, render space)
       map: { value: null },
       uSunDir: sunDir,
       uEmissive: { value: 0 },

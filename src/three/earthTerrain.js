@@ -61,7 +61,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
   const group = new THREE.Group()
   group.visible = false
   earth.tiltGroup.add(group)
-  const buildings = createBuildings(group, earth.lod.sunDir, R, isMobile)
+  const buildings = createBuildings(group, earth.lod.sunDir, earth.anchor.position, R, isMobile)
   const ships = createShips(group, R)
 
   // Pool: decode + normal maps are CPU-heavy → spread over cores. Same-parent tiles → same worker (cache hits).

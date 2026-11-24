@@ -113,7 +113,7 @@ export const spaceConfig = {
     },
     // Real radii, km. Positions: ephemeris (sun fixed at 0, moon custom).
     // beaconPx: min-size dot when sub-pixel. labelRange: km, hide label past it.
-    // axialTiltX (Earth): real obliquity → pole = true NCP; with realSpin: rotation = GMST (day/night real).
+    // axialTiltX (Earth): −obliquity → pole = true NCP (scene (0, cos ε, −sin ε)); realSpin: rotation = GMST.
     // textureLonOffset: deg, where the texture puts real lon 0 vs our 0°-centered convention
     // (Mars map is 0–360 → 180; Venus map shifted → −60). Verified by feature overlay. Places only.
     // atmosphere: post-pass scattering (atmosphere.js). km + 1/km. Earth = standard Rayleigh/Mie.
@@ -122,7 +122,7 @@ export const spaceConfig = {
       { key: 'sun',     radius: 695_700, rotationSign: 1,  axialTilt: 0.12, texture: 'sun',     emissive: true, beaconPx: 0, beaconColor: 0xf9e2af },
       { key: 'mercury', radius: 2_439.7, rotationSign: 1,  axialTilt: 0.03, texture: 'mercury', beaconPx: 3,   beaconColor: 0x9399b2 },
       { key: 'venus',   radius: 6_051.8, textureLonOffset: -60, rotationSign: -1, axialTilt: 3.09, texture: 'venus',   beaconPx: 3.5, beaconColor: 0xfab387, atmosphere: { height: 120, betaR: [12e-3, 9e-3, 4e-3], betaM: 8e-3, Hr: 15.9, Hm: 6, g: 0.7, sunIntensity: 6 } },
-      { key: 'earth',   radius: 6_371,   rotationSign: 1,  axialTilt: 0, axialTiltX: 0.40910518, realSpin: true, nightTexture: 'earthLights', nightGain: 1.6, texture: 'earth',   beaconPx: 3.5, beaconColor: 0x94e2d5, atmosphere: { height: 100, betaR: [5.802e-3, 13.558e-3, 33.1e-3], betaM: 3.996e-3, Hr: 8, Hm: 1.2, g: 0.8, sunIntensity: 7 } },
+      { key: 'earth',   radius: 6_371,   rotationSign: 1,  axialTilt: 0, axialTiltX: -0.40910518, realSpin: true, nightTexture: 'earthLights', nightGain: 1.6, texture: 'earth',   beaconPx: 3.5, beaconColor: 0x94e2d5, atmosphere: { height: 100, betaR: [5.802e-3, 13.558e-3, 33.1e-3], betaM: 3.996e-3, Hr: 8, Hm: 1.2, g: 0.8, sunIntensity: 7 } },
       // Moon: circular orbit, real period, tidally locked.
       { key: 'moon',    radius: 1_737.4, rotationSign: 1,  axialTilt: 0.09, texture: 'moon',    parent: 'earth', orbitRadius: 384_400, orbitInclination: 0.0898, tidallyLocked: true, beaconPx: 2.5, beaconColor: 0xa6adc8, labelRange: 5e6 },
       { key: 'mars',    radius: 3_389.5, textureLonOffset: 180, rotationSign: 1,  axialTilt: 0.44, texture: 'mars',    beaconPx: 3,   beaconColor: 0xeba0ac, atmosphere: { height: 90, betaR: [2e-3, 1.36e-3, 0.58e-3], betaM: 4e-3, Hr: 11.1, Hm: 3, g: 0.7, sunIntensity: 5 } },
