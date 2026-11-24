@@ -6,6 +6,11 @@ import { spaceConfig } from './spaceConfig'
 import { createGalaxyVolume } from './galaxyVolume'
 import { createDeepSpace } from './deepSpace'
 import { createLensPass } from './lensPass'
+import { createPostFx } from './postFx'
+import { createAtmospheres } from './atmosphere'
+import { quality } from './qualityRuntime'
+import { getWarp } from './cameraRuntime'
+import { getSolarCollisionBodies } from './solarSystemRuntime'
 import { createStarPromoter } from './starPromoter'
 import { createFadeOverlay } from './fadeOverlay'
 import { createStarSectors } from './starSectors'
@@ -80,7 +85,9 @@ export function useGalaxy(sceneRef, rendererRef) {
     const volume = createGalaxyVolume(isMobile)
     const sectors = createStarSectors(scene, magLimit)
     const deepSpace = createDeepSpace(scene, isMobile)
-    const lens = createLensPass(isMobile)
+    const lens = createLensPass()
+    const post = createPostFx(quality)
+    const atmospheres = createAtmospheres()
     const promoter = createStarPromoter(scene)
     const fade = createFadeOverlay()
 
@@ -93,7 +100,7 @@ export function useGalaxy(sceneRef, rendererRef) {
     const sunPoint = createStarPoints(sunGeometry, CHUNK_AT_SUN)
     scene.add(sunPoint)
 
-    const state = { volume, sectors, deepSpace, lens, promoter, fade, catalog: null, catalogPoints: null, nearestTimer: 0, disposed: false }
+    const state = { volume, sectors, deepSpace, lens, post, atmospheres, promoter, fade, catalog: null, catalogPoints: null, nearestTimer: 0, disposed: false }
     stateRef.current = state
 
     loadStarCatalog()
@@ -113,6 +120,8 @@ export function useGalaxy(sceneRef, rendererRef) {
       sectors.dispose()
       deepSpace.dispose()
       lens.dispose()
+      post.dispose()
+      atmospheres.dispose()
       promoter.dispose()
       fade.dispose()
       scene.remove(sunPoint)
@@ -162,17 +171,38 @@ export function useGalaxy(sceneRef, rendererRef) {
     }
   }
 
-  /** Full frame: sky glow → world → lens (only when a black hole bends ≥ few px). */
+  const warpCenter = useRef(new THREE.Vector2(0.5, 0.5))
+  const warpDir = useRef(new THREE.Vector3())
+
+  /** Full frame (HDR): sky glow → world → atmospheres → lens → bloom → composite (warp, tone map) → fade. */
   const render = (renderer, scene, camera, deltaSeconds) => {
     const state = stateRef.current
-    const target = state ? state.lens.prepare(renderer, camera, state.deepSpace.blackHoles) : null
+    if (!state) return
+    const target = state.post.begin(renderer)
+    state.volume.render(renderer, camera, deltaSeconds, target)
     renderer.setRenderTarget(target)
-    renderer.clear()
-    state?.volume.render(renderer, camera, deltaSeconds, target)
     renderer.clearDepth()
     renderer.render(scene, camera)
-    if (target) state.lens.finish(renderer)
-    state?.fade.render(renderer)
+
+    const stages = state.atmospheres.collect(getSolarCollisionBodies(), camera, starUniforms.uFocalPx.value, quality)
+    const lensStage = state.lens.collect(renderer, camera, state.deepSpace.blackHoles)
+    if (lensStage) stages.push(lensStage)
+
+    // Warp vanishing point = travel direction on screen. Behind cam → fade out.
+    const warp = getWarp()
+    let strength = warp.strength
+    warpDir.current.set(warp.x, warp.y, warp.z).applyMatrix4(camera.matrixWorldInverse.clone().setPosition(0, 0, 0))
+    if (warpDir.current.z < 0) {
+      const tanY = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
+      warpCenter.current.set(
+        0.5 + (warpDir.current.x / -warpDir.current.z) / (tanY * camera.aspect) / 2,
+        0.5 + (warpDir.current.y / -warpDir.current.z) / tanY / 2
+      )
+    } else {
+      strength = 0
+    }
+    state.post.finish(renderer, stages, { strength, center: warpCenter.current })
+    state.fade.render(renderer)
   }
 
   return { update, render }

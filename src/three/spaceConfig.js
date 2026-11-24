@@ -12,7 +12,7 @@ export const spaceConfig = {
     // km. Log depth → 1 m to ~3 Mpc in one pass.
     near: 1e-3,
     far: 1e20,
-    clearColor: 0x11111b, // crust
+    clearColor: 0x000000, // space
     maxPixelRatio: 2,
     powerPreference: 'high-performance',
     toneMappingExposure: 1.1,
@@ -52,7 +52,11 @@ export const spaceConfig = {
       boostShakeFrequency: 26,
       lookSensitivity: 0.0022,
       touchLookSensitivity: 0.003,
-      minAltitude: 1,       // km above surface
+      minAltitude: 0.02,    // km above terrain (~20 m)
+      // Low level: jet-like. Speed floor (≈ Mach 0.75) + boost capped (≈ Mach 2), blends out by jetBlendAltKm.
+      jetCruise: 0.25,      // km/s
+      jetBoostMultiplier: 2.4,
+      jetBlendAltKm: [2, 100],
       maxGalaxyDistance: 150_000 * PC_KM, // from galactic center
       wormholeFovKick: 55,  // deg, eases back after Sgr A* exit
       localUpRange: [0.15, 0.8], // altitude / radius: below near → full local vertical, above far → world up
@@ -109,19 +113,22 @@ export const spaceConfig = {
     },
     // Real radii, km. Positions: ephemeris (sun fixed at 0, moon custom).
     // beaconPx: min-size dot when sub-pixel. labelRange: km, hide label past it.
+    // axialTiltX (Earth): real obliquity → pole = true NCP; with realSpin: rotation = GMST (day/night real).
+    // atmosphere: post-pass scattering (atmosphere.js). km + 1/km. Earth = standard Rayleigh/Mie.
+    // sunIntensity ≈ lights.sun.intensity → sky + haze stay in balance with lit ground.
     bodies: [
       { key: 'sun',     radius: 695_700, rotationSign: 1,  axialTilt: 0.12, texture: 'sun',     emissive: true, beaconPx: 0, beaconColor: 0xf9e2af },
       { key: 'mercury', radius: 2_439.7, rotationSign: 1,  axialTilt: 0.03, texture: 'mercury', beaconPx: 3,   beaconColor: 0x9399b2 },
-      { key: 'venus',   radius: 6_051.8, rotationSign: -1, axialTilt: 3.09, texture: 'venus',   beaconPx: 3.5, beaconColor: 0xfab387 },
-      { key: 'earth',   radius: 6_371,   rotationSign: 1,  axialTilt: 0.41, texture: 'earth',   beaconPx: 3.5, beaconColor: 0x94e2d5 },
+      { key: 'venus',   radius: 6_051.8, rotationSign: -1, axialTilt: 3.09, texture: 'venus',   beaconPx: 3.5, beaconColor: 0xfab387, atmosphere: { height: 120, betaR: [12e-3, 9e-3, 4e-3], betaM: 8e-3, Hr: 15.9, Hm: 6, g: 0.7, sunIntensity: 6 } },
+      { key: 'earth',   radius: 6_371,   rotationSign: 1,  axialTilt: 0, axialTiltX: 0.40910518, realSpin: true, nightTexture: 'earthLights', nightGain: 1.6, texture: 'earth',   beaconPx: 3.5, beaconColor: 0x94e2d5, atmosphere: { height: 100, betaR: [5.802e-3, 13.558e-3, 33.1e-3], betaM: 3.996e-3, Hr: 8, Hm: 1.2, g: 0.8, sunIntensity: 7 } },
       // Moon: circular orbit, real period, tidally locked.
       { key: 'moon',    radius: 1_737.4, rotationSign: 1,  axialTilt: 0.09, texture: 'moon',    parent: 'earth', orbitRadius: 384_400, orbitInclination: 0.0898, tidallyLocked: true, beaconPx: 2.5, beaconColor: 0xa6adc8, labelRange: 5e6 },
-      { key: 'mars',    radius: 3_389.5, rotationSign: 1,  axialTilt: 0.44, texture: 'mars',    beaconPx: 3,   beaconColor: 0xeba0ac },
-      { key: 'jupiter', radius: 69_911,  rotationSign: 1,  axialTilt: 0.05, texture: 'jupiter', beaconPx: 4,   beaconColor: 0xf9e2af },
+      { key: 'mars',    radius: 3_389.5, rotationSign: 1,  axialTilt: 0.44, texture: 'mars',    beaconPx: 3,   beaconColor: 0xeba0ac, atmosphere: { height: 90, betaR: [2e-3, 1.36e-3, 0.58e-3], betaM: 4e-3, Hr: 11.1, Hm: 3, g: 0.7, sunIntensity: 5 } },
+      { key: 'jupiter', radius: 69_911,  rotationSign: 1,  axialTilt: 0.05, texture: 'jupiter', beaconPx: 4,   beaconColor: 0xf9e2af, atmosphere: { height: 800, betaR: [1.2e-4, 1.6e-4, 2.4e-4], betaM: 1.5e-4, Hr: 27, Hm: 20, g: 0.7, sunIntensity: 5 } },
       // Rings: C ring inner → A ring outer. ringUv 'radial' = 1D strip texture (u = radius); else planar top-down image.
-      { key: 'saturn',  radius: 58_232,  rotationSign: 1,  axialTilt: 0.47, texture: 'saturn',  ringTexture: 'saturnRing', ringUv: 'radial', ringInner: 74_500, ringOuter: 136_800, ringOpacity: 0.72, beaconPx: 4, beaconColor: 0xf5e0dc },
-      { key: 'uranus',  radius: 25_362,  rotationSign: -1, axialTilt: 1.71, texture: 'uranus',  ringTexture: 'uranusRing', ringInner: 34_100, ringOuter: 46_400, ringOpacity: 0.48, beaconPx: 3.5, beaconColor: 0x89dceb },
-      { key: 'neptune', radius: 24_622,  rotationSign: 1,  axialTilt: 0.49, texture: 'neptune', beaconPx: 3.5, beaconColor: 0x74c7ec },
+      { key: 'saturn',  radius: 58_232,  rotationSign: 1,  axialTilt: 0.47, texture: 'saturn',  ringTexture: 'saturnRing', ringUv: 'radial', ringInner: 74_500, ringOuter: 136_800, ringOpacity: 0.72, beaconPx: 4, beaconColor: 0xf5e0dc, atmosphere: { height: 900, betaR: [1.4e-4, 1.4e-4, 1.6e-4], betaM: 1.2e-4, Hr: 60, Hm: 30, g: 0.7, sunIntensity: 5 } },
+      { key: 'uranus',  radius: 25_362,  rotationSign: -1, axialTilt: 1.71, texture: 'uranus',  ringTexture: 'uranusRing', ringInner: 34_100, ringOuter: 46_400, ringOpacity: 0.48, beaconPx: 3.5, beaconColor: 0x89dceb, atmosphere: { height: 600, betaR: [0.6e-4, 1.4e-4, 1.8e-4], betaM: 0.4e-4, Hr: 28, Hm: 20, g: 0.7, sunIntensity: 5 } },
+      { key: 'neptune', radius: 24_622,  rotationSign: 1,  axialTilt: 0.49, texture: 'neptune', beaconPx: 3.5, beaconColor: 0x74c7ec, atmosphere: { height: 600, betaR: [0.5e-4, 1.0e-4, 2.2e-4], betaM: 0.4e-4, Hr: 20, Hm: 15, g: 0.7, sunIntensity: 5 } },
       { key: 'pluto',   radius: 1_188.3, rotationSign: -1, axialTilt: 2.13, texture: 'pluto',   beaconPx: 2.5, beaconColor: 0xf2cdcd },
     ],
     // Real Earth surface tiles (explore only). URL templates: {z} {x} {y}.
@@ -129,17 +136,28 @@ export const spaceConfig = {
       // EOX Sentinel-2 cloudless 2020, CC BY-NC-SA 4.0 (non-commercial). Alt (public domain, z≤8):
       // https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg
       imageryUrl: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg',
+      // Close-up (z > imageryMaxZoom): Esri World Imagery, sub-meter. Attribution in HUD.
+      closeImageryUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      imageryMaxZoom: 9,    // Esri from z10 → source seam stays far from camera
       // AWS Terrain Tiles (Terrarium), open data.
       terrainUrl: 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
       terrainMaxZoom: 15,
-      maxZoom: 14,
-      maxZoomMobile: 13,
+      maxZoom: 18,
+      maxZoomMobile: 17,
       grid: 32,             // quads per tile edge
-      splitPx: 1.6,         // refine when imagery texel > this many px
+      splitPx: 1.25,        // refine when imagery texel > this many px (× quality.terrainSplitScale)
       splitPxMobile: 2.4,
-      maxTiles: 420,
-      maxTilesMobile: 200,
-      maxInFlight: 6,
+      maxTiles: 320,        // GPU cache (≈0.45 MB/tile)
+      maxTilesMobile: 160,
+      uploadsPerFrame: 4,   // tiles made drawable per frame (smooth)
+      cancelAfterFrames: 30, // unwanted in-flight load → aborted
+      maxInFlight: 12,
+      maxInFlightMobile: 6,
+      lookaheadLevels: 2,   // prefetch under cam beyond next level
+      distanceFalloffKm: 40, // split threshold × (1 + dist / this)
+      maxReliefKm: 3,       // horizon allowance for distant peaks
+      workers: 3,
+      workersMobile: 2,
       activeRadii: 12,      // render distance: × Earth radius from center
       baseSinkKm: 3,        // base sphere sinks under tiles (no z-fight)
     },
@@ -155,6 +173,13 @@ export const spaceConfig = {
       collisionRadius: 0.05, // km
       labelRange: 2e4,
     },
+  },
+
+  postFx: {
+    bloomLevels: 5,
+    bloomThreshold: 3,      // HDR linear, max channel. Only sun/very bright cores bloom.
+    bloomStrength: 0.4,
+    maxAtmospheres: 2,
   },
 
   galaxy: {

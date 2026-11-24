@@ -19,6 +19,7 @@ const solarLabels = [
 ]
 
 // Names = nav aid, any range (unless labelRange / labelVisibility). Fade once disc fills screen.
+// Focus: inside a body's atmosphere (airless: < 10 % radius) → only its surface places; stellar labels fade.
 const NAME_HIDE_START = 0.3 // × viewport height, disc radius
 const NAME_HIDE_END = 0.55
 const RANGE_FADE = 0.25     // last fraction of labelRange fades
@@ -30,7 +31,42 @@ function smoothstep(edge0, edge1, x) {
   return t * t * (3 - 2 * t)
 }
 
+const PLACE_MARK = { city: '●', mountain: '▲', landmark: '◆', crater: '○', site: '✦' }
+
+function PlaceLabel({ item, register }) {
+  const region = item.placeKind === 'region' || item.placeKind === 'water'
+  return (
+    <div ref={(el) => register(item.key, el)} className="absolute left-0 top-0 select-none" style={{ opacity: 0 }}>
+      <p
+        className={`whitespace-nowrap text-center ${
+          region
+            ? 'text-[0.7rem] font-light uppercase tracking-[0.45em] text-white/70'
+            : 'text-[0.66rem] font-medium tracking-[0.04em] text-white/90'
+        } ${item.placeKind === 'water' ? 'italic text-sky-200/70' : ''}`}
+        style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.6)' }}
+      >
+        {PLACE_MARK[item.placeKind] ? <span className="mr-1 text-[0.5rem] text-amber-200/90">{PLACE_MARK[item.placeKind]}</span> : null}
+        {item.name}
+      </p>
+      {item.facts.length ? (
+        <div
+          data-facts
+          className="absolute bottom-full left-1/2 mb-1 w-max max-w-[240px] -translate-x-1/2 rounded-lg border border-white/10 bg-black/60 px-2.5 py-1.5 text-left backdrop-blur-md"
+          style={{ opacity: 0, visibility: 'hidden' }}
+        >
+          {item.facts.map((fact, i) => (
+            <p key={i} className="text-[0.66rem] leading-[1.5] text-white/85">
+              {fact}
+            </p>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function Label({ item, register }) {
+  if (item.kind === 'place') return <PlaceLabel item={item} register={register} />
   return (
     <div ref={(el) => register(item.key, el)} className="absolute left-0 top-0 select-none" style={{ opacity: 0 }}>
       {/* Name — glowing halo text, always faces camera (HTML overlay) */}
@@ -76,6 +112,22 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
     const forward = new THREE.Vector3()
     let frameId
 
+    const focus = { key: null, f: 0 }
+    const updateFocus = () => {
+      focus.key = null
+      focus.f = 0
+      getSolarCollisionBodies().forEach((body) => {
+        if (body.kind !== 'body') return
+        const range = body.atmosphere ? body.atmosphere.height : body.radius * 0.1
+        const alt = Math.hypot(origin.x - body.position.x, origin.y - body.position.y, origin.z - body.position.z) - body.radius
+        const f = 1 - smoothstep(range * 0.8, range * 1.6, alt)
+        if (f > focus.f) {
+          focus.f = f
+          focus.key = body.key
+        }
+      })
+    }
+
     const place = (body, w, h, focalPx) => {
       const refs = elementsRef.current.get(body.key)
       if (!refs) return
@@ -88,7 +140,8 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       const dist = rel.length()
       const range = body.labelRange ?? Infinity
       if (rel.dot(forward) <= 0 || dist > range) return hide()
-      const extra = body.labelVisibility ? body.labelVisibility(dist) : 1
+      let extra = body.labelVisibility ? body.labelVisibility(dist) : 1
+      if (!(body.bodyKey && body.bodyKey === focus.key)) extra *= 1 - focus.f
       if (extra <= 0.001) return hide()
 
       vec.copy(rel).project(camera())
@@ -123,6 +176,7 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       const h = renderer.domElement.clientHeight
       const focalPx = h / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2)
       cam.getWorldDirection(forward)
+      updateFocus()
       getSolarCollisionBodies().forEach((body) => place(body, w, h, focalPx))
       getPoiBodies().forEach((body) => place(body, w, h, focalPx))
     }

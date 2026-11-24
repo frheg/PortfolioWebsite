@@ -23,6 +23,24 @@ uniform vec3 uAmbientLight;
 uniform float uEmissive;
 uniform vec3 uTint;
 uniform float uTintMix;
+uniform sampler2D uNightMap;
+uniform float uNightGain;
+
+// City lights on the dark side. localDir: body-local (equirect lookup, same convention as map).
+vec3 nightLights(vec3 localDir, vec3 nW) {
+  if (uNightGain <= 0.0) return vec3(0.0);
+  vec3 d = normalize(localDir);
+  float u = atan(-d.z, d.x) / PI2 + 0.5;
+  vec2 uv = vec2(u, asin(clamp(d.y, -1.0, 1.0)) / PI + 0.5);
+  vec2 uvAlt = vec2(fract(u + 0.5) - 0.5, uv.y);
+  vec2 g = fwidth(uv.x) <= fwidth(uvAlt.x) ? uv : uvAlt; // seam-safe grads
+  vec3 lights = textureGrad(uNightMap, uv, dFdx(g), dFdy(g)).rgb;
+  float dark = 1.0 - smoothstep(-0.12, 0.06, dot(nW, uSunDir));
+  // Map is ~20 km/texel: magnified past ~3 px/texel it's a blob, not lights → fade out up close.
+  float texelsPerPx = max(fwidth(g.x), fwidth(g.y)) * float(textureSize(uNightMap, 0).x);
+  float far = smoothstep(0.15, 0.5, texelsPerPx);
+  return lights * lights * vec3(1.0, 0.82, 0.55) * uNightGain * dark * far;
+}
 
 vec3 shadeBody(vec3 albedo, vec3 nW) {
   if (uEmissive > 0.5) return mix(albedo, vec3(dot(albedo, vec3(0.3, 0.59, 0.11))) * uTint * 1.6, uTintMix);
@@ -36,9 +54,12 @@ const MESH_VERT = /* glsl */ `
 #include <logdepthbuf_pars_vertex>
 varying vec2 vUv;
 varying vec3 vNormalW;
+varying vec3 vLocalPos;
+uniform vec3 uTileCenter; // terrain tiles: tile-local → body-local. Sphere mesh: 0.
 void main() {
   vUv = uv;
   vNormalW = normalize(mat3(modelMatrix) * normal);
+  vLocalPos = position + uTileCenter;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   #include <logdepthbuf_vertex>
 }
@@ -50,10 +71,17 @@ const MESH_FRAG = /* glsl */ `
 ${SHADE_GLSL}
 varying vec2 vUv;
 varying vec3 vNormalW;
+varying vec3 vLocalPos;
+uniform sampler2D uNormalMap;   // terrain: body-local normals, rgb = n·0.5+0.5
+uniform float uUseNormalMap;
+uniform mat3 uNormalRot;        // body-local → world rotation
 void main() {
   #include <logdepthbuf_fragment>
   vec3 albedo = texture2D(map, vUv).rgb;
-  gl_FragColor = vec4(shadeBody(albedo, normalize(vNormalW)), 1.0);
+  vec3 n = uUseNormalMap > 0.5
+    ? normalize(uNormalRot * (texture2D(uNormalMap, vUv).xyz * 2.0 - 1.0))
+    : normalize(vNormalW);
+  gl_FragColor = vec4(shadeBody(albedo, n) + nightLights(vLocalPos, n), 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
 }
@@ -118,7 +146,7 @@ void main() {
   vec2 g = fwidth(uv.x) <= fwidth(uvAlt.x) ? uv : uvAlt;
   vec3 albedo = textureGrad(map, uv, dFdx(g), dFdy(g)).rgb;
 
-  gl_FragColor = vec4(shadeBody(albedo, nW), cov * uFade);
+  gl_FragColor = vec4(shadeBody(albedo, nW) + nightLights(nL, nW), cov * uFade);
 
   #ifdef USE_LOGDEPTHBUF
     // Depth of hit point, not quad → correct sort vs rings/moons.
@@ -136,6 +164,7 @@ void main() {
  * sunDir: shared { value: Vector3 } from the owning body → identical lighting.
  */
 export function createSurfaceMaterial(map, sunDir, options = {}) {
+  const { nightMap, nightGain, normalRot, ...materialOptions } = options
   return new THREE.ShaderMaterial({
     uniforms: {
       map: { value: map },
@@ -143,11 +172,17 @@ export function createSurfaceMaterial(map, sunDir, options = {}) {
       uEmissive: { value: 0 },
       uTint: { value: new THREE.Color(1, 1, 1) },
       uTintMix: { value: 0 },
+      uNightMap: nightMap ?? { value: null },
+      uNightGain: nightGain ?? { value: 0 },
+      uTileCenter: { value: new THREE.Vector3() },
+      uNormalMap: { value: null },
+      uUseNormalMap: { value: 0 },
+      uNormalRot: normalRot ?? { value: new THREE.Matrix3() },
       ...sharedLight,
     },
     vertexShader: MESH_VERT,
     fragmentShader: MESH_FRAG,
-    ...options,
+    ...materialOptions,
   })
 }
 
@@ -224,13 +259,28 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
   const emissive = { value: def.emissive ? 1 : 0 }
   const tint = { value: new THREE.Color(...(def.tint ?? [1, 1, 1])) }
   const tintMix = { value: def.tint ? 1 : 0 }
+  const nightMap = { value: def.nightMap ?? null }
+  const nightGain = { value: def.nightMap ? (def.nightGain ?? 1) : 0 }
   const sunDir = { value: new THREE.Vector3(1, 0, 0) }
   const mapUniform = { value: map }
 
   const mesh = new THREE.Mesh(
     getSphere(0),
     new THREE.ShaderMaterial({
-      uniforms: { map: mapUniform, uSunDir: sunDir, uEmissive: emissive, uTint: tint, uTintMix: tintMix, ...sharedLight },
+      uniforms: {
+        map: mapUniform,
+        uSunDir: sunDir,
+        uEmissive: emissive,
+        uTint: tint,
+        uTintMix: tintMix,
+        uNightMap: nightMap,
+        uNightGain: nightGain,
+        uTileCenter: { value: new THREE.Vector3() },
+        uNormalMap: { value: null },
+        uUseNormalMap: { value: 0 },
+        uNormalRot: { value: new THREE.Matrix3() },
+        ...sharedLight,
+      },
       vertexShader: MESH_VERT,
       fragmentShader: MESH_FRAG,
     })
@@ -249,6 +299,8 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
         uEmissive: emissive,
         uTint: tint,
         uTintMix: tintMix,
+        uNightMap: nightMap,
+        uNightGain: nightGain,
         uBodyRot: bodyRot,
         uRadius: { value: def.radius },
         uFade: fade,
@@ -320,5 +372,5 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
     }
   }
 
-  return { mesh, update, dispose, sunDir }
+  return { mesh, update, dispose, sunDir, nightMap, nightGain }
 }

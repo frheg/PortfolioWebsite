@@ -6,6 +6,7 @@ import {
 } from '../three/exploreState'
 import ExploreDateReadout from './ExploreDateReadout'
 import ExploreTimeControl from './ExploreTimeControl'
+import ExploreQualityControl from './ExploreQualityControl'
 import ExplorePauseNav from './ExplorePauseNav'
 
 export default function ExplorePauseOverlay() {
@@ -46,6 +47,10 @@ export default function ExplorePauseOverlay() {
         <div className="my-6 h-px bg-white/8" />
 
         <ExploreTimeControl />
+
+        <div className="my-6 h-px bg-white/8" />
+
+        <ExploreQualityControl />
 
         <div className="my-6 h-px bg-white/8" />
 

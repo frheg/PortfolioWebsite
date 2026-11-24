@@ -32,3 +32,17 @@ export function setActiveCamera(camera) {
 export function getActiveCamera() {
   return _camera
 }
+
+// Speed streaks: strength 0..1 + world travel dir. Written by camera, read by post composite.
+const _warp = { strength: 0, x: 0, y: 0, z: -1 }
+
+export function setWarp(strength, x, y, z) {
+  _warp.strength = strength
+  _warp.x = x
+  _warp.y = y
+  _warp.z = z
+}
+
+export function getWarp() {
+  return _warp
+}

@@ -2,7 +2,8 @@
 // Frame: Earth-local km (matches SphereGeometry/equirect texture: lon 0 → +x, north → +y).
 // Positions relative to tile center (float32 precise near surface). Skirts hide LOD cracks.
 // In:  { id, z, x, y, grid, radius, terrainUrl, terrainMaxZ, skirtKm }
-// Out: { id, center[3], positions, normals, uvs, indices, heights } | { id, error }
+// Out: { id, center[3], positions, normals, uvs, indices, heights, normalMap (128² RGBA) } | { id, error }
+// In { cancel: id } → drop result if still pending (mesh build skipped).
 
 const mercatorLat = (yFrac) => Math.atan(Math.sinh(Math.PI * (1 - 2 * yFrac)))
 
@@ -11,8 +12,26 @@ function dirFromLatLon(lat, lon) {
   return [Math.cos(lon) * c, Math.sin(lat), -Math.sin(lon) * c]
 }
 
+// Decoded source tiles, LRU. z > terrainMaxZ tiles share their ancestor's decode.
+const heightCache = new Map()
+const HEIGHT_CACHE_MAX = 48
+
+async function loadHeightsCached(url) {
+  const hit = heightCache.get(url)
+  if (hit) {
+    heightCache.delete(url)
+    heightCache.set(url, hit)
+    return hit
+  }
+  const promise = loadHeights(url)
+  heightCache.set(url, promise)
+  if (heightCache.size > HEIGHT_CACHE_MAX) heightCache.delete(heightCache.keys().next().value)
+  promise.catch(() => heightCache.delete(url))
+  return promise
+}
+
 async function loadHeights(url) {
-  const res = await fetch(url)
+  const res = await fetch(url) // shared by many tiles → not aborted per tile
   if (!res.ok) throw new Error(`terrain ${res.status}`)
   const bitmap = await createImageBitmap(await res.blob())
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height)
@@ -42,7 +61,13 @@ function sample({ h, width, height }, u, v) {
   return a * (1 - fy) + b * fy
 }
 
+const cancelled = new Set()
+
 self.onmessage = async (event) => {
+  if (event.data.cancel !== undefined) {
+    cancelled.add(event.data.cancel)
+    return
+  }
   const { id, z, x, y, grid, radius, terrainUrl, terrainMaxZ, skirtKm } = event.data
   try {
     // Beyond terrain max zoom: sample the covering ancestor's sub-rect.
@@ -53,7 +78,8 @@ self.onmessage = async (event) => {
     const span = 1 / (1 << shift)
     const offU = (x - (tx << shift)) * span
     const offV = (y - (ty << shift)) * span
-    const src = await loadHeights(terrainUrl.replace('{z}', tz).replace('{x}', tx).replace('{y}', ty))
+    const src = await loadHeightsCached(terrainUrl.replace('{z}', tz).replace('{x}', tx).replace('{y}', ty))
+    if (cancelled.delete(id)) return
 
     const n = grid
     const side = n + 1
@@ -157,7 +183,35 @@ self.onmessage = async (event) => {
     })
     const indices = new Uint16Array(idx)
 
-    self.postMessage({ id, center, positions, normals, uvs, indices, heights }, [
+    // Per-pixel normal map (NM×NM) from source heights → relief shading way past mesh grid.
+    // Mercator is conformal → texel spacing equal E/W and N/S.
+    const NM = 128
+    const normalMap = new Uint8Array(NM * NM * 4)
+    const texelKm = (2 * Math.PI * radius * Math.cos(mercatorLat((y + 0.5) / tiles))) / tiles / NM
+    const hAt = (i, j) => sample(src, offU + (Math.min(Math.max(i, 0), NM - 1) / (NM - 1)) * span, offV + (Math.min(Math.max(j, 0), NM - 1) / (NM - 1)) * span)
+    for (let j = 0; j < NM; j += 1) {
+      const lat = mercatorLat((y + (j + 0.5) / NM) / tiles)
+      for (let i = 0; i < NM; i += 1) {
+        const lon = ((x + (i + 0.5) / NM) / tiles) * 2 * Math.PI - Math.PI
+        const up = dirFromLatLon(lat, lon)
+        const east = [-Math.sin(lon), 0, -Math.cos(lon)]
+        const north = [-Math.sin(lat) * Math.cos(lon), Math.cos(lat), Math.sin(lat) * Math.sin(lon)]
+        const dhE = (hAt(i + 1, j) - hAt(i - 1, j)) / (2 * texelKm)
+        const dhN = (hAt(i, j - 1) - hAt(i, j + 1)) / (2 * texelKm) // row 0 = north
+        let nx = up[0] - east[0] * dhE - north[0] * dhN
+        let ny = up[1] - east[1] * dhE - north[1] * dhN
+        let nz = up[2] - east[2] * dhE - north[2] * dhN
+        const l = Math.hypot(nx, ny, nz)
+        const k = (j * NM + i) * 4
+        normalMap[k] = Math.round(((nx / l) * 0.5 + 0.5) * 255)
+        normalMap[k + 1] = Math.round(((ny / l) * 0.5 + 0.5) * 255)
+        normalMap[k + 2] = Math.round(((nz / l) * 0.5 + 0.5) * 255)
+        normalMap[k + 3] = 255
+      }
+    }
+
+    self.postMessage({ id, center, positions, normals, uvs, indices, heights, normalMap }, [
+      normalMap.buffer,
       positions.buffer,
       normals.buffer,
       uvs.buffer,

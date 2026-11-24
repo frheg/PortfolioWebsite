@@ -15,7 +15,7 @@ export default function BackgroundCanvas() {
 
   const { sceneRef, cameraRef, rendererRef } = useThree(canvasRef)
   useLights(sceneRef)
-  const solarSystem = useSolarSystem(sceneRef, routePath === '/explore')
+  const solarSystem = useSolarSystem(sceneRef, routePath === '/explore', rendererRef)
   const galaxy = useGalaxy(sceneRef, rendererRef)
   const scrollCam = useScrollCamera(cameraRef, routePath)
 
@@ -30,11 +30,11 @@ export default function BackgroundCanvas() {
   // Dev only: console/test handle → jump cam anywhere (explore, paused): __space.origin.set(...)
   useEffect(() => {
     if (!import.meta.env.DEV) return undefined
-    window.__space = { origin, cameraRef }
+    window.__space = { origin, cameraRef, sceneRef }
     return () => {
       delete window.__space
     }
-  }, [cameraRef])
+  }, [cameraRef, sceneRef])
 
   useEffect(() => {
     let animationId

@@ -1,20 +1,13 @@
-// Gravitational lensing post pass. Active only while a black hole's Einstein ring ≥ few px on screen:
-// frame → HDR MSAA target → point-lens remap to screen. Shadow (2.6 Rs) black + photon ring.
+// Gravitational lensing post stage. Active only while a black hole's Einstein ring ≥ few px on screen.
 // Point lens, source at ∞: θ_src = θ − θE²/θ, θE = √(2Rs/D). Negative → secondary image (Einstein ring).
+// Shadow (2.6 Rs) black + photon ring. HDR in/out (tone mapping in composite).
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { origin } from './floatingOrigin'
 import { SHADOW_FACTOR } from './deepSpace'
+import { FULLSCREEN_VERT } from './postFx'
 
 const cfg = spaceConfig.galaxy.deepSpace
-
-const VERT = /* glsl */ `
-varying vec2 vUv;
-void main() {
-  vUv = uv;
-  gl_Position = vec4(position.xy, 0.0, 1.0);
-}
-`
 
 const FRAG = /* glsl */ `
 uniform sampler2D uFrame;
@@ -38,41 +31,38 @@ void main() {
   col += ring * vec3(1.0, 0.82, 0.6) * ${cfg.photonRingGain.toFixed(2)} * uStrength;
   if (r < uRS) col = vec3(0.0);
   gl_FragColor = vec4(col, 1.0);
-  #include <tonemapping_fragment>
-  #include <colorspace_fragment>
 }
 `
 
 const _rel = new THREE.Vector3()
 const _ndc = new THREE.Vector3()
 
-export function createLensPass(isMobile) {
-  const target = new THREE.WebGLRenderTarget(4, 4, {
-    type: THREE.HalfFloatType,
-    samples: isMobile ? 0 : 4,
-  })
-  const quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+export function createLensPass() {
   const material = new THREE.ShaderMaterial({
     uniforms: {
-      uFrame: { value: target.texture },
+      uFrame: { value: null },
       uRes: { value: new THREE.Vector2() },
       uCenter: { value: new THREE.Vector2() },
       uRE: { value: 0 },
       uRS: { value: 0 },
       uStrength: { value: 0 },
     },
-    vertexShader: VERT,
+    vertexShader: FULLSCREEN_VERT,
     fragmentShader: FRAG,
     depthTest: false,
     depthWrite: false,
   })
-  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material)
-  const quadScene = new THREE.Scene()
-  quadScene.add(quad)
   const size = new THREE.Vector2()
+  const stage = {
+    material,
+    prepare(src, _depth, res) {
+      material.uniforms.uFrame.value = src
+      material.uniforms.uRes.value.copy(res)
+    },
+  }
 
-  /** Pick strongest on-screen lens. Returns target to render into, or null (no lens). */
-  const prepare = (renderer, camera, blackHoles) => {
+  /** Strongest on-screen lens → pipeline stage, or null. */
+  const collect = (renderer, camera, blackHoles) => {
     renderer.getDrawingBufferSize(size)
     const focalPx = size.y / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
     let best = null
@@ -86,27 +76,16 @@ export function createLensPass(isMobile) {
       best = { rEpx, rSpx: ((SHADOW_FACTOR * bh.rsKm) / d) * focalPx, x: (_ndc.x * 0.5 + 0.5) * size.x, y: (_ndc.y * 0.5 + 0.5) * size.y }
     }
     if (!best) return null
-    if (target.width !== size.x || target.height !== size.y) target.setSize(size.x, size.y)
     const u = material.uniforms
-    u.uRes.value.copy(size)
     u.uCenter.value.set(best.x, best.y)
     u.uRE.value = best.rEpx
     u.uRS.value = best.rSpx
     // Ease in over a few px → no pop when lens switches on.
     u.uStrength.value = THREE.MathUtils.smoothstep(best.rEpx, cfg.lensMinPx, cfg.lensMinPx * 3)
-    return target
+    return stage
   }
 
-  const finish = (renderer) => {
-    renderer.setRenderTarget(null)
-    renderer.render(quadScene, quadCam)
-  }
+  const dispose = () => material.dispose()
 
-  const dispose = () => {
-    target.dispose()
-    material.dispose()
-    quad.geometry.dispose()
-  }
-
-  return { prepare, finish, dispose }
+  return { collect, dispose }
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { setActiveCamera } from './cameraRuntime'
+import { quality, subscribeQuality } from './qualityRuntime'
 
 export function useThree(canvasRef) {
   const sceneRef = useRef(null)
@@ -28,11 +29,14 @@ export function useThree(canvasRef) {
       powerPreference: spaceConfig.renderer.powerPreference,
       logarithmicDepthBuffer: true,
     })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, spaceConfig.renderer.maxPixelRatio))
+    const applyPixelRatio = () =>
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, spaceConfig.renderer.maxPixelRatio, quality.pixelRatio))
+    applyPixelRatio()
+    const unsubscribeQuality = subscribeQuality(applyPixelRatio)
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setClearColor(clearColor, 1)
     renderer.autoClear = false
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMapping = THREE.ACESFilmicToneMapping // applied once, in post composite
     renderer.toneMappingExposure = spaceConfig.renderer.toneMappingExposure
 
     sceneRef.current = scene
@@ -49,6 +53,7 @@ export function useThree(canvasRef) {
 
     return () => {
       window.removeEventListener('resize', onResize)
+      unsubscribeQuality()
       setActiveCamera(null)
       renderer.dispose()
       scene.traverse((obj) => {

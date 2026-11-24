@@ -3,7 +3,8 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { spaceConfig, AU_KM } from './spaceConfig'
-import { setSolarCollisionBodies } from './solarSystemRuntime'
+import { setPoiGroup, setSolarCollisionBodies } from './solarSystemRuntime'
+import { surfacePlaces } from '../data/surfacePlaces'
 import { sceneLoadingManager } from './sceneLoadingManager'
 import { origin, trackAnchor, untrackAnchor } from './floatingOrigin'
 import { createBodyLod } from './bodyLod'
@@ -22,6 +23,7 @@ import sunTexUrl from '../assets/Models/solar/sun/sol/sun.webp'
 import mercuryTexUrl from '../assets/Models/solar/mercury/mercury.webp'
 import venusTexUrl from '../assets/Models/solar/venus/venus.webp'
 import earthTexUrl from '../assets/Models/Earth 3D Model/textures/earth.webp'
+import earthLightsTexUrl from '../assets/Models/Earth 3D Model/textures/earth_lights_2048.png' // NASA, public domain
 import moonTexUrl from '../assets/Models/solar/moon/moon.webp'
 import marsTexUrl from '../assets/Models/solar/mars/mars.webp'
 import jupiterTexUrl from '../assets/Models/solar/jupiter/jupiter.webp'
@@ -37,6 +39,7 @@ const textureUrls = {
   mercury: mercuryTexUrl,
   venus: venusTexUrl,
   earth: earthTexUrl,
+  earthLights: earthLightsTexUrl,
   moon: moonTexUrl,
   mars: marsTexUrl,
   jupiter: jupiterTexUrl,
@@ -101,7 +104,6 @@ const PLANET_HUE_TARGETS = {
   sun: { hex: 0xfab387, strength: 0.6 }, // peach — matches its own glow sprites, pushed harder since the source photo's natural color was already close to the old gentle target
   mercury: { hex: 0x9399b2, strength: 0.55 }, // overlay2
   venus: { hex: 0xfab387, strength: 0.55 }, // peach
-  earth: { hex: 0x94e2d5, strength: 0.5 }, // teal
   moon: { hex: 0xa6adc8, strength: 0.5 }, // subtext0
   mars: { hex: 0xeba0ac, strength: 0.55 }, // maroon
   jupiter: { hex: 0xf9e2af, strength: 0.5 }, // yellow
@@ -474,6 +476,68 @@ const _m = new THREE.Matrix4()
 const _zero = new THREE.Vector3()
 const _up = new THREE.Vector3(0, 1, 0)
 
+// ─── Surface places ──────────────────────────────────────────────────────────
+// Labels pinned to bodies, spin with them. Visibility: rank vs cam altitude, horizon, near-horizon range.
+
+const _placeQ = new THREE.Quaternion()
+const _placeN = new THREE.Vector3()
+const _placeToCam = new THREE.Vector3()
+
+function placeVisibility(place, body) {
+  const R = body.def.radius
+  return (distKm) => {
+    const camAlt = origin.distanceTo(body.world) - R
+    const ss = THREE.MathUtils.smoothstep
+    let v
+    if (place.rank === 1) v = ss(camAlt, R * 0.04, R * 0.08) * (1 - ss(camAlt, R * 3, R * 6))
+    else if (place.rank === 2) v = 1 - ss(camAlt, R * 0.25, R * 0.45)
+    else v = 1 - ss(camAlt, R * 0.02, R * 0.04)
+    if (v <= 0) return 0
+    // Behind the limb → hidden.
+    _placeN.subVectors(place.position, body.world).normalize()
+    _placeToCam.subVectors(origin, place.position)
+    v *= ss(_placeN.dot(_placeToCam) / Math.max(distKm, 1e-6), -0.02, 0.06)
+    // Low: only what's within ~horizon range (no clutter piled at the horizon).
+    if (place.rank > 1) {
+      const horizon = Math.sqrt(2 * R * Math.max(camAlt, 0.05)) + R * 0.02
+      v *= 1 - ss(distKm, horizon, horizon * 1.6)
+    }
+    return v
+  }
+}
+
+function buildPlaces(bodyMap) {
+  const out = []
+  Object.entries(surfacePlaces).forEach(([key, list]) => {
+    const body = bodyMap.get(key)
+    if (!body) return
+    list.forEach((def, i) => {
+      const lat = THREE.MathUtils.degToRad(def.lat)
+      const lon = THREE.MathUtils.degToRad(def.lon)
+      const place = {
+        key: `place_${key}_${i}`,
+        kind: 'place',
+        placeKind: def.kind,
+        rank: def.rank,
+        bodyKey: key,
+        name: def.name,
+        facts: def.facts ?? [],
+        radius: 0,
+        labelRange: Infinity,
+        factsRange: Math.max(body.def.radius * 0.01, 20),
+        // Body-local dir (same convention as textures/terrain): lon 0 → +x, north → +y.
+        local: new THREE.Vector3(Math.cos(lon) * Math.cos(lat), Math.sin(lat), -Math.sin(lon) * Math.cos(lat)).multiplyScalar(
+          body.def.radius + (def.alt ?? 0) + 0.05
+        ),
+        position: new THREE.Vector3(),
+      }
+      place.labelVisibility = placeVisibility(place, body)
+      out.push(place)
+    })
+  })
+  return out
+}
+
 function isMobileDevice() {
   if (typeof navigator === 'undefined') return false
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 2
@@ -481,10 +545,11 @@ function isMobileDevice() {
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
-export function useSolarSystem(sceneRef, isExplore = false) {
+export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) {
   const bodyMapRef = useRef(new Map())
   const ufosRef = useRef([])
   const terrainRef = useRef(null)
+  const placesRef = useRef([])
   const sunGlowRef = useRef(null)
   const timeRef = useRef(0)
   const isExploreRef = useRef(isExplore)
@@ -536,7 +601,7 @@ export function useSolarSystem(sceneRef, isExplore = false) {
       anchors.push(anchor)
 
       const tiltGroup = new THREE.Group()
-      tiltGroup.rotation.z = def.axialTilt || 0
+      tiltGroup.rotation.set(def.axialTiltX || 0, 0, def.axialTilt || 0)
       anchor.add(tiltGroup)
 
       let ring = null
@@ -563,7 +628,13 @@ export function useSolarSystem(sceneRef, isExplore = false) {
         anchor.add(new THREE.PointLight(color, intensity, 0, decay))
       }
 
-      const lod = createBodyLod(def, textures[def.texture], anchor, tiltGroup, ring)
+      const lod = createBodyLod(
+        def.nightTexture ? { ...def, nightMap: textures[def.nightTexture] } : def,
+        textures[def.texture],
+        anchor,
+        tiltGroup,
+        ring
+      )
 
       system.add(anchor)
       const entry = {
@@ -572,7 +643,8 @@ export function useSolarSystem(sceneRef, isExplore = false) {
         position: world,
         radius: def.radius,
         labelRange: def.labelRange ?? (def.emissive ? Infinity : cfg.lod.planetLabelRange),
-        axis: new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(0, 0, def.axialTilt || 0)), // north pole dir (tilt static)
+        axis: new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(def.axialTiltX || 0, 0, def.axialTilt || 0)), // north pole dir (tilt static)
+        atmosphere: def.atmosphere ?? null,
         // Per-frame motion → camera co-moving frame (useScrollCamera carry).
         delta: new THREE.Vector3(),
         spinDelta: 0,
@@ -621,12 +693,20 @@ export function useSolarSystem(sceneRef, isExplore = false) {
     ufosRef.current = ufos
 
     // Real Earth surface (explore, close range). Collision follows terrain.
-    const terrain = createEarthTerrain(bodyMap.get('earth'), isMobileDevice())
+    const terrain = createEarthTerrain(
+      bodyMap.get('earth'),
+      isMobileDevice(),
+      rendererRef?.current?.capabilities.getMaxAnisotropy() ?? 8,
+      () => rendererRef?.current?.getPixelRatio() ?? 1
+    )
     terrainRef.current = terrain
     const earthEntry = collisions.find((c) => c.key === 'earth')
     earthEntry.heightAt = terrain.heightAt
 
     setSolarCollisionBodies(collisions)
+    const places = buildPlaces(bodyMap)
+    placesRef.current = places
+    setPoiGroup('places', places)
 
     return () => {
       setSolarCollisionBodies([])
@@ -640,11 +720,13 @@ export function useSolarSystem(sceneRef, isExplore = false) {
       Object.values(textures).forEach((t) => t.dispose())
       terrain.dispose()
       terrainRef.current = null
+      setPoiGroup('places', [])
+      placesRef.current = []
       bodyMapRef.current = new Map()
       ufosRef.current = []
       sunGlowRef.current = null
     }
-  }, [sceneRef])
+  }, [sceneRef, rendererRef])
 
   const update = (deltaSeconds = 1 / 60, camera = null) => {
     const bodyMap = bodyMapRef.current
@@ -689,9 +771,19 @@ export function useSolarSystem(sceneRef, isExplore = false) {
         world.set(0, 0, 0)
       }
 
-      if (!def.tidallyLocked && ROTATION_PERIOD_DAYS[def.key]) {
+      if (def.realSpin) {
+        // Greenwich (lon 0 = local +x) at RA = GMST (Earth rotation angle, IERS).
+        mesh.rotation.y = ((0.779057273264 + 1.0027378119113546 * simDays) % 1) * TWO_PI
+      } else if (!def.tidallyLocked && ROTATION_PERIOD_DAYS[def.key]) {
         mesh.rotation.y = def.rotationSign * ((spinDays / ROTATION_PERIOD_DAYS[def.key]) % 1) * TWO_PI
       }
+    })
+
+    // Places follow their body's tilt + spin.
+    placesRef.current.forEach((place) => {
+      const body = bodyMap.get(place.bodyKey)
+      _placeQ.multiplyQuaternions(body.tiltGroup.quaternion, body.mesh.quaternion)
+      place.position.copy(place.local).applyQuaternion(_placeQ).add(body.world)
     })
 
     // Frame motion for co-moving camera. First frame: no delta.

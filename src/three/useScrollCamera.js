@@ -21,7 +21,7 @@ import {
   resetExplorePauseState,
   setExplorePaused,
 } from './exploreState'
-import { setCameraSpeed, setCameraThrottle } from './cameraRuntime'
+import { setCameraSpeed, setCameraThrottle, setWarp } from './cameraRuntime'
 import { origin } from './floatingOrigin'
 import { nearestStar } from './starRuntime'
 import { setWormholeApproach, triggerWormhole } from './wormholeRuntime'
@@ -640,9 +640,16 @@ export function useScrollCamera(cameraRef, routePath) {
 
     // Speed cap ∝ altitude. Hard cap every frame = auto-brake on approach.
     const altitude = Math.max(nearestAltitude(origin), exploreConfig.minAltitude)
-    const baseSpeed = clamp(altitude * exploreConfig.speedPerAltitude, exploreConfig.minSpeed, exploreConfig.maxSpeed)
+    // Near ground: jet regime (speed floor, gentler boost). Higher: log-scale travel.
+    const jet = 1 - smoothstep(exploreConfig.jetBlendAltKm[0], exploreConfig.jetBlendAltKm[1], altitude)
+    const baseSpeed = clamp(
+      Math.max(altitude * exploreConfig.speedPerAltitude, exploreConfig.jetCruise * jet),
+      exploreConfig.minSpeed,
+      exploreConfig.maxSpeed
+    )
     boostBlendRef.current += ((boostActive ? 1 : 0) - boostBlendRef.current) * expFactor(exploreConfig.boostBlendRate, deltaSeconds)
-    const speedCap = baseSpeed * (1 + (exploreConfig.boostMultiplier - 1) * boostBlendRef.current)
+    const boostMultiplier = exploreConfig.boostMultiplier + (exploreConfig.jetBoostMultiplier - exploreConfig.boostMultiplier) * jet
+    const speedCap = baseSpeed * (1 + (boostMultiplier - 1) * boostBlendRef.current)
 
     const moveForward = (movement.forward ? 1 : 0) - (movement.backward ? 1 : 0)
     const hasMoveInput = moveForward !== 0
@@ -660,6 +667,10 @@ export function useScrollCamera(cameraRef, routePath) {
     const speed = velocity.length()
     setCameraSpeed(speed)
     setCameraThrottle(clamp01(speed / (baseSpeed * 3)))
+    // Streaks only while boosting near cap.
+    const warpAmount = boostBlendRef.current * smoothstep(0.3, 0.9, speed / Math.max(speedCap, 1e-9))
+    if (speed > 0) setWarp(warpAmount, velocity.x / speed, velocity.y / speed, velocity.z / speed)
+    else setWarp(0, 0, 0, -1)
     if (speed === 0) return false
 
     const next = nextPosRef.current.copy(origin).addScaledVector(velocity, deltaSeconds)
@@ -759,6 +770,9 @@ export function useScrollCamera(cameraRef, routePath) {
     setCameraSpeed(0)
     setCameraThrottle(0)
     updateScrollRoute(camera, deltaSeconds)
+    // Fast scroll → mild streaks toward view center.
+    camera.getWorldDirection(forwardRef.current)
+    setWarp(scrollVelocityBlendRef.current * 0.6, forwardRef.current.x, forwardRef.current.y, forwardRef.current.z)
   }
 
   return { update }
