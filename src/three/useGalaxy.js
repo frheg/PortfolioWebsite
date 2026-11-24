@@ -87,7 +87,7 @@ export function useGalaxy(sceneRef, rendererRef) {
     const sectors = createStarSectors(scene, magLimit)
     const deepSpace = createDeepSpace(scene, isMobile)
     const neighbors = createNeighborGalaxies(scene, isMobile)
-    const lens = createLensPass()
+    const lens = createLensPass(isMobile)
     const post = createPostFx(quality)
     const atmospheres = createAtmospheres()
     const promoter = createStarPromoter(scene)

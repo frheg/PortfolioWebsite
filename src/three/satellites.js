@@ -97,6 +97,7 @@ export function createSatellites(earth, isMobile) {
       new THREE.PointsMaterial({
         color: def.color,
         size: def.sizePx,
+        opacity: def.opacity ?? 1,
         sizeAttenuation: false,
         map: getDot(),
         vertexColors: true,
@@ -162,6 +163,9 @@ export function createSatellites(earth, isMobile) {
     root.visible = camDist < cfg.visibleKm
     if (!root.visible) return
     cfg.groups.filter((g) => g.lazy && camDist < g.loadWithinKm).forEach(ensure)
+    // Subtle from afar (globe stays readable), full when in orbit among them.
+    const near = 1 - THREE.MathUtils.smoothstep(camDist, cfg.opacityNearKm, cfg.opacityNearKm * 3)
+    for (const s of sets) s.points.material.opacity = (s.def.opacity ?? 1) + (1 - (s.def.opacity ?? 1)) * near
 
     const nowMs = getSimulatedDateMs()
     const date = new Date(nowMs)

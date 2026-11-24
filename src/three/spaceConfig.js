@@ -47,9 +47,9 @@ export const spaceConfig = {
       keyTurnSpeed: 0.55,
       keyPitchSpeed: 0.45,
       boostFovIncrease: 16,
-      fovLerp: 0.12,
-      boostShakeRotation: 0.01,
-      boostShakeFrequency: 26,
+      fovRate: 5,           // 1/s, FOV ease (frame-rate independent)
+      boostShakeRotation: 0.003, // × boost blend; subtle rumble, not jitter
+      boostShakeFrequency: 11,
       lookSensitivity: 0.0022,
       touchLookSensitivity: 0.003,
       minAltitude: 0.02,    // km above terrain (~20 m)
@@ -68,7 +68,10 @@ export const spaceConfig = {
       starInfluenceRangePc: [0.01, 1],
       maxPitch: 1.35,
       bankAngle: 0.1,
-      bankLerp: 0.12,
+      bankRate: 6,          // 1/s
+      capUpRate: 2.5,       // 1/s, speed cap rises (log space)
+      capDownRate: 8,       // 1/s, falls (approach braking stays crisp)
+      jetSoften: 0.35,      // low level: accel + boost ramp × (1 − this)
     },
     // Order must match chapterOrder (src/content/chapters.js).
     // body: target key. distance: × body radius, from center.
@@ -125,6 +128,9 @@ export const spaceConfig = {
       levelHysteresis: 0.15,
       dotNightFloor: 0.35,  // dot brightness when fully backlit
       dotFadeFar: [300 * AU_KM, 800 * AU_KM], // planets invisible from interstellar space
+      sunGainFar: 9,        // photosphere HDR when small on screen (blooms → glare)
+      sunGainNear: 0.75,    // disc filling view: adapted exposure (granulation visible, no veil)
+      coronaGain: 0.4,      // × photosphere exposure
       planetLabelRange: 2000 * AU_KM,
     },
     // Real radii, km. Positions: ephemeris (sun fixed at 0, moon custom).
@@ -195,12 +201,14 @@ export const spaceConfig = {
     // Live satellites: CelesTrak GP groups → SGP4 (satellite.js) at simulated time.
     satellites: {
       groups: [
-        { group: 'stations', color: 0xfab387, sizePx: 5 },
-        { group: 'visual', color: 0xffffff, sizePx: 3 },
-        { group: 'gps-ops', color: 0x89dceb, sizePx: 3 },
-        { group: 'galileo', color: 0x94e2d5, sizePx: 3 },
-        { group: 'starlink', color: 0xb4befe, sizePx: 2, lazy: true, loadWithinKm: 60_000, mobileLimit: 2500 },
+        // opacity: far (whole globe in view) → near (≤ nearKm from Earth center) ramps to opacityNear.
+        { group: 'stations', color: 0xfab387, sizePx: 3.5, opacity: 0.7 },
+        { group: 'visual', color: 0xffffff, sizePx: 2, opacity: 0.35 },
+        { group: 'gps-ops', color: 0x89dceb, sizePx: 2, opacity: 0.4 },
+        { group: 'galileo', color: 0x94e2d5, sizePx: 2, opacity: 0.4 },
+        { group: 'starlink', color: 0xb4befe, sizePx: 1.5, opacity: 0.22, lazy: true, loadWithinKm: 60_000, mobileLimit: 2500 },
       ],
+      opacityNearKm: 9000,  // from Earth center: closer → full opacity (in orbit, sats matter)
       labeled: [
         { key: 'iss', match: '^ISS \\(ZARYA\\)', name: 'ISS', facts: ['Den internasjonale romstasjonen', '~420 km høyde, ~7,66 km/s', 'Ett omløp ≈ 92 min', 'Bemannet siden 2000'] },
         { key: 'css', match: '^CSS \\(TIANHE\\)', name: 'Tiangong', facts: ['Kinas romstasjon', '~390 km høyde'] },
@@ -328,7 +336,10 @@ export const spaceConfig = {
       diskOuterRs: 24,
       diskGain: 2.2,
       diskSpin: 0.6,        // visual time scale for disk rotation
-      lensMinPx: 2,         // Einstein radius on screen to switch lens pass on
+      lensMinPx: 2,         // Einstein radius on screen to switch ray-traced pass on
+      raySteps: 260,        // geodesic steps per pixel (strong-field rays only)
+      rayStepsMobile: 140,
+      rayDiskGain: 0.22,    // traced disk vs mesh disk exposure
       photonRingGain: 0.9,
     },
   },

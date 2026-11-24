@@ -237,6 +237,7 @@ export function useScrollCamera(cameraRef, routePath) {
   const qeRef = useRef(new THREE.Quaternion())
   const eulerRef = useRef(new THREE.Euler())
   const velocityRef = useRef(new THREE.Vector3())
+  const capLogRef = useRef(null) // smoothed log(speed cap) → no jumps when nearest star/body changes
   const targetVelocityRef = useRef(new THREE.Vector3())
   const boostBlendRef = useRef(0)
   const appliedShakeRotRef = useRef({ x: 0, y: 0, z: 0 })
@@ -529,7 +530,7 @@ export function useScrollCamera(cameraRef, routePath) {
   const applyBoostShake = (camera, deltaSeconds) => {
     boostTimeRef.current += deltaSeconds * exploreConfig.boostShakeFrequency
     const t = boostTimeRef.current
-    const amp = exploreConfig.boostShakeRotation
+    const amp = exploreConfig.boostShakeRotation * boostBlendRef.current
     const jitterX = Math.sin(t * 1.7) + Math.sin(t * 3.9 + 0.6) * 0.45
     const jitterY = Math.cos(t * 2.4 + 0.9) + Math.sin(t * 5.2 + 1.3) * 0.35
     const jitterZ = Math.sin(t * 2.1 + 2.2) + Math.cos(t * 4.7 + 0.2) * 0.3
@@ -596,6 +597,7 @@ export function useScrollCamera(cameraRef, routePath) {
       .applyQuaternion(camera.quaternion)
       .multiplyScalar(nearestAltitude(origin) * exploreConfig.speedPerAltitude * 0.4)
     boostBlendRef.current = 0
+    capLogRef.current = null
     triggerWormhole()
   }
 
@@ -626,10 +628,10 @@ export function useScrollCamera(cameraRef, routePath) {
       -exploreConfig.maxPitch,
       exploreConfig.maxPitch
     )
-    currentRollRef.current += (bankIntent * exploreConfig.bankAngle - currentRollRef.current) * exploreConfig.bankLerp
+    currentRollRef.current += (bankIntent * exploreConfig.bankAngle - currentRollRef.current) * expFactor(exploreConfig.bankRate, deltaSeconds)
 
     const targetFov = baseFovRef.current + (boostActive ? exploreConfig.boostFovIncrease : 0)
-    const nextFov = camera.fov + (targetFov - camera.fov) * exploreConfig.fovLerp
+    const nextFov = camera.fov + (targetFov - camera.fov) * expFactor(exploreConfig.fovRate, deltaSeconds)
     if (Math.abs(nextFov - camera.fov) > 0.01) {
       camera.fov = nextFov
       camera.updateProjectionMatrix()
@@ -648,9 +650,16 @@ export function useScrollCamera(cameraRef, routePath) {
       exploreConfig.minSpeed,
       exploreConfig.maxSpeed
     )
-    boostBlendRef.current += ((boostActive ? 1 : 0) - boostBlendRef.current) * expFactor(exploreConfig.boostBlendRate, deltaSeconds)
+    // Low level: everything a touch softer (small things nearby → speed changes read strongly).
+    const soft = 1 - exploreConfig.jetSoften * jet
+    boostBlendRef.current += ((boostActive ? 1 : 0) - boostBlendRef.current) * expFactor(exploreConfig.boostBlendRate * soft, deltaSeconds)
     const boostMultiplier = exploreConfig.boostMultiplier + (exploreConfig.jetBoostMultiplier - exploreConfig.boostMultiplier) * jet
-    const speedCap = baseSpeed * (1 + (boostMultiplier - 1) * boostBlendRef.current)
+    // Cap smoothed in log space: fast down (approach brake), slower up → no stutter when nearest star/body flips.
+    const capTarget = Math.log(baseSpeed * (1 + (boostMultiplier - 1) * boostBlendRef.current))
+    if (capLogRef.current === null) capLogRef.current = capTarget
+    const capRate = capTarget < capLogRef.current ? exploreConfig.capDownRate : exploreConfig.capUpRate
+    capLogRef.current += (capTarget - capLogRef.current) * expFactor(capRate, deltaSeconds)
+    const speedCap = Math.exp(capLogRef.current)
 
     const moveForward = (movement.forward ? 1 : 0) - (movement.backward ? 1 : 0)
     const hasMoveInput = moveForward !== 0
@@ -659,7 +668,7 @@ export function useScrollCamera(cameraRef, routePath) {
     const reversing = hasMoveInput && velocity.dot(target) < 0
 
     const rate = hasMoveInput
-      ? reversing ? exploreConfig.brakeAcceleration : exploreConfig.acceleration
+      ? reversing ? exploreConfig.brakeAcceleration : exploreConfig.acceleration * soft
       : exploreConfig.coastDamping
     velocity.lerp(target, expFactor(rate, deltaSeconds))
     if (velocity.length() > speedCap) velocity.setLength(speedCap)
@@ -707,7 +716,7 @@ export function useScrollCamera(cameraRef, routePath) {
 
   const updateScrollRoute = (camera, deltaSeconds) => {
     if (Math.abs(camera.fov - baseFovRef.current) > 0.01) {
-      camera.fov += (baseFovRef.current - camera.fov) * Math.max(exploreConfig.fovLerp, 0.1)
+      camera.fov += (baseFovRef.current - camera.fov) * expFactor(exploreConfig.fovRate, deltaSeconds)
       camera.updateProjectionMatrix()
     }
 

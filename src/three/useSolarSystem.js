@@ -202,164 +202,76 @@ function buildSoftGlowTexture(rgb) {
   return new THREE.CanvasTexture(canvas)
 }
 
-// ─── Sun glow helpers ────────────────────────────────────────────────────────
+// ─── Sun corona ──────────────────────────────────────────────────────────────
+// Camera-facing billboard at the Sun (behind-disc part depth-hidden by the photosphere).
+// K-corona falloff ~ r^-3.5 plus faint radial streamers + thin chromosphere rim. Faint by design:
+// real corona is ~1e-6 of the disc; glare comes from bloom on the HDR photosphere, not sprites.
+const CORONA_EXTENT = 7 // × radius (half-size of quad)
 
-/** Outer halo sprite: wide radial gradient + 6-spike diffraction pattern. */
-function buildSunHaloTexture() {
-  const S = 512
-  const canvas = document.createElement('canvas')
-  canvas.width = S
-  canvas.height = S
-  const ctx = canvas.getContext('2d')
-  const cx = S / 2
-  const r = S / 2
-
-  // Soft background radial gradient
-  const bg = ctx.createRadialGradient(cx, cx, 0, cx, cx, r)
-  bg.addColorStop(0.00, 'rgba(245, 224, 220, 0.65)') // rosewater
-  bg.addColorStop(0.07, 'rgba(249, 226, 175, 0.40)') // yellow
-  bg.addColorStop(0.22, 'rgba(250, 179, 135, 0.18)') // peach
-  bg.addColorStop(0.50, 'rgba(235, 160, 172, 0.06)') // maroon
-  bg.addColorStop(1.00, 'rgba(243, 139, 168, 0.00)') // red
-  ctx.fillStyle = bg
-  ctx.fillRect(0, 0, S, S)
-
-  // 6 diffraction spikes on 3 axes
-  const axes = [
-    { angle: 0,                   len: 0.47, coreW: 3.5, softW: 14, op: 0.85 },
-    { angle: Math.PI / 3,         len: 0.42, coreW: 2.5, softW: 11, op: 0.65 },
-    { angle: (Math.PI * 2) / 3,   len: 0.38, coreW: 2.5, softW: 10, op: 0.55 },
-  ]
-
-  axes.forEach(({ angle, len, coreW, softW, op }) => {
-    ctx.save()
-    ctx.translate(cx, cx)
-    ctx.rotate(angle)
-
-    for (const dir of [-1, 1]) {
-      const endX = dir * r * len
-
-      const sg = ctx.createLinearGradient(0, 0, endX, 0)
-      sg.addColorStop(0.0, `rgba(249, 226, 175, ${op * 0.40})`) // yellow
-      sg.addColorStop(0.2, `rgba(250, 179, 135, ${op * 0.20})`) // peach
-      sg.addColorStop(0.6, `rgba(235, 160, 172, ${op * 0.06})`) // maroon
-      sg.addColorStop(1.0, 'rgba(243, 139, 168, 0)') // red
-      ctx.fillStyle = sg
-      ctx.fillRect(dir > 0 ? 0 : endX, -softW / 2, Math.abs(endX), softW)
-
-      const cg = ctx.createLinearGradient(0, 0, endX, 0)
-      cg.addColorStop(0.00, `rgba(245, 224, 220, ${op})`) // rosewater
-      cg.addColorStop(0.15, `rgba(249, 226, 175, ${op * 0.70})`) // yellow
-      cg.addColorStop(0.45, `rgba(250, 179, 135, ${op * 0.20})`) // peach
-      cg.addColorStop(1.00, 'rgba(235, 160, 172, 0)') // maroon
-      ctx.fillStyle = cg
-      ctx.fillRect(dir > 0 ? 0 : endX, -coreW / 2, Math.abs(endX), coreW)
-    }
-    ctx.restore()
-  })
-
-  return new THREE.CanvasTexture(canvas)
+const CORONA_VERT = /* glsl */ `
+#include <common>
+#include <logdepthbuf_pars_vertex>
+uniform float uRadius;
+varying vec2 vQuad;
+void main() {
+  vec3 c = (modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  vec3 f = normalize(c);
+  vec3 r = normalize(cross(f, abs(f.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
+  vec3 u = cross(r, f);
+  vQuad = position.xy * ${CORONA_EXTENT.toFixed(1)};
+  gl_Position = projectionMatrix * vec4(c + (r * vQuad.x + u * vQuad.y) * uRadius, 1.0);
+  #include <logdepthbuf_vertex>
 }
+`
 
-/**
- * Ring-profile glow sprite for the sun surface edge.
- *
- * The texture is TRANSPARENT at the centre and peaks at exactly 50% of the
- * canvas radius.  When rendered as a Sprite sized to `radius * 4.0`, the
- * world-space centre-to-edge = radius * 2.0, so stop 0.50 lands precisely on
- * the sun sphere's surface — the glow appears only at and just outside the
- * visible edge, with zero contribution inside the sphere area.
- *
- *  Canvas %   →  world distance (radius=30 example)
- *   0 %        →   0  (sun centre, fully transparent)
- *  44 %        →  26  (just inside the surface — glow starts blooming in)
- *  50 %        →  30  (sun surface)
- *  58 %        →  35  (peak brightness, just outside sun)
- *  82 %        →  49  (mostly faded)
- * 100 %        →  60  (transparent edge)
- */
-function buildSunRimGlowTexture() {
-  const S = 512
-  const canvas = document.createElement('canvas')
-  canvas.width = S
-  canvas.height = S
-  const ctx = canvas.getContext('2d')
-  const cx = S / 2
-
-  // Wide, gradual ramp rather than mostly-flat-then-a-spike — that shape is
-  // what read as a hard ring right at the sun's edge instead of a soft bloom.
-  const grd = ctx.createRadialGradient(cx, cx, 0, cx, cx, cx)
-  grd.addColorStop(0.00, 'rgba(245, 224, 220, 0.00)') // rosewater — fully transparent, sun texture shows
-  grd.addColorStop(0.32, 'rgba(245, 224, 220, 0.00)') // still inside sun body
-  grd.addColorStop(0.44, 'rgba(249, 226, 175, 0.18)') // yellow — first hint of glow, before the surface
-  grd.addColorStop(0.50, 'rgba(250, 179, 135, 0.55)') // peach — at the surface, a bright limb rather than a hard edge
-  grd.addColorStop(0.58, 'rgba(250, 179, 135, 0.85)') // peach — peak, just outside the surface
-  grd.addColorStop(0.68, 'rgba(235, 160, 172, 0.42)') // maroon
-  grd.addColorStop(0.82, 'rgba(243, 139, 168, 0.10)') // red
-  grd.addColorStop(1.00, 'rgba(243, 139, 168, 0.00)')
-  ctx.fillStyle = grd
-  ctx.fillRect(0, 0, S, S)
-
-  return new THREE.CanvasTexture(canvas)
+const CORONA_FRAG = /* glsl */ `
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform float uTime;
+uniform float uGain;
+varying vec2 vQuad;
+float hash1(float n) { return fract(sin(n) * 43758.5453); }
+// Periodic (period n cells) → no seam where atan wraps.
+float noise1(float x, float n) {
+  float i = floor(x);
+  float f = fract(x);
+  return mix(hash1(mod(i, n)), hash1(mod(i + 1.0, n)), f * f * (3.0 - 2.0 * f));
 }
+void main() {
+  #include <logdepthbuf_fragment>
+  float r = length(vQuad);
+  if (r < 0.995) discard;
+  float a = atan(vQuad.y, vQuad.x);
+  // Streamers: angular noise (periodic: wrap via 48 cells), slow drift; stronger toward equator (y≈0).
+  float cells = 48.0;
+  float x = a / PI2 + 0.5;
+  float s = noise1(x * cells + uTime * 0.003, cells) * 0.55 + noise1(x * cells * 3.0 - uTime * 0.002, cells * 3.0) * 0.45;
+  float eq = 0.55 + 0.45 * abs(cos(a));
+  float streak = mix(0.7, 1.3, s * eq);
+  float k = pow(r, -3.5) * streak;
+  float edge = 1.0 - smoothstep(${(CORONA_EXTENT * 0.6).toFixed(1)}, ${CORONA_EXTENT.toFixed(1)}, r);
+  vec3 col = vec3(1.0, 0.94, 0.86) * k * 0.35 * edge;
+  // Chromosphere: thin H-alpha pink rim just above the limb.
+  col += vec3(1.0, 0.32, 0.36) * exp(-pow((r - 1.004) / 0.006, 2.0)) * 0.6;
+  gl_FragColor = vec4(col * uGain, 1.0);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+}
+`
 
-/**
- * Adds the full layered glow system to the sun's anchor.
- * All canvas textures are module-level singletons (see _glowCache) so they are
- * created once per page load — NOT pushed to disposables.
- */
-function buildSunGlowEffect(radius, anchor) {
-  const glowSprites = []
-
-  // Layer 0: rim glow (transparent centre, peak at sun surface). Scale is
-  // fixed at radius * 4.0 — that's load-bearing for buildSunRimGlowTexture's
-  // gradient stops to land where the doc comment above it says they do,
-  // shrink the corona/halo layers below instead for a smaller glow overall.
-  const rimTex = cachedGlowTex('sun-rim', buildSunRimGlowTexture)
-  const rimSprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: rimTex, transparent: true, opacity: 0.78, blending: THREE.AdditiveBlending, depthWrite: false })
-  )
-  rimSprite.scale.setScalar(radius * 4.0)
-  rimSprite.userData.baseOpacity = 0.78
-  rimSprite.userData.baseSize    = radius * 4.0
-  anchor.add(rimSprite)
-  glowSprites.push(rimSprite)
-
-  // Layers 1–4: wide soft-gradient corona. Opacities stay short of the
-  // original values — these layers overlap heavily near the surface, and
-  // with additive blending even pastel Catppuccin colors sum toward white
-  // fast once several of them stack, which is what read as a plain white
-  // halo originally.
-  const coronaLayers = [
-    { size: radius *  2.8, baseOpacity: 0.38, rgb: [245, 224, 220] }, // rosewater
-    { size: radius *  5.5, baseOpacity: 0.32, rgb: [249, 226, 175] }, // yellow
-    { size: radius * 10.0, baseOpacity: 0.18, rgb: [250, 179, 135] }, // peach
-    { size: radius * 17.0, baseOpacity: 0.09, rgb: [235, 160, 172] }, // maroon
-  ]
-
-  coronaLayers.forEach(({ size, baseOpacity, rgb }) => {
-    const tex = cachedGlowTex(`soft-${rgb.join(',')}`, () => buildSoftGlowTexture(rgb))
-    const sprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: baseOpacity, blending: THREE.AdditiveBlending, depthWrite: false })
-    )
-    sprite.scale.setScalar(size)
-    sprite.userData.baseOpacity = baseOpacity
-    sprite.userData.baseSize = size
-    anchor.add(sprite)
-    glowSprites.push(sprite)
+function buildSunCorona(radius, anchor) {
+  const material = new THREE.ShaderMaterial({
+    uniforms: { uRadius: { value: radius }, uTime: { value: 0 }, uGain: { value: 1 } },
+    vertexShader: CORONA_VERT,
+    fragmentShader: CORONA_FRAG,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
   })
-
-  // Outer halo + diffraction spike sprite
-  const haloTex = cachedGlowTex('sun-halo', buildSunHaloTexture)
-  const haloSize = radius * 22
-  const haloSprite = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: haloTex, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending, depthWrite: false })
-  )
-  haloSprite.scale.setScalar(haloSize)
-  haloSprite.userData.baseScale = haloSize
-  anchor.add(haloSprite)
-
-  return { glowSprites, haloSprite }
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material)
+  quad.frustumCulled = false
+  anchor.add(quad)
+  return { material }
 }
 
 // ─── UFO helpers ─────────────────────────────────────────────────────────────
@@ -629,7 +541,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
       }
 
       if (def.emissive) {
-        sunGlowRef.current = buildSunGlowEffect(def.radius, anchor)
+        sunGlowRef.current = buildSunCorona(def.radius, anchor)
         const { color, intensity, decay } = spaceConfig.lights.sun
         anchor.add(new THREE.PointLight(color, intensity, 0, decay))
       }
@@ -830,20 +742,11 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
       multiplayerRef.current?.update(camera, focalPx, explore)
     }
 
-    // Sun glow pulse + slow spike spin.
+    // Corona: slow streamer drift. Exposure follows photosphere adaptation (bright disc → corona swamped, as real).
     if (sunGlowRef.current) {
-      const glowTime = time * 0.032
-      const { glowSprites, haloSprite } = sunGlowRef.current
-      glowSprites.forEach((sprite, i) => {
-        sprite.material.opacity =
-          sprite.userData.baseOpacity * (1 + Math.sin(glowTime * (0.5 + i * 0.22) + i * 1.1) * 0.2)
-        if (i === 0) {
-          sprite.scale.setScalar(sprite.userData.baseSize * (1 + Math.sin(glowTime * 0.38) * 0.04))
-        }
-      })
-      haloSprite.material.opacity = 0.72 + Math.sin(glowTime * 0.33) * 0.22
-      haloSprite.material.rotation += deltaSeconds * 0.008
-      haloSprite.scale.setScalar(haloSprite.userData.baseScale * (1 + Math.sin(glowTime * 0.15) * 0.03))
+      const u = sunGlowRef.current.material.uniforms
+      u.uTime.value = time
+      u.uGain.value = (bodyMap.get('sun')?.lod.sunGain?.value ?? 1) * spaceConfig.solarSystem.lod.coronaGain
     }
 
     // UFOs: wander inside shell round Earth.

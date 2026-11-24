@@ -25,6 +25,44 @@ uniform vec3 uTint;
 uniform float uTintMix;
 uniform sampler2D uNightMap;
 uniform float uNightGain;
+uniform float uTime;     // s (emissive: granulation drift)
+uniform float uSunGain;  // emissive HDR exposure (adapts to apparent size)
+
+// Hoskins hash (no sin → no float32 streaks at high frequency).
+vec3 hash33(vec3 p) {
+  p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+  p += dot(p, p.yxz + 33.33);
+  return fract((p.xxy + p.yxx) * p.zyx);
+}
+// Cellular distance → granules (bright cell, dark intergranular lanes).
+float worley(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  float md = 1.0;
+  for (int x = -1; x <= 1; x++)
+    for (int y = -1; y <= 1; y++)
+      for (int z = -1; z <= 1; z++) {
+        vec3 o = vec3(float(x), float(y), float(z));
+        vec3 r = o + hash33(i + o) - f;
+        md = min(md, dot(r, r));
+      }
+  return sqrt(md);
+}
+
+// Photosphere: granulation (cells + finer cells, slow churn) × texture mottling × limb darkening (redder, dimmer edge).
+// mu = cos(view angle to normal). localDir: body-local.
+vec3 sunSurface(vec3 albedo, float mu, vec3 localDir) {
+  vec3 d = normalize(localDir);
+  float g1 = 1.0 - smoothstep(0.15, 0.95, worley(d * 180.0 + vec3(uTime * 0.01, 0.0, uTime * -0.008)));
+  float g2 = 1.0 - smoothstep(0.1, 1.0, worley(d * 640.0 + vec3(0.0, uTime * 0.03, 0.0)));
+  float g = g1 * 0.65 + g2 * 0.35;
+  float tex = dot(albedo, vec3(0.3, 0.59, 0.11));
+  float base = mix(0.62, 1.22, g) * mix(0.78, 1.12, tex);
+  mu = clamp(mu, 0.0, 1.0);
+  vec3 ld = vec3(0.25 + 0.75 * pow(mu, 0.42), 0.16 + 0.84 * pow(mu, 0.6), 0.08 + 0.92 * pow(mu, 0.85));
+  vec3 col = vec3(1.0, 0.74, 0.46) * base * ld * uSunGain;
+  return mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))) * uTint * 1.6, uTintMix);
+}
 
 // City lights on the dark side. localDir: body-local (equirect lookup, same convention as map).
 vec3 nightLights(vec3 localDir, vec3 nW) {
@@ -62,9 +100,11 @@ const MESH_VERT = /* glsl */ `
 varying vec2 vUv;
 varying vec3 vNormalW;
 varying vec3 vLocalPos;
+varying vec3 vPosR; // render space (camera at 0)
 uniform vec3 uTileCenter; // terrain tiles: tile-local → body-local. Sphere mesh: 0.
 void main() {
   vUv = uv;
+  vPosR = (modelMatrix * vec4(position, 1.0)).xyz;
   vNormalW = normalize(mat3(modelMatrix) * normal);
   vLocalPos = position + uTileCenter;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -79,6 +119,7 @@ ${SHADE_GLSL}
 varying vec2 vUv;
 varying vec3 vNormalW;
 varying vec3 vLocalPos;
+varying vec3 vPosR;
 uniform sampler2D uNormalMap;   // terrain: RG8 east/north slopes (±4)
 uniform float uUseNormalMap;
 uniform mat3 uNormalRot;        // body-local → world rotation
@@ -94,6 +135,8 @@ void main() {
     vec3 north = cross(up, east);
     n = normalize(uNormalRot * normalize(up - east * s.x - north * s.y));
     lit = shadeBodyShadowed(albedo, n, normalize(uNormalRot * up));
+  } else if (uEmissive > 0.5) {
+    lit = sunSurface(albedo, dot(n, normalize(-vPosR)), vLocalPos);
   } else {
     lit = shadeBody(albedo, n);
   }
@@ -162,7 +205,8 @@ void main() {
   vec2 g = fwidth(uv.x) <= fwidth(uvAlt.x) ? uv : uvAlt;
   vec3 albedo = textureGrad(map, uv, dFdx(g), dFdy(g)).rgb;
 
-  gl_FragColor = vec4(shadeBody(albedo, nW) + nightLights(nL, nW), cov * uFade);
+  vec3 lit = uEmissive > 0.5 ? sunSurface(albedo, z, nL) : shadeBody(albedo, nW) + nightLights(nL, nW);
+  gl_FragColor = vec4(lit, cov * uFade);
 
   #ifdef USE_LOGDEPTHBUF
     // Depth of hit point, not quad → correct sort vs rings/moons.
@@ -358,6 +402,8 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
   const nightGain = { value: def.nightMap ? (def.nightGain ?? 1) : 0 }
   const sunDir = { value: new THREE.Vector3(1, 0, 0) }
   const mapUniform = { value: map }
+  const time = { value: 0 }
+  const sunGain = { value: lodCfg.sunGainFar }
 
   const mesh = new THREE.Mesh(
     getSphere(0),
@@ -370,6 +416,8 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
         uTintMix: tintMix,
         uNightMap: nightMap,
         uNightGain: nightGain,
+        uTime: time,
+        uSunGain: sunGain,
         uTileCenter: { value: new THREE.Vector3() },
         uNormalMap: { value: null },
         uUseNormalMap: { value: 0 },
@@ -396,6 +444,8 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
         uTintMix: tintMix,
         uNightMap: nightMap,
         uNightGain: nightGain,
+        uTime: time,
+        uSunGain: sunGain,
         uBodyRot: bodyRot,
         uRadius: { value: def.radius },
         uFade: fade,
@@ -423,6 +473,11 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
     const radiusPx = dist > def.radius ? (def.radius / dist) * focalPx : Infinity
 
     if (!def.emissive) sunDir.value.copy(world).negate().normalize() // sun at world 0
+    else {
+      // Eye adaptation: small disc → hot HDR (bloom glare); disc filling view → exposure down (surface detail, no veil).
+      time.value = performance.now() / 1000
+      sunGain.value = THREE.MathUtils.lerp(lodCfg.sunGainFar, lodCfg.sunGainNear, smoothstep(0.01, 0.25, def.radius / Math.max(dist, def.radius)))
+    }
     _q.multiplyQuaternions(tiltGroup.quaternion, mesh.quaternion)
     bodyRot.value.setFromMatrix4(_m4.makeRotationFromQuaternion(_q))
 
@@ -467,5 +522,5 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
     }
   }
 
-  return { mesh, update, dispose, sunDir, nightMap, nightGain }
+  return { mesh, update, dispose, sunDir, nightMap, nightGain, sunGain }
 }
