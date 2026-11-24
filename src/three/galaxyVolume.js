@@ -130,6 +130,7 @@ const SCENE_TO_G = new THREE.Matrix3().set(...GALAXY_AXES.x, ...GALAXY_AXES.y, .
 const _camRot = new THREE.Matrix3()
 const _basis = new THREE.Matrix3()
 const _lens = new THREE.Matrix3()
+const _bufSize = new THREE.Vector2()
 const _camPc = new THREE.Vector3()
 
 export function createGalaxyVolume(isMobile) {
@@ -255,7 +256,7 @@ export function createGalaxyVolume(isMobile) {
 
     if (compositeMat.uniforms.uMix.value > 0.002) {
       const scale = isMobile ? cfg.liveScaleMobile : cfg.liveScale
-      const size = renderer.getDrawingBufferSize(new THREE.Vector2())
+      const size = renderer.getDrawingBufferSize(_bufSize)
       const w = Math.max(2, Math.round(size.x * scale))
       const h = Math.max(2, Math.round(size.y * scale))
       if (live.width !== w || live.height !== h) live.setSize(w, h)

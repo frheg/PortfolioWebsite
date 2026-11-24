@@ -61,7 +61,7 @@ function getGlow() {
   return glowTex
 }
 
-const TAIL_N = 700
+const TAIL_N = 1600
 const _au = new THREE.Vector3()
 const _prevAu = new THREE.Vector3()
 const _anti = new THREE.Vector3()
@@ -75,6 +75,7 @@ function buildComet(c, scene) {
   scene.add(anchor)
 
   const coma = new THREE.Sprite(new THREE.SpriteMaterial({ map: getGlow(), color: 0xcfe8ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))
+  coma.material.color.multiplyScalar(1.8)
   anchor.add(coma)
   // Beacon: few px from anywhere in the inner system.
   const beaconGeo = new THREE.BufferGeometry()
@@ -83,26 +84,35 @@ function buildComet(c, scene) {
   anchor.add(beacon)
 
   // Tails: particle strips (anchor-local, rebuilt as the sun direction changes).
-  const mkTail = (color) => {
-    const g = new THREE.BufferGeometry()
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TAIL_N * 3), 3))
-    const m = new THREE.PointsMaterial({ size: 1, sizeAttenuation: true, map: getGlow(), color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.5 })
-    const pts = new THREE.Points(g, m)
-    pts.frustumCulled = false
-    anchor.add(pts)
-    return pts
-  }
-  const ion = mkTail(0x7fb4ff)
-  const dust = mkTail(0xffe2b8)
   // Stable random per particle.
   const rnd = new Float32Array(TAIL_N * 3).map((_, k) => {
     const x = Math.sin((k + 1) * 12.9898) * 43758.5453
     return x - Math.floor(x)
   })
+  const mkTail = (color, gain, lenPow) => {
+    const g = new THREE.BufferGeometry()
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TAIL_N * 3), 3))
+    // Brightness falls off toward the tail end (no hard cut).
+    const fade = new Float32Array(TAIL_N * 3)
+    for (let k = 0; k < TAIL_N; k += 1) fade.fill(Math.pow(1 - Math.pow(rnd[k * 3], lenPow), 1.5), k * 3, k * 3 + 3)
+    g.setAttribute('color', new THREE.BufferAttribute(fade, 3))
+    const m = new THREE.PointsMaterial({ size: 1, sizeAttenuation: true, map: getGlow(), color, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.5 })
+    m.color.multiplyScalar(gain) // HDR > 1 → tail catches bloom
+    const pts = new THREE.Points(g, m)
+    pts.frustumCulled = false
+    anchor.add(pts)
+    return pts
+  }
+  const ion = mkTail(0x7fb4ff, 3.2, 1.6)
+  const dust = mkTail(0xffe2b8, 2.8, 1.3)
 
   const poi = { key: `comet_${c.key}`, kind: 'comet', name: c.name, position: world, radius: 5, labelRange: 4 * AU_KM, factsRange: 8e6, facts: c.facts }
 
+  let lastDays = NaN
   const update = (days) => {
+    // Tail shape barely changes in 15 min sim time → skip rebuild + upload.
+    if (Math.abs(days - lastDays) < 1 / 96) return
+    lastDays = days
     cometPositionAU(c, days, _au)
     cometPositionAU(c, days - 1, _prevAu)
     world.set(_au.x * AU_KM, _au.z * AU_KM, -_au.y * AU_KM) // ecliptic → scene
@@ -114,7 +124,7 @@ function buildComet(c, scene) {
     _side.crossVectors(_anti, _vel).normalize()
     const comaKm = 6e4 * Math.sqrt(act)
     coma.scale.setScalar(comaKm * 2)
-    coma.material.opacity = Math.min(1, 0.4 + act * 0.15)
+    coma.material.opacity = Math.min(1, 0.5 + act * 0.2)
     const ionLen = 1.5e7 * act
     const dustLen = 0.9e7 * act
     const ia = ion.geometry.attributes.position.array
@@ -139,10 +149,10 @@ function buildComet(c, scene) {
     }
     ion.geometry.attributes.position.needsUpdate = true
     dust.geometry.attributes.position.needsUpdate = true
-    ion.material.size = comaKm * 0.5
-    dust.material.size = comaKm * 0.9
-    ion.material.opacity = Math.min(0.85, 0.16 * act)
-    dust.material.opacity = Math.min(0.7, 0.13 * act)
+    ion.material.size = comaKm * 0.6
+    dust.material.size = comaKm * 1.1
+    ion.material.opacity = Math.min(1, 0.3 * act)
+    dust.material.opacity = Math.min(1, 0.25 * act)
   }
 
   const dispose = () => {

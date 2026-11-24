@@ -71,7 +71,18 @@ export function useExploreAudio(isExplore) {
 
     rafId = requestAnimationFrame(tick)
 
+    // Autoplay blocked (e.g. reload straight onto /explore) → start on first gesture.
+    const unlock = () => {
+      if (ambient.paused) ambient.play().catch(() => {})
+      if (engine.paused) engine.play().catch(() => {})
+      if (!ambient.paused && !engine.paused) removeUnlock()
+    }
+    const GESTURES = ['pointerdown', 'keydown', 'touchstart']
+    const removeUnlock = () => GESTURES.forEach((g) => window.removeEventListener(g, unlock, true))
+    GESTURES.forEach((g) => window.addEventListener(g, unlock, true))
+
     return () => {
+      removeUnlock()
       cancelAnimationFrame(rafId)
       ambient.pause()
       engine.pause()

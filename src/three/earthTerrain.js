@@ -23,6 +23,7 @@ function dirFromLatLon(lat, lon, out = new THREE.Vector3()) {
 }
 
 const _q = new THREE.Quaternion()
+const _m4 = new THREE.Matrix4()
 const _qi = new THREE.Quaternion()
 const _v = new THREE.Vector3()
 const _camLocal = new THREE.Vector3()
@@ -363,7 +364,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
 
     _q.copy(frameState.quaternion)
     _qi.copy(_q).invert()
-    normalRot.value.setFromMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(_q))
+    normalRot.value.setFromMatrix4(_m4.makeRotationFromQuaternion(_q))
     _camLocal.subVectors(eye, earth.world).applyQuaternion(_qi)
     camDist = _camLocal.length()
     horizonCos = R / camDist

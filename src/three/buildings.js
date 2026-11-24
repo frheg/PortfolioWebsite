@@ -5,10 +5,12 @@
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { createVertexColorMaterial } from './bodyLod'
+import { queueUpload } from './frameGovernor'
 
 const cfg = spaceConfig.solarSystem.earthTerrain.buildings
 const terrainCfg = spaceConfig.solarSystem.earthTerrain
 const Z = 14
+const _dir = new THREE.Vector3()
 
 let buildingsActive = false
 /** HUD: OSM attribution while buildings render. */
@@ -51,26 +53,34 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
       t.state = 'empty'
       return
     }
-    const geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3, true))
-    geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
-    geometry.setIndex(new THREE.BufferAttribute(indices, 1))
-    geometry.computeBoundingSphere()
-    let mat = material
+    // Drawable later (upload budget). Dropped meanwhile → just free the bitmap.
+    t.state = 'queued'
+    let tex = null
     if (imagery) {
-      const tex = new THREE.Texture(imagery)
+      tex = new THREE.Texture(imagery)
       tex.flipY = false // ImageBitmap: rows top-down = uv.y down
       tex.colorSpace = THREE.SRGBColorSpace
       tex.anisotropy = 4
       tex.needsUpdate = true
-      mat = createVertexColorMaterial(sunDir, planetCenter, tex)
     }
-    t.mesh = new THREE.Mesh(geometry, mat)
-    t.mesh.position.set(center[0], center[1], center[2])
-    group.add(t.mesh)
-    t.state = 'ready'
+    queueUpload(() => {
+      if (t.state !== 'queued') {
+        imagery?.close()
+        tex?.dispose()
+        return false
+      }
+      const geometry = new THREE.BufferGeometry()
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+      geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3, true))
+      geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
+      geometry.setIndex(new THREE.BufferAttribute(indices, 1))
+      geometry.computeBoundingSphere()
+      t.mesh = new THREE.Mesh(geometry, tex ? createVertexColorMaterial(sunDir, planetCenter, tex) : material)
+      t.mesh.position.set(center[0], center[1], center[2])
+      group.add(t.mesh)
+      t.state = 'ready'
+    }, tex ? [tex] : null)
   }
 
   const drop = (key, t) => {
@@ -91,12 +101,13 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
   /** camLocal: Earth-local km. camAlt: km above sea level. */
   const update = (camLocal, camAlt) => {
     const on = Boolean(urlTemplate) && camAlt < cfg.maxAltKm
-    buildingsActive = on && [...tiles.values()].some((t) => t.state === 'ready')
+    buildingsActive = false
+    if (on) for (const t of tiles.values()) if (t.state === 'ready') buildingsActive = true
     if (!on) {
       tiles.forEach((t, k) => drop(k, t))
       return
     }
-    const d = camLocal.clone().normalize()
+    const d = _dir.copy(camLocal).normalize()
     const lat = Math.asin(d.y)
     const lon = Math.atan2(-d.z, d.x)
     const n = 1 << Z
@@ -131,7 +142,7 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
     }
     // Unload outside reach (hysteresis: only when not wanted at all).
     tiles.forEach((t, k) => {
-      if (!keep.has(k) && t.state !== 'loading') drop(k, t)
+      if (!keep.has(k) && t.state !== 'loading') drop(k, t) // queued → dropped, job cleans up
     })
   }
 

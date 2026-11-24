@@ -16,7 +16,8 @@ const MAIN_BODIES = new Set(['sun', 'mercury', 'venus', 'earth', 'moon', 'mars',
 const MAIN_POIS = new Set(['bh_sgra', 'gal_m31'])
 const nameByKey = Object.fromEntries(planetFacts.map((p) => [p.key, p.name]))
 
-const nb = (n, d = 0) => n.toLocaleString('nb-NO', { maximumFractionDigits: d })
+const NB = [0, 1, 2].map((d) => new Intl.NumberFormat('nb-NO', { maximumFractionDigits: d }))
+const nb = (n, d = 0) => NB[d].format(n)
 function fmt(km) {
   if (km < 1) return `${nb(km * 1000)} m`
   if (km < 100) return `${nb(km, 1)} km`

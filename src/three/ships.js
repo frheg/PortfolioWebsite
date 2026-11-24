@@ -51,6 +51,7 @@ export function areShipsActive() {
 }
 
 const _m = new THREE.Matrix4()
+const _dir = new THREE.Vector3()
 const _f = new THREE.Vector3()
 const _u = new THREE.Vector3()
 const _e = new THREE.Vector3()
@@ -135,7 +136,7 @@ export function createShips(group, R, sunDir, planetCenter) {
 
   /** camLocal: Earth-local km. camAlt: km. focalPx: px per unit at 1 km. */
   const update = (camLocal, camAlt, focalPx) => {
-    const d = camLocal.clone().normalize()
+    const d = _dir.copy(camLocal).normalize()
     const lat = Math.asin(d.y) / DEG
     const lon = Math.atan2(-d.z, d.x) / DEG
     const [la0, lo0, la1, lo1] = cfg.bbox

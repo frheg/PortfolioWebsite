@@ -5,6 +5,7 @@
 import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { createStarPoints } from './starMaterial'
+import { queueUpload } from './frameGovernor'
 
 const cfg = spaceConfig.galaxy.stars
 
@@ -45,14 +46,18 @@ export function createStarSectors(scene, magLimit) {
     cell.absMag = absMag
     cell.temp = temp
     if (count === 0) return
-    const geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    geometry.setAttribute('absMag', new THREE.BufferAttribute(absMag, 1))
-    geometry.setAttribute('temp', new THREE.BufferAttribute(temp, 1))
-    geometry.setAttribute('color', new THREE.BufferAttribute(color, 3, true))
-    cell.points = createStarPoints(geometry, cell.corner)
-    cell.points.material.uniforms.uFade.value = 0
-    scene.add(cell.points)
+    // Drawable later (upload budget); fades in anyway.
+    queueUpload(() => {
+      if (cells.get(key) !== cell) return false
+      const geometry = new THREE.BufferGeometry()
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+      geometry.setAttribute('absMag', new THREE.BufferAttribute(absMag, 1))
+      geometry.setAttribute('temp', new THREE.BufferAttribute(temp, 1))
+      geometry.setAttribute('color', new THREE.BufferAttribute(color, 3, true))
+      cell.points = createStarPoints(geometry, cell.corner)
+      cell.points.material.uniforms.uFade.value = 0
+      scene.add(cell.points)
+    })
   }
 
   const boxDistance = (corner, size, p) => {

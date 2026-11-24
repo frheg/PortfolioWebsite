@@ -89,7 +89,9 @@ function attitude(camera, frame) {
 
 // ─── formatting ──────────────────────────────────────────────────────────────
 
-const nb = (n, digits = 0) => n.toLocaleString('nb-NO', { maximumFractionDigits: digits, minimumFractionDigits: 0 })
+// Cached formatters (toLocaleString builds one per call → slow every frame).
+const NB = [0, 1, 2, 3].map((d) => new Intl.NumberFormat('nb-NO', { maximumFractionDigits: d, minimumFractionDigits: 0 }))
+const nb = (n, digits = 0) => NB[digits].format(n)
 
 function formatDistance(km) {
   const a = Math.abs(km)
@@ -113,17 +115,30 @@ function formatSpeed(kmS) {
 
 // ─── canvas helpers ──────────────────────────────────────────────────────────
 
+// CSS size via ResizeObserver → no clientWidth read per frame (forced layout).
+const canvasSize = new WeakMap()
+const sizeObserver =
+  typeof ResizeObserver === 'undefined'
+    ? null
+    : new ResizeObserver((entries) => entries.forEach((e) => canvasSize.set(e.target, { w: e.contentRect.width, h: e.contentRect.height })))
+
 function fitCanvas(canvas) {
+  let css = canvasSize.get(canvas)
+  if (!css) {
+    css = { w: canvas.clientWidth, h: canvas.clientHeight }
+    canvasSize.set(canvas, css)
+    sizeObserver?.observe(canvas)
+  }
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
-  const w = Math.round(canvas.clientWidth * dpr)
-  const h = Math.round(canvas.clientHeight * dpr)
+  const w = Math.round(css.w * dpr)
+  const h = Math.round(css.h * dpr)
   if (canvas.width !== w || canvas.height !== h) {
     canvas.width = w
     canvas.height = h
   }
   const ctx = canvas.getContext('2d')
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  return { ctx, w: canvas.clientWidth, h: canvas.clientHeight }
+  return { ctx, w: css.w, h: css.h }
 }
 
 let galaxyMapImage = null

@@ -39,6 +39,7 @@ function nearness(dist, near, far) {
 }
 const WEIGHTS = [400, 500, 600, 700, 800]
 const weightOf = (n) => WEIGHTS[Math.min(4, Math.round(n * 4))]
+const viewSize = new THREE.Vector2()
 // Per kind: [near, far] km (bodies: × radius).
 const NEAR_RANGE = { place: [3, 3000], player: [1, 1e7], satellite: [5, 30000], ufo: [5, 30000] }
 
@@ -193,8 +194,10 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       const renderer = rendererRef.current
       if (!cam || !renderer) return
 
-      const w = renderer.domElement.clientWidth
-      const h = renderer.domElement.clientHeight
+      // Renderer's cached CSS size (no layout read per frame).
+      renderer.getSize(viewSize)
+      const w = viewSize.x
+      const h = viewSize.y
       const focalPx = h / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2)
       cam.getWorldDirection(forward)
       updateFocus()
@@ -213,8 +216,10 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
         }
         const text = (NAME_MARK[item.kind] ? NAME_MARK[item.kind] + ' ' : '') + item.name
         if (el.textContent !== text) el.textContent = text
-        el.dataset.kind = item.kind
-        el.title = item.title ?? ''
+        // Same-value attribute writes still dirty style → write on change only.
+        if (el.dataset.kind !== item.kind) el.dataset.kind = item.kind
+        const title = item.title ?? ''
+        if (el.title !== title) el.title = title
         // Close names: bolder + bigger (2 km → 400 km log scale).
         const n = item.dist === undefined ? 0.5 : nearness(item.dist, 2, 400)
         el.style.transform = `translate(${item.x}px, ${item.y}px) translate(-50%, -100%) scale(${(0.88 + 0.3 * n).toFixed(3)})`

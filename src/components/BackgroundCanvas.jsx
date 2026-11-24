@@ -6,6 +6,7 @@ import { useSolarSystem } from '../three/useSolarSystem'
 import { useGalaxy } from '../three/useGalaxy'
 import { useScrollCamera } from '../three/useScrollCamera'
 import { origin, syncAnchors } from '../three/floatingOrigin'
+import { frameTick } from '../three/frameGovernor'
 import { useRoutePath } from '../context/RouteContext'
 import PlanetLabels from './PlanetLabels'
 
@@ -30,11 +31,11 @@ export default function BackgroundCanvas() {
   // Dev only: console/test handle → jump cam anywhere (explore, paused): __space.origin.set(...)
   useEffect(() => {
     if (!import.meta.env.DEV) return undefined
-    window.__space = { origin, cameraRef, sceneRef }
+    window.__space = { origin, cameraRef, sceneRef, rendererRef }
     return () => {
       delete window.__space
     }
-  }, [cameraRef, sceneRef])
+  }, [cameraRef, sceneRef, rendererRef])
 
   useEffect(() => {
     let animationId
@@ -42,13 +43,15 @@ export default function BackgroundCanvas() {
     const animate = () => {
       animationId = requestAnimationFrame(animate)
       const now = performance.now()
-      const deltaSeconds = Math.min((now - lastTime) / 1000, 0.05)
+      const rawDt = (now - lastTime) / 1000
+      const deltaSeconds = Math.min(rawDt, 0.05)
       lastTime = now
 
       const scene = sceneRef.current
       const camera = cameraRef.current
       const renderer = rendererRef.current
       if (!scene || !camera || !renderer) return
+      frameTick(rawDt, renderer) // upload queue + dynamic resolution
 
       solarSystemRef.current.update?.(deltaSeconds, camera)
       scrollCamRef.current.update?.(deltaSeconds)

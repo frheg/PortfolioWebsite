@@ -16,6 +16,17 @@ export const spaceConfig = {
     maxPixelRatio: 2,
     powerPreference: 'high-performance',
     toneMappingExposure: 1.1,
+    // frameGovernor: upload spreading + dynamic resolution (× quality pixel ratio).
+    dynamicRes: {
+      enabled: true,
+      steps: [1, 0.85, 0.72, 0.6],
+      downMs: 26,         // frame EMA above → slow
+      upMs: 18,           // below → fast
+      downHoldS: 0.5,     // slow this long → step down
+      upHoldS: 4,         // fast this long → step up (doubles on oscillation)
+      maxUpHoldS: 60,
+      uploadsPerFrame: 2, // queued drawables made live per frame
+    },
   },
 
   camera: {
@@ -217,7 +228,7 @@ export const spaceConfig = {
       minTiles: 100,
       idleEvictMs: 8000,    // unseen this long → freed even under budget
       highPriorityLoads: 4, // nearest N fetches get high network priority
-      uploadsPerFrame: 4,   // tiles made drawable per frame (smooth)
+      uploadsPerFrame: 3,   // tiles made drawable per frame (smooth)
       cancelAfterFrames: 30, // unwanted in-flight load → aborted
       maxInFlight: 12,
       maxInFlightMobile: 6,

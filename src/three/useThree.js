@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { spaceConfig } from './spaceConfig'
 import { setActiveCamera } from './cameraRuntime'
 import { quality, subscribeQuality } from './qualityRuntime'
+import { getRenderScale, subscribeRenderScale } from './frameGovernor'
 
 export function useThree(canvasRef) {
   const sceneRef = useRef(null)
@@ -30,9 +31,10 @@ export function useThree(canvasRef) {
       logarithmicDepthBuffer: true,
     })
     const applyPixelRatio = () =>
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, spaceConfig.renderer.maxPixelRatio, quality.pixelRatio))
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, spaceConfig.renderer.maxPixelRatio, quality.pixelRatio) * getRenderScale())
     applyPixelRatio()
     const unsubscribeQuality = subscribeQuality(applyPixelRatio)
+    const unsubscribeScale = subscribeRenderScale(applyPixelRatio)
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setClearColor(clearColor, 1)
     renderer.autoClear = false
@@ -54,6 +56,7 @@ export function useThree(canvasRef) {
     return () => {
       window.removeEventListener('resize', onResize)
       unsubscribeQuality()
+      unsubscribeScale()
       setActiveCamera(null)
       renderer.dispose()
       scene.traverse((obj) => {
