@@ -1,6 +1,6 @@
 // Explore HUD: minimap (sol / lokal / galakse), attitude indicator (horizon + heading tape), flight stats.
 // One rAF loop → canvas draws + DOM text, no per-frame React renders. Lazy-loaded (pulls 3D runtime).
-// Ref frame auto: ecliptic near Sun, galactic beyond → heading/pitch = ecliptic λ/β or galactic l/b.
+// Ref frame auto: local horizon near a surface (compass + climb), ecliptic near Sun, galactic beyond.
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { origin } from '../three/floatingOrigin'
 import { getActiveCamera, getCameraSpeed } from '../three/cameraRuntime'
@@ -10,8 +10,10 @@ import { isExplorePaused, subscribeExplorePause } from '../three/exploreState'
 import { AU_KM, GALAXY_AXES, LY_KM, PC_KM, sceneToGalaxyKpc, spectralClass } from '../three/galaxyFrame'
 import { galaxyMapColor } from '../three/galaxyModel'
 import { planetFacts } from '../data/planetFacts'
+import { getEarthLatLon, isEarthTerrainActive } from '../three/earthTerrain'
 
 const SOLAR_FRAME_KM = 0.05 * PC_KM // inside → ecliptic frame
+const LOCAL_FRAME_RATIO = 0.8 // altitude / radius below → local horizon frame
 const SOL_MAP_KM = 2000 * AU_KM // auto: sol map inside this
 const LOCAL_MAP_PC = 1000 // auto: local map inside this (catalog region)
 const GALAXY_MAP_KPC = 20 // half-extent
@@ -46,6 +48,19 @@ const MAP_MODES = [
 
 const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 const neg = (a) => [-a[0], -a[1], -a[2]]
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
+const normalize = (a) => {
+  const l = Math.hypot(a[0], a[1], a[2]) || 1
+  return [a[0] / l, a[1] / l, a[2] / l]
+}
+
+// Local horizon (ENU) at cam over body: up = radial, 0° = north (body axis), 90° = east.
+function localFrame(body) {
+  const up = normalize([origin.x - body.position.x, origin.y - body.position.y, origin.z - body.position.z])
+  const axis = [body.axis.x, body.axis.y, body.axis.z]
+  const north = normalize(axis.map((c, i) => c - up[i] * dot(axis, up)))
+  return { name: 'Horisont', up, h0: north, h90: cross(north, up), zeroLabel: 'N', hLabel: 'Kurs', pLabel: 'Stigning' }
+}
 
 const FRAMES = {
   ecliptic: { name: 'Ekliptisk', up: [0, 1, 0], h0: [1, 0, 0], h90: [0, 0, -1], zeroLabel: 'VP', hLabel: 'λ', pLabel: 'β' },
@@ -424,6 +439,7 @@ const STAT_ROWS = [
   ['star', 'Stjerne', true],
   ['body', 'Nærmest', false],
   ['dir', 'Retning', false],
+  ['pos', 'Posisjon', false],
 ]
 
 export default function ExploreHud() {
@@ -437,6 +453,7 @@ export default function ExploreHud() {
   const mapLabelRef = useRef(null)
   const mapFootRef = useRef(null)
   const frameRef = useRef(null)
+  const terrainCreditRef = useRef(null)
   const statRefs = useRef({})
 
   useEffect(() => {
@@ -451,7 +468,13 @@ export default function ExploreHud() {
       if (!camera || !mapRef.current || !attRef.current) return
 
       const dSunKm = Math.hypot(origin.x, origin.y, origin.z)
-      const frame = dSunKm < SOLAR_FRAME_KM ? FRAMES.ecliptic : FRAMES.galactic
+      let surface = null
+      getSolarCollisionBodies().forEach((body) => {
+        if (body.kind !== 'body' || !body.axis) return
+        const alt = Math.hypot(origin.x - body.position.x, origin.y - body.position.y, origin.z - body.position.z) - body.radius
+        if (alt / body.radius < LOCAL_FRAME_RATIO && (!surface || alt < surface.alt)) surface = { body, alt }
+      })
+      const frame = surface ? localFrame(surface.body) : dSunKm < SOLAR_FRAME_KM ? FRAMES.ecliptic : FRAMES.galactic
       const att = attitude(camera, frame)
       const camG = sceneToGalaxyKpc(origin.x / PC_KM, origin.y / PC_KM, origin.z / PC_KM)
 
@@ -479,6 +502,7 @@ export default function ExploreHud() {
       if (mapLabelRef.current) mapLabelRef.current.textContent = MAP_MODES.find((m) => m.id === mode).label
       if (mapFootRef.current) mapFootRef.current.textContent = foot
       if (frameRef.current) frameRef.current.textContent = frame.name
+      if (terrainCreditRef.current) terrainCreditRef.current.style.display = isEarthTerrainActive() ? '' : 'none'
 
       const set = (key, text) => {
         const el = statRefs.current[key]
@@ -506,6 +530,8 @@ export default function ExploreHud() {
       }
       set('body', best ? `${best.name} · ${formatDistance(best.alt)}` : '—')
       set('dir', `${frame.hLabel} ${nb(att.heading)}° · ${frame.pLabel} ${nb(att.pitch)}°`)
+      const ll = getEarthLatLon(origin)
+      set('pos', ll ? `${nb(Math.abs(ll[0]), 3)}° ${ll[0] >= 0 ? 'N' : 'S'} · ${nb(Math.abs(ll[1]), 3)}° ${ll[1] >= 0 ? 'Ø' : 'V'}` : '—')
     }
 
     frameId = requestAnimationFrame(tick)
@@ -531,6 +557,16 @@ export default function ExploreHud() {
         </div>
         <canvas ref={mapRef} className="block aspect-square w-full rounded-xl bg-[#11111b]" />
         <p ref={mapFootRef} className="px-1 pt-1 text-[0.55rem] uppercase tracking-[0.12em] text-cyan-100/60" />
+        {/* Required attribution while Earth tiles render. */}
+        <p ref={terrainCreditRef} style={{ display: 'none' }} className="px-1 pt-1 text-[0.45rem] leading-snug text-cyan-100/45">
+          <a href="https://s2maps.eu" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
+            Sentinel-2 cloudless – s2maps.eu by EOX (Copernicus Sentinel data 2020)
+          </a>
+          {' · '}
+          <a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
+            Terreng: AWS Terrain Tiles
+          </a>
+        </p>
       </div>
 
       <div className="flex flex-col items-end gap-2 md:flex-row md:items-end">

@@ -55,6 +55,9 @@ export const spaceConfig = {
       minAltitude: 1,       // km above surface
       maxGalaxyDistance: 150_000 * PC_KM, // from galactic center
       wormholeFovKick: 55,  // deg, eases back after Sgr A* exit
+      localUpRange: [0.15, 0.8], // altitude / radius: below near → full local vertical, above far → world up
+      carryRadii: 30,       // altitude / radius: inside → camera rides with body's orbit
+      spinCarryRange: [0.05, 0.4], // altitude / radius: below near → fully rides body spin
       // Nearest star limits speed: effective altitude = d × factor, factor 1 → starInfluence
       // over starInfluenceRangePc. Far stars barely brake, close ones fully.
       starInfluence: 50,
@@ -121,6 +124,25 @@ export const spaceConfig = {
       { key: 'neptune', radius: 24_622,  rotationSign: 1,  axialTilt: 0.49, texture: 'neptune', beaconPx: 3.5, beaconColor: 0x74c7ec },
       { key: 'pluto',   radius: 1_188.3, rotationSign: -1, axialTilt: 2.13, texture: 'pluto',   beaconPx: 2.5, beaconColor: 0xf2cdcd },
     ],
+    // Real Earth surface tiles (explore only). URL templates: {z} {x} {y}.
+    earthTerrain: {
+      // EOX Sentinel-2 cloudless 2020, CC BY-NC-SA 4.0 (non-commercial). Alt (public domain, z≤8):
+      // https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg
+      imageryUrl: 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg',
+      // AWS Terrain Tiles (Terrarium), open data.
+      terrainUrl: 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
+      terrainMaxZoom: 15,
+      maxZoom: 14,
+      maxZoomMobile: 13,
+      grid: 32,             // quads per tile edge
+      splitPx: 1.6,         // refine when imagery texel > this many px
+      splitPxMobile: 2.4,
+      maxTiles: 420,
+      maxTilesMobile: 200,
+      maxInFlight: 6,
+      activeRadii: 12,      // render distance: × Earth radius from center
+      baseSinkKm: 3,        // base sphere sinks under tiles (no z-fight)
+    },
     // UFOs roam LEO-ish shell round Earth.
     ufo: {
       count: 3,

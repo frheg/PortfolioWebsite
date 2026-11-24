@@ -131,6 +131,26 @@ void main() {
 }
 `
 
+/**
+ * Lit surface material w/ same shading as body mesh/impostor (terrain tiles use it).
+ * sunDir: shared { value: Vector3 } from the owning body → identical lighting.
+ */
+export function createSurfaceMaterial(map, sunDir, options = {}) {
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      map: { value: map },
+      uSunDir: sunDir,
+      uEmissive: { value: 0 },
+      uTint: { value: new THREE.Color(1, 1, 1) },
+      uTintMix: { value: 0 },
+      ...sharedLight,
+    },
+    vertexShader: MESH_VERT,
+    fragmentShader: MESH_FRAG,
+    ...options,
+  })
+}
+
 // ─── Shared GPU resources (module cache, reused across remounts) ─────────────
 
 const sphereCache = new Map()
@@ -300,5 +320,5 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
     }
   }
 
-  return { mesh, update, dispose }
+  return { mesh, update, dispose, sunDir }
 }

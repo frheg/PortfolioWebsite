@@ -7,6 +7,7 @@ import { setSolarCollisionBodies } from './solarSystemRuntime'
 import { sceneLoadingManager } from './sceneLoadingManager'
 import { origin, trackAnchor, untrackAnchor } from './floatingOrigin'
 import { createBodyLod } from './bodyLod'
+import { createEarthTerrain } from './earthTerrain'
 import {
   daysSinceJ2000,
   dateMsFromDaysSinceJ2000,
@@ -473,11 +474,17 @@ const _m = new THREE.Matrix4()
 const _zero = new THREE.Vector3()
 const _up = new THREE.Vector3(0, 1, 0)
 
+function isMobileDevice() {
+  if (typeof navigator === 'undefined') return false
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 2
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useSolarSystem(sceneRef, isExplore = false) {
   const bodyMapRef = useRef(new Map())
   const ufosRef = useRef([])
+  const terrainRef = useRef(null)
   const sunGlowRef = useRef(null)
   const timeRef = useRef(0)
   const isExploreRef = useRef(isExplore)
@@ -559,14 +566,19 @@ export function useSolarSystem(sceneRef, isExplore = false) {
       const lod = createBodyLod(def, textures[def.texture], anchor, tiltGroup, ring)
 
       system.add(anchor)
-      bodyMap.set(def.key, { def, world, anchor, mesh: lod.mesh, lod })
-      collisions.push({
+      const entry = {
         key: def.key,
         kind: 'body',
         position: world,
         radius: def.radius,
         labelRange: def.labelRange ?? (def.emissive ? Infinity : cfg.lod.planetLabelRange),
-      })
+        axis: new THREE.Vector3(0, 1, 0).applyEuler(new THREE.Euler(0, 0, def.axialTilt || 0)), // north pole dir (tilt static)
+        // Per-frame motion → camera co-moving frame (useScrollCamera carry).
+        delta: new THREE.Vector3(),
+        spinDelta: 0,
+      }
+      collisions.push(entry)
+      bodyMap.set(def.key, { def, world, anchor, tiltGroup, mesh: lod.mesh, lod, entry, prev: new THREE.Vector3(), prevSpin: null })
     }
 
     bodyMapRef.current = bodyMap
@@ -608,6 +620,12 @@ export function useSolarSystem(sceneRef, isExplore = false) {
     }
     ufosRef.current = ufos
 
+    // Real Earth surface (explore, close range). Collision follows terrain.
+    const terrain = createEarthTerrain(bodyMap.get('earth'), isMobileDevice())
+    terrainRef.current = terrain
+    const earthEntry = collisions.find((c) => c.key === 'earth')
+    earthEntry.heightAt = terrain.heightAt
+
     setSolarCollisionBodies(collisions)
 
     return () => {
@@ -620,6 +638,8 @@ export function useSolarSystem(sceneRef, isExplore = false) {
       })
       scene.remove(system)
       Object.values(textures).forEach((t) => t.dispose())
+      terrain.dispose()
+      terrainRef.current = null
       bodyMapRef.current = new Map()
       ufosRef.current = []
       sunGlowRef.current = null
@@ -649,6 +669,7 @@ export function useSolarSystem(sceneRef, isExplore = false) {
     const spinDays = simDays + spinOffsetDaysRef.current
 
     // Bodies (config order: parents before children).
+    bodyMap.forEach((body) => body.prev.copy(body.world))
     bodyMap.forEach(({ def, world, mesh }) => {
       if (def.parent) {
         const parent = bodyMap.get(def.parent).world
@@ -673,10 +694,21 @@ export function useSolarSystem(sceneRef, isExplore = false) {
       }
     })
 
+    // Frame motion for co-moving camera. First frame: no delta.
+    bodyMap.forEach((body) => {
+      const first = body.prevSpin === null
+      body.entry.delta.subVectors(body.world, body.prev)
+      const spin = body.mesh.rotation.y
+      body.entry.spinDelta = first ? 0 : Math.atan2(Math.sin(spin - body.prevSpin), Math.cos(spin - body.prevSpin))
+      if (first) body.entry.delta.set(0, 0, 0)
+      body.prevSpin = spin
+    })
+
     // LOD tiers. Last frame's origin → 1-frame lag on tier/fade, invisible.
     if (camera) {
       const focalPx = window.innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
       bodyMap.forEach(({ world, lod }) => lod.update(world, origin, focalPx))
+      terrainRef.current?.update(focalPx, explore)
     }
 
     // Sun glow pulse + slow spike spin.

@@ -230,10 +230,20 @@ export function useScrollCamera(cameraRef, routePath) {
   const bodyOffsetRef = useRef(new THREE.Vector3())
   const aimRef = useRef(new THREE.Vector3())
   const forwardRef = useRef(new THREE.Vector3())
+  const upRef = useRef(new THREE.Vector3())
+  const contactRef = useRef(new THREE.Vector3())
+  const radialRef = useRef(new THREE.Vector3())
+  const dqRef = useRef(new THREE.Quaternion())
+  const qeRef = useRef(new THREE.Quaternion())
+  const eulerRef = useRef(new THREE.Euler())
   const velocityRef = useRef(new THREE.Vector3())
   const targetVelocityRef = useRef(new THREE.Vector3())
   const boostBlendRef = useRef(0)
   const appliedShakeRotRef = useRef({ x: 0, y: 0, z: 0 })
+  // Explore orientation = qRef · euler(yaw, pitch, roll). qRef carries "up" from world-up to the
+  // local vertical of a nearby body (parallel transport → no flips) → level horizon near surfaces.
+  const qRefRef = useRef(new THREE.Quaternion())
+  const prevUpRef = useRef(new THREE.Vector3(0, 1, 0))
 
   useEffect(() => {
     if (!isExploreRoute(routePath)) {
@@ -415,9 +425,13 @@ export function useScrollCamera(cameraRef, routePath) {
     settleFramesRef.current = 0
     resetExploreInput()
 
+    // Both directions: refs back to world-frame yaw/pitch, identity ref frame.
+    currentYawRef.current = camera?.rotation.y ?? currentYawRef.current
+    currentPitchRef.current = camera?.rotation.x ?? currentPitchRef.current
+    qRefRef.current.identity()
+    prevUpRef.current.copy(UP)
+
     if (nextIsExplore) {
-      currentYawRef.current = camera?.rotation.y ?? currentYawRef.current
-      currentPitchRef.current = camera?.rotation.x ?? currentPitchRef.current
       transTRef.current = 1
       baseFovRef.current = exploreConfig.baseFov ?? spaceConfig.renderer.fov
       scrollVelocityBlendRef.current = 0
@@ -431,8 +445,10 @@ export function useScrollCamera(cameraRef, routePath) {
 
   // ─── Shared helpers ────────────────────────────────────────────────────────
 
-  // Rotate toward world point. snap = instant.
+  // Rotate toward world point (world frame → resets explore ref frame). snap = instant.
   const aimAt = (camera, lookWorld, snap) => {
+    qRefRef.current.identity()
+    prevUpRef.current.copy(UP)
     const d = aimRef.current.subVectors(lookWorld, origin)
     const yawDesired = Math.atan2(-d.x, -d.z)
     const pitchDesired = Math.atan2(d.y, Math.hypot(d.x, d.z))
@@ -453,7 +469,8 @@ export function useScrollCamera(cameraRef, routePath) {
     forEachBody((body) => {
       if (body.kind !== 'body') return
       // Portal: speed ∝ distance to singularity → horizon reachable in seconds.
-      best = Math.min(best, position.distanceTo(body.position) - (body.portal ? 0 : body.radius))
+      const surface = body.portal ? 0 : body.radius + (body.heightAt ? body.heightAt(position) : 0)
+      best = Math.min(best, position.distanceTo(body.position) - surface)
     })
     if (nearestStar.valid) {
       const w = nearestStar.world
@@ -464,7 +481,9 @@ export function useScrollCamera(cameraRef, routePath) {
     return best
   }
 
+  // Returns contact normal (unit, outward) if pushed out of a surface, else null.
   const clampExplorePosition = (position) => {
+    let contact = null
     const fromCenter = bodyOffsetRef.current.subVectors(position, GALAXY_CENTER_KM)
     if (fromCenter.length() > exploreConfig.maxGalaxyDistance) {
       position.copy(GALAXY_CENTER_KM).addScaledVector(fromCenter.normalize(), exploreConfig.maxGalaxyDistance)
@@ -472,12 +491,14 @@ export function useScrollCamera(cameraRef, routePath) {
 
     forEachBody((body) => {
       if (body.portal) return
-      const minDistance = body.radius + (body.kind === 'body' ? exploreConfig.minAltitude : 0)
+      const ground = body.heightAt ? body.heightAt(position) : 0
+      const minDistance = body.radius + ground + (body.kind === 'body' ? exploreConfig.minAltitude : 0)
       const offset = bodyOffsetRef.current.subVectors(position, body.position)
       if (offset.lengthSq() >= minDistance * minDistance) return
       if (offset.lengthSq() < 1e-12) offset.set(0, 1, 0)
       offset.setLength(minDistance)
       position.addVectors(body.position, offset)
+      contact = contactRef.current.copy(offset).normalize()
     })
 
     if (nearestStar.valid) {
@@ -486,8 +507,10 @@ export function useScrollCamera(cameraRef, routePath) {
       if (offset.lengthSq() < minDistance * minDistance) {
         offset.setLength(minDistance)
         position.set(nearestStar.world.x + offset.x, nearestStar.world.y + offset.y, nearestStar.world.z + offset.z)
+        contact = contactRef.current.copy(offset).normalize()
       }
     }
+    return contact
   }
 
   // Rotation-only shake. Positional shake meaningless across 12 decades of scale.
@@ -520,6 +543,45 @@ export function useScrollCamera(cameraRef, routePath) {
 
   // ─── Explore ───────────────────────────────────────────────────────────────
 
+  // Co-moving frame: ride along with nearest body (orbit within carryRadii, spin when low).
+  // Runs even while paused → planet never drifts away / rams the camera.
+  const carryWithBody = () => {
+    let best = null
+    getSolarCollisionBodies().forEach((body) => {
+      if (body.kind !== 'body' || !body.delta) return
+      const ratio = (origin.distanceTo(body.position) - body.radius) / body.radius
+      if (!best || ratio < best.ratio) best = { body, ratio }
+    })
+    if (!best || best.ratio > exploreConfig.carryRadii) return
+    const { body } = best
+    // Body already moved this frame: shift by delta, then spin about its axis.
+    origin.add(body.delta)
+    const w = 1 - smoothstep(exploreConfig.spinCarryRange[0], exploreConfig.spinCarryRange[1], best.ratio)
+    if (w <= 0 || body.spinDelta === 0) return
+    const q = dqRef.current.setFromAxisAngle(body.axis, body.spinDelta * w)
+    origin.sub(body.position).applyQuaternion(q).add(body.position)
+    qRefRef.current.premultiply(q)
+    prevUpRef.current.applyQuaternion(q)
+    velocityRef.current.applyQuaternion(q)
+  }
+
+  // Blend reference up: world up → local vertical of nearest surface (below localUpRange × radius).
+  const transportUp = () => {
+    let best = null
+    forEachBody((body) => {
+      if (body.kind !== 'body' || body.portal) return
+      const alt = origin.distanceTo(body.position) - body.radius - (body.heightAt ? body.heightAt(origin) : 0)
+      if (!best || alt / body.radius < best.ratio) best = { body, ratio: alt / body.radius }
+    })
+    const [near, far] = exploreConfig.localUpRange
+    const w = best ? 1 - smoothstep(near, far, best.ratio) : 0
+    const up = upRef.current.copy(UP)
+    if (w > 0) up.lerp(radialRef.current.subVectors(origin, best.body.position).normalize(), w).normalize()
+    dqRef.current.setFromUnitVectors(prevUpRef.current, up)
+    qRefRef.current.premultiply(dqRef.current)
+    prevUpRef.current.copy(up)
+  }
+
   const exitWormhole = (camera) => {
     const pose = poseRef.current
     if (!stopPose(pageStops[0], pose)) return
@@ -528,10 +590,9 @@ export function useScrollCamera(cameraRef, routePath) {
     camera.fov = baseFovRef.current + exploreConfig.wormholeFovKick
     camera.updateProjectionMatrix()
     // Emerge drifting toward the planet, auto-brake does the rest.
-    const yaw = currentYawRef.current
-    const pitch = currentPitchRef.current
     velocityRef.current
-      .set(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch))
+      .set(0, 0, -1)
+      .applyQuaternion(camera.quaternion)
       .multiplyScalar(nearestAltitude(origin) * exploreConfig.speedPerAltitude * 0.4)
     boostBlendRef.current = 0
     triggerWormhole()
@@ -548,6 +609,7 @@ export function useScrollCamera(cameraRef, routePath) {
       aimAt(camera, pose.look, true)
       aimedRef.current = true
     }
+    carryWithBody()
     if (isExplorePaused()) return false
 
     const movement = getExploreMovement()
@@ -571,12 +633,10 @@ export function useScrollCamera(cameraRef, routePath) {
       camera.fov = nextFov
       camera.updateProjectionMatrix()
     }
-    camera.rotation.set(currentPitchRef.current, currentYawRef.current, currentRollRef.current)
-
-    // YXZ euler → forward. Roll doesn't move it.
-    const yaw = currentYawRef.current
-    const pitch = currentPitchRef.current
-    const forward = forwardRef.current.set(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch))
+    transportUp()
+    eulerRef.current.set(currentPitchRef.current, currentYawRef.current, currentRollRef.current, 'YXZ')
+    camera.quaternion.copy(qRefRef.current).multiply(qeRef.current.setFromEuler(eulerRef.current))
+    const forward = forwardRef.current.set(0, 0, -1).applyQuaternion(camera.quaternion)
 
     // Speed cap ∝ altitude. Hard cap every frame = auto-brake on approach.
     const altitude = Math.max(nearestAltitude(origin), exploreConfig.minAltitude)
@@ -603,9 +663,12 @@ export function useScrollCamera(cameraRef, routePath) {
     if (speed === 0) return false
 
     const next = nextPosRef.current.copy(origin).addScaledVector(velocity, deltaSeconds)
-    clampExplorePosition(next)
-    // Blocked by surface → bleed speed.
-    if (next.distanceTo(origin) < speed * deltaSeconds * 0.5) velocity.multiplyScalar(0.2)
+    const contact = clampExplorePosition(next)
+    // Hit surface → drop only the inward part → slide along, never stuck.
+    if (contact) {
+      const inward = velocity.dot(contact)
+      if (inward < 0) velocity.addScaledVector(contact, -inward)
+    }
     origin.copy(next)
 
     // Portal: darken toward horizon, cross → respawn at first stop out of a white-hole flash.
