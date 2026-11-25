@@ -142,6 +142,7 @@ function buildGalaxy(def, isMobile) {
     position: world,
     radius: radiusKm,
     labelRange: Infinity,
+    introLabel: def.key === 'm31' || def.key === 'm33', // named during the intro flight
     factsRange: radiusKm * 3,
     labelVisibility: (distKm) => THREE.MathUtils.smoothstep(distKm, radiusKm * 0.5, radiusKm * 1.4),
     facts: def.facts,

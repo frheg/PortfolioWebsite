@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { getPoiBodies, getSolarCollisionBodies, subscribePoiBodies } from '../three/solarSystemRuntime'
 import { origin } from '../three/floatingOrigin'
 import { getTravelRanges } from '../three/scrollChapters'
+import { subscribeSceneLoading } from '../utils/sceneLoadingState'
 import { planetFacts } from '../data/planetFacts'
 import { spaceConfig } from '../three/spaceConfig'
 import { collectEarthNames } from '../three/earthNames'
@@ -113,6 +114,21 @@ function Label({ item, register }) {
   )
 }
 
+// Intro state as an external store (scene loading pub/sub): 3D up, glide not landed yet.
+let _introActive = false
+const introListeners = new Set()
+subscribeSceneLoading(({ visible, introDone }) => {
+  const next = visible && !introDone
+  if (next === _introActive) return
+  _introActive = next
+  introListeners.forEach((l) => l())
+})
+const getIntroActive = () => _introActive
+const subscribeIntro = (l) => {
+  introListeners.add(l)
+  return () => introListeners.delete(l)
+}
+
 export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
   const pois = useSyncExternalStore(subscribePoiBodies, getPoiBodies, getPoiBodies)
   const elementsRef = useRef(new Map()) // key → { el, factsEl }
@@ -124,8 +140,11 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
   }
 
   // Scroll pages: only scrollLabel POIs (sightings, e.g. the comet). Explore: everything.
+  // Intro flight (scroll pages, before content shows): introLabel POIs instead (galaxies, groups, clusters).
+  const introActive = useSyncExternalStore(subscribeIntro, getIntroActive, getIntroActive)
   const scrollOnly = !isExplore
-  const shown = scrollOnly ? pois.filter((p) => p.scrollLabel) : pois
+  const intro = scrollOnly && introActive
+  const shown = scrollOnly ? pois.filter((p) => (intro ? p.introLabel : p.scrollLabel)) : pois
   const hasLabels = !scrollOnly || shown.length > 0
 
   useEffect(() => {
@@ -174,7 +193,7 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       const sy = (-vec.y * 0.5 + 0.5) * h - radiusPx - (body.kind === 'place' ? 1 : 6)
       if (sx < -120 || sx > w + 120 || sy < -120 || sy > h + 120) return hide()
       // Scroll pages: only when looked right at (near screen center).
-      if (scrollOnly) extra *= 1 - smoothstep(SCROLL_CENTER[0], SCROLL_CENTER[1], Math.hypot(sx - w / 2, sy - h / 2) / (Math.min(w, h) / 2))
+      if (scrollOnly && !intro) extra *= 1 - smoothstep(SCROLL_CENTER[0], SCROLL_CENTER[1], Math.hypot(sx - w / 2, sy - h / 2) / (Math.min(w, h) / 2))
       if (extra <= 0.001) return hide()
       const [nr, fr] = NEAR_RANGE[body.kind] ?? (body.radius > 0 ? [body.radius * 4, body.radius * 4000] : [1e6, 1e14])
       const n = nearness(dist, nr, fr)
@@ -209,6 +228,10 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       const h = viewSize.y
       const focalPx = h / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2)
       cam.getWorldDirection(forward)
+      if (intro) {
+        getPoiBodies().forEach((body) => body.introLabel && place(body, w, h, focalPx))
+        return
+      }
       if (scrollOnly) {
         // Mid-travel only (no page card on screen): scroll well inside a gap, ≥ SCROLL_CARD_VH from either chapter.
         const y = window.scrollY
@@ -248,7 +271,7 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
 
     frameId = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frameId)
-  }, [hasLabels, scrollOnly, cameraRef, rendererRef])
+  }, [hasLabels, scrollOnly, intro, cameraRef, rendererRef])
 
   if (!hasLabels) return null
 

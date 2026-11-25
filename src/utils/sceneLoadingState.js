@@ -7,7 +7,7 @@
 let progress = 0
 let status = 'Bygger galaksen' // what's loading now (loading screen status line)
 let ready = false
-let visible = false // 3D intro shot is up → loading screen goes see-through
+let visible = false // 3D intro running (behind the loading screen until it fades)
 let introDone = false // camera glide reached the first stop → page content fades in
 const listeners = new Set()
 

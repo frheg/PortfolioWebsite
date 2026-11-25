@@ -142,3 +142,55 @@ export const galaxies = [
     facts: ['Dverggalakse, satellitt til Melkeveien', 'Avstand: ~200 000 lysår', '~7 milliarder stjerner'],
   },
 ]
+
+// Beyond the Local Group's big three: scale context (intro flight + explore). ra/dec deg, dist + radius pc.
+// type: s spiral (blue-white) | e elliptical/dwarf spheroidal (warm) | i irregular (blue).
+// Dwarfs: real Local Group members (McConnachie 2012, rounded). M31/M33/LMC/SMC live in `galaxies`.
+export const localDwarfs = [
+  ['M32', 10.674, 40.865, 785_000, 1_000, 'e'], ['M110', 10.092, 41.685, 824_000, 2_500, 'e'],
+  ['NGC 185', 9.741, 48.337, 617_000, 1_500, 'e'], ['NGC 147', 8.3, 48.509, 676_000, 1_500, 'e'],
+  ['Andromeda I', 11.415, 38.04, 727_000, 700, 'e'], ['Andromeda II', 19.124, 33.419, 652_000, 1_000, 'e'],
+  ['NGC 6822', 296.236, -14.803, 459_000, 1_500, 'i'], ['IC 1613', 16.199, 2.118, 755_000, 1_800, 'i'],
+  ['IC 10', 5.072, 59.304, 794_000, 1_000, 'i'], ['WLM', 0.492, -15.461, 933_000, 1_500, 'i'],
+  ['Leo A', 149.86, 30.746, 798_000, 600, 'i'], ['Sextans A', 152.753, -4.693, 1_432_000, 1_200, 'i'],
+  ['Sextans B', 150.0, 5.333, 1_426_000, 1_000, 'i'], ['NGC 3109', 150.78, -26.16, 1_300_000, 3_000, 'i'],
+  ['Pegasus dIrr', 352.151, 14.743, 920_000, 800, 'i'], ['Phoenix', 27.776, -44.445, 415_000, 400, 'i'],
+  ['Tucana', 340.457, -64.419, 887_000, 300, 'e'], ['Fornax dSph', 39.997, -34.449, 147_000, 1_000, 'e'],
+  ['Sculptor dSph', 15.039, -33.709, 86_000, 500, 'e'], ['Leo I', 152.117, 12.307, 254_000, 400, 'e'],
+  ['Leo II', 168.37, 22.152, 233_000, 250, 'e'], ['Carina', 100.403, -50.966, 105_000, 400, 'e'],
+  ['Draco', 260.052, 57.915, 76_000, 300, 'e'], ['Ursa Minor', 227.285, 67.222, 76_000, 400, 'e'],
+  ['Sextans dSph', 153.262, -1.615, 86_000, 700, 'e'],
+]
+
+// Nearby groups: real main members (rounded), + `extra` generated dwarfs within `spread` pc of the first member.
+export const nearbyGroups = [
+  {
+    key: 'm81', name: 'M81-gruppen', spread: 350_000, extra: 20,
+    members: [['M81', 148.888, 69.065, 3_600_000, 14_000, 's'], ['M82', 148.968, 69.68, 3_500_000, 6_000, 'i'], ['NGC 2403', 114.214, 65.603, 3_200_000, 9_000, 's'], ['NGC 3077', 150.83, 68.734, 3_800_000, 3_000, 'i']],
+    facts: ['Nærmeste gruppe utenfor vår egen', 'Avstand: ~12 millioner lysår'],
+  },
+  {
+    key: 'sculptor', name: 'Skulptørgruppen', spread: 800_000, extra: 15,
+    members: [['NGC 253', 11.888, -25.288, 3_500_000, 13_000, 's'], ['NGC 300', 13.723, -37.684, 2_000_000, 7_000, 's'], ['NGC 55', 3.723, -39.197, 2_100_000, 8_000, 'i'], ['NGC 7793', 359.458, -32.591, 3_900_000, 5_000, 's']],
+    facts: ['Løs gruppe rett bak Den lokale gruppen', 'Avstand: ~7–13 millioner lysår'],
+  },
+  {
+    key: 'cena', name: 'Centaurus A-gruppen', spread: 500_000, extra: 25,
+    members: [['Centaurus A', 201.365, -43.019, 3_800_000, 15_000, 'e'], ['M83', 204.254, -29.866, 4_700_000, 12_000, 's'], ['NGC 4945', 196.364, -49.468, 3_700_000, 12_000, 's'], ['NGC 5102', 199.733, -36.63, 3_400_000, 4_000, 'e']],
+    facts: ['Rundt radiogalaksen Centaurus A', 'Avstand: ~12–15 millioner lysår'],
+  },
+  {
+    key: 'ic342', name: 'IC 342-gruppen', spread: 400_000, extra: 10,
+    members: [['IC 342', 56.702, 68.096, 3_300_000, 12_000, 's'], ['Maffei 1', 39.148, 59.655, 3_000_000, 8_000, 'e'], ['Maffei 2', 40.479, 59.604, 3_400_000, 7_000, 's']],
+    facts: ['Delvis skjult bak Melkeveiens støv', 'Avstand: ~10 millioner lysår'],
+  },
+]
+
+// Clusters: real centre + distance + rough size/count; members generated (seeded), ellipticals toward the core.
+export const galaxyClusters = [
+  { key: 'virgo', name: 'Virgohopen', ra: 187.706, dec: 12.391, dist: 16_500_000, coreRadius: 400_000, radius: 2_200_000, count: 1300, seed: 87, facts: ['~1 300–2 000 galakser', 'Avstand: ~54 millioner lysår', 'Kjempegalaksen M87 i sentrum', 'Trekker Den lokale gruppen mot seg'] },
+  { key: 'fornax', name: 'Fornaxhopen', ra: 54.621, dec: -35.45, dist: 19_000_000, coreRadius: 200_000, radius: 1_000_000, count: 250, seed: 1399, facts: ['~60 store galakser + dverger', 'Avstand: ~62 millioner lysår'] },
+]
+
+// Field galaxies between groups: generated, ~real mean density of bright galaxies.
+export const fieldGalaxies = { count: 1400, minDist: 5_000_000, maxDist: 45_000_000, seed: 4242 }

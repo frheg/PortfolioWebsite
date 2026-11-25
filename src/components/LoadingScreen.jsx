@@ -4,8 +4,8 @@ import { subscribeSceneLoading } from '../utils/sceneLoadingState'
 // Kept visible at least this long so it reads as an intentional entrance
 // rather than a flash on a warm cache, and never longer than the max wait
 // even if a texture load stalls or errors out.
-const MIN_VISIBLE_MS = 1800 // intro shot (Milky Way) gets a moment even on a warm cache
-const MAX_WAIT_MS = 50000 // waits for every asset (textures + home-stop tiles); cap only for dead networks
+const MIN_VISIBLE_MS = 1800 // reads as an entrance even on a warm cache
+const MAX_WAIT_MS = 50000 // waits for planet textures; cap only for dead networks
 const EXIT_MS = 900
 
 export default function LoadingScreen() {
@@ -13,7 +13,7 @@ export default function LoadingScreen() {
   const [status, setStatus] = useState('')
   const [exiting, setExiting] = useState(false)
   const [dismissed, setDismissed] = useState(false)
-  const [seeThrough, setSeeThrough] = useState(false)
+  const [sceneUp, setSceneUp] = useState(false) // 3D intro running behind the (solid) screen
   const [introDone, setIntroDone] = useState(false)
   const mountedAtRef = useRef(typeof performance !== 'undefined' ? performance.now() : 0)
   const exitStartedRef = useRef(false)
@@ -34,7 +34,7 @@ export default function LoadingScreen() {
     const unsubscribe = subscribeSceneLoading(({ progress: nextProgress, ready, visible, introDone: nextIntroDone, status: nextStatus }) => {
       setProgress(nextProgress)
       setStatus(nextStatus ?? '')
-      if (visible) setSeeThrough(true)
+      if (visible) setSceneUp(true)
       if (nextIntroDone) setIntroDone(true)
       if (ready) scheduleExitOnceReady()
     })
@@ -49,16 +49,16 @@ export default function LoadingScreen() {
     }
   }, [])
 
-  // Intro shot (3D behind see-through screen) → page UI hidden until the camera glide lands. Safety: 20 s after dismiss.
+  // Intro flight (screen fades out when loaded) → page UI hidden until the camera glide lands. Safety: 25 s after dismiss.
   useEffect(() => {
-    if (!seeThrough || introDone) return undefined
+    if (!sceneUp || introDone) return undefined
     document.body.classList.add('intro-active')
-    const safety = dismissed ? window.setTimeout(() => setIntroDone(true), 20000) : null
+    const safety = dismissed ? window.setTimeout(() => setIntroDone(true), 25000) : null
     return () => {
       document.body.classList.remove('intro-active')
       if (safety) window.clearTimeout(safety)
     }
-  }, [seeThrough, introDone, dismissed])
+  }, [sceneUp, introDone, dismissed])
 
   useEffect(() => {
     if (dismissed) return undefined
@@ -75,7 +75,7 @@ export default function LoadingScreen() {
 
   return (
     <div
-      className={`loading-screen${seeThrough ? ' loading-screen--see-through' : ''}${exiting ? ' loading-screen--exit' : ''}`}
+      className={`loading-screen${exiting ? ' loading-screen--exit' : ''}`}
       role="status"
       aria-live="polite"
       aria-label={`Laster, ${percent}%`}

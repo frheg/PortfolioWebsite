@@ -6,6 +6,7 @@ import { spaceConfig } from './spaceConfig'
 import { createGalaxyVolume } from './galaxyVolume'
 import { createDeepSpace } from './deepSpace'
 import { createNeighborGalaxies } from './neighborGalaxies'
+import { createLocalUniverse } from './localUniverse'
 import { createLensPass } from './lensPass'
 import { createPostFx } from './postFx'
 import { createAtmospheres } from './atmosphere'
@@ -88,6 +89,7 @@ export function useGalaxy(sceneRef, rendererRef) {
     const sectors = createStarSectors(scene, magLimit)
     const deepSpace = createDeepSpace(scene, isMobile)
     const neighbors = createNeighborGalaxies(scene, isMobile)
+    const localUniverse = createLocalUniverse(scene, isMobile)
     const lens = createLensPass(isMobile)
     const post = createPostFx(quality)
     const atmospheres = createAtmospheres()
@@ -122,6 +124,7 @@ export function useGalaxy(sceneRef, rendererRef) {
       volume.dispose()
       sectors.dispose()
       neighbors.dispose()
+      localUniverse.dispose()
       deepSpace.dispose()
       lens.dispose()
       post.dispose()

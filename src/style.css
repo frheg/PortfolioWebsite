@@ -472,7 +472,7 @@ summary {
   transition: opacity 600ms cubic-bezier(0.35, 0, 0.65, 1), filter 600ms cubic-bezier(0.35, 0, 0.65, 1);
 }
 
-/* Intro: page UI hidden while the camera holds on the Milky Way + glides to the first stop. */
+/* Intro: page UI hidden while the camera flies in from outside the Local Group to the first stop. */
 .route-stage,
 [data-floating-nav] {
   transition: opacity 1.4s ease;
@@ -482,19 +482,6 @@ body.intro-active .route-stage,
 body.intro-active [data-floating-nav] {
   opacity: 0;
   pointer-events: none;
-}
-
-/* 3D intro (Milky Way + neighbours) visible behind: backdrop fades out, text moves to the bottom. */
-.loading-screen--see-through {
-  justify-content: flex-end;
-  padding-bottom: calc(env(safe-area-inset-bottom) + 3.5rem);
-  background: linear-gradient(to top, rgba(17, 17, 27, 0.55), transparent 35%);
-  transition: background 1.6s ease, opacity 900ms cubic-bezier(0.35, 0, 0.65, 1), filter 900ms cubic-bezier(0.35, 0, 0.65, 1);
-}
-
-.loading-screen--see-through .loading-screen-glow,
-.loading-screen--see-through .loading-orbit {
-  display: none;
 }
 
 .loading-screen--exit {

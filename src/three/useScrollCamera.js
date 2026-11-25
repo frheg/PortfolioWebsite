@@ -322,10 +322,13 @@ function chapterPose(path, out) {
 
 // "Powers of ten" travel: distance from A grows ×, distance to B shrinks × → every scale on the way gets
 // screen time. Quadratic bezier (control bulged along bulgeDir) → no flying through bodies.
-function travelPos(pa, ra, pb, rb, t, bulgeDir, out) {
+// ease: 'both' (stop at A and B) | 'in' (stop at A, arrive moving) | 'out' (leave moving, stop at B).
+const easeIn = (t) => t * t * (2 - t) // speed 0 → 1
+const EASE = { both: (t) => t * t * (3 - 2 * t), in: easeIn, out: (t) => 1 - easeIn(1 - t) }
+function travelPos(pa, ra, pb, rb, t, bulgeDir, out, ease = 'both') {
   const D = pa.distanceTo(pb)
   if (D < 1e-9) return out.copy(pb)
-  const e = t * t * (3 - 2 * t)
+  const e = EASE[ease](t)
   const x = e <= 0.5 ? ra * (Math.pow(1 + D / (2 * ra), 2 * e) - 1) : D - rb * (Math.pow(1 + D / (2 * rb), 2 * (1 - e)) - 1)
   const u = Math.min(Math.max(x / D, 0), 1)
   _ctrl.addVectors(pa, pb).multiplyScalar(0.5).addScaledVector(bulgeDir, D * scrollConfig.arcLift)
@@ -342,11 +345,11 @@ const _poseB = makePose()
 const _bulge = new THREE.Vector3()
 
 // Leg A→B at t: log-scale position; keep watching what we leave, then turn to the destination.
-function travelPose(a, b, t, out, turn = scrollConfig.lookTurn) {
+function travelPose(a, b, t, out, turn = scrollConfig.lookTurn, ease = 'both') {
   _bulge.addVectors(a.up, b.up)
   if (_bulge.lengthSq() < 1e-6) _bulge.copy(a.up)
   _bulge.normalize()
-  travelPos(a.pos, a.scale, b.pos, b.scale, t, _bulge, out.pos)
+  travelPos(a.pos, a.scale, b.pos, b.scale, t, _bulge, out.pos, ease)
   lookQuat(_dir.subVectors(a.look, out.pos), a.up, _qA)
   lookQuat(_dir.subVectors(b.look, out.pos), b.up, _qB)
   const [t0, t1] = turn
@@ -354,19 +357,46 @@ function travelPose(a, b, t, out, turn = scrollConfig.lookTurn) {
   return true
 }
 
-// Intro shot: slow sway orbit round the Milky Way (galaxy frame), looking at its center.
-const _introAxisZ = new THREE.Vector3()
-function introPose(time, out) {
-  const [x, y, z] = scrollConfig.introPos
-  const a = Math.sin(time * scrollConfig.introSwayRate) * scrollConfig.introSway
-  const gx = x * Math.cos(a) - y * Math.sin(a)
-  const gy = x * Math.sin(a) + y * Math.cos(a)
-  out.pos.set(...galaxyKpcToScene(gx, gy, z)).multiplyScalar(PC_KM)
-  out.look.set(...galaxyKpcToScene(0, 0, 0)).multiplyScalar(PC_KM)
-  out.up.copy(_introAxisZ.set(...GALAXY_AXES.z))
-  out.scale = out.pos.distanceTo(out.look)
-  lookQuat(_dir.subVectors(out.look, out.pos), out.up, out.quat)
-  return out
+// Intro flight: start far outside the Local Group (Virgo behind it) → Andromeda glimpse → route's stop.
+// Fixed world points (galaxies don't move on this timescale) → built once.
+let _introPoses = null
+function introPoses() {
+  if (_introPoses) return _introPoses
+  const up = new THREE.Vector3(...GALAXY_AXES.z)
+  const m31Def = galaxyDefs.m31
+  const m31 = new THREE.Vector3(...raDecToScene(m31Def.ra, m31Def.dec, m31Def.dist)).multiplyScalar(PC_KM)
+  const group = GALAXY_CENTER_KM.clone().lerp(m31, 0.55) // Local Group centre-ish
+  const virgo = new THREE.Vector3(...raDecToScene(187.706, 12.391, 16.5e6)).multiplyScalar(PC_KM)
+  const start = makePose()
+  const away = group.clone().sub(virgo).normalize() // camera on the far side → Virgo behind the group
+  const dist = scrollConfig.introStartMpc * 1e6 * PC_KM
+  start.pos.copy(group).addScaledVector(away, dist).addScaledVector(up, dist * scrollConfig.introStartLift)
+  start.look.copy(group)
+  start.up.copy(up)
+  start.scale = start.pos.distanceTo(group)
+  lookQuat(_dir.subVectors(start.look, start.pos), up, start.quat)
+  // Andromeda: beside the M31→Milky Way line, so the next leg heads home with M31 sliding out of frame.
+  const andromeda = makePose()
+  const toMw = GALAXY_CENTER_KM.clone().sub(m31).normalize()
+  const side = new THREE.Vector3().crossVectors(toMw, up).normalize()
+  const az = scrollConfig.introM31Az * DEG
+  const r = scrollConfig.introM31Kpc * 1e3 * PC_KM
+  andromeda.pos.copy(m31).addScaledVector(toMw, Math.cos(az) * r).addScaledVector(side, Math.sin(az) * r).addScaledVector(up, r * 0.25)
+  andromeda.look.copy(m31)
+  andromeda.up.copy(up)
+  andromeda.scale = r
+  lookQuat(_dir.subVectors(andromeda.look, andromeda.pos), up, andromeda.quat)
+  _introPoses = { start, andromeda }
+  return _introPoses
+}
+
+// Intro at glide fraction t (0..1) toward target pose.
+function introPose(t, target, out) {
+  const { start, andromeda } = introPoses()
+  const split = scrollConfig.introSplit
+  // Fly past Andromeda without stopping: arrive moving, leave moving.
+  if (t < split) return travelPose(start, andromeda, t / split, out, scrollConfig.introLookTurn, 'in')
+  return travelPose(andromeda, target, (t - split) / (1 - split), out, scrollConfig.introLookTurn, 'out')
 }
 
 // Scroll → hold at a stop, or travel through the gap after it.
@@ -1017,7 +1047,8 @@ export function useScrollCamera(cameraRef, routePath) {
 
     const pose = poseRef.current
 
-    // Intro: hold on the Milky Way while loading, then glide in. (Bergen terrain preloads in background, see preloadHome.)
+    // Intro: hold far outside the Local Group behind the loading screen, glide in once loaded (screen fades meanwhile).
+    // (Bergen terrain preloads in background, see preloadHome.)
     const intro = introRef.current
     if (intro.phase !== 'done') {
       setMist(0)
@@ -1028,9 +1059,9 @@ export function useScrollCamera(cameraRef, routePath) {
       intro.t0 ||= now || 1e-6
       const target = chapterPose(routeRef.current, pose)
       if (intro.phase === 'hold') {
-        introPose(now - intro.t0, intro.from)
-        origin.copy(intro.from.pos)
-        camera.quaternion.copy(intro.from.quat)
+        const { start } = introPoses()
+        origin.copy(start.pos)
+        camera.quaternion.copy(start.quat)
         setSceneVisible()
         if (target && isSceneLoadReady()) {
           intro.phase = 'glide'
@@ -1040,7 +1071,7 @@ export function useScrollCamera(cameraRef, routePath) {
       }
       const t = Math.min(1, (now - intro.glideT0) / scrollConfig.introGlideS)
       if (target) {
-        travelPose(intro.from, pose, t, intro.out, scrollConfig.introLookTurn)
+        introPose(t, pose, intro.out)
         origin.copy(intro.out.pos)
         aimScroll(camera, intro.out.quat, t >= 1, deltaSeconds)
       }

@@ -11,7 +11,7 @@ export const spaceConfig = {
     fov: 75,
     // km. Log depth → 1 m to ~3 Mpc in one pass.
     near: 1e-3,
-    far: 1e20,
+    far: 1e23,           // ~3 Gpc: Virgo (16.5 Mpc) + field galaxies (≤ 45 Mpc) inside
     clearColor: 0x000000, // space
     maxPixelRatio: 2,
     powerPreference: 'high-performance',
@@ -52,13 +52,15 @@ export const spaceConfig = {
       // Look: keep facing what we leave until lookTurn[0] of the leg, face destination by lookTurn[1].
       lookTurn: [0.25, 0.85],
       rotRate: 3.5,         // 1/s, camera orientation ease toward path orientation (lag → turns easy to follow)
-      // Intro (behind loading screen): slow orbit round the Milky Way (galaxy kpc), M31 + M33 in frame;
-      // when loaded → glide to the route's stop.
-      introPos: [-12.6, 34.6, 25.8],
-      introSway: 0.18,      // rad, orbit sway amplitude
-      introSwayRate: 0.07,  // rad/s
-      introGlideS: 9,
-      introLookTurn: [0, 0.3],
+      // Intro (starts as the loading screen fades): from far outside the Local Group (Virgo behind it) → past Andromeda
+      // (M33 in frame) → route's stop. Log-scale legs, names shown on the way.
+      introStartMpc: 3,     // from Local Group centre, opposite Virgo
+      introStartLift: 0.25, // × start distance, toward galactic north (look slightly down on the group)
+      introM31Kpc: 140,     // Andromeda glimpse: distance from its centre
+      introM31Az: 55,       // deg off the M31→Milky Way line (side view, disk + M33 in frame)
+      introSplit: 0.45,     // fraction of the glide spent reaching Andromeda
+      introGlideS: 10,
+      introLookTurn: [0.1, 0.6],
       // Earth spin offset in scroll mode → Bergen time follows the Bergen-stop scroll: real sunset → night → real sunrise
       // (sun 2° above horizon, today's declination). Polar day/night → fallback hours. Earlier stops keep sunset.
       homeTime: { lat: 60.39, lon: 5.32, sunAltDeg: 2, fallbackSet: 15, fallbackRise: 9 },
@@ -353,6 +355,12 @@ export const spaceConfig = {
       labelMag: 1.5,        // named star label when brighter than this
       labelNearPc: 4,       // ...or closer than this
       promoteDistancePc: 0.05, // nearest star → real sphere + label inside this (~10 000 AU)
+    },
+    // Dwarfs, nearby groups, Virgo/Fornax clusters, field galaxies (localUniverse.js). One sprite each.
+    localUniverse: {
+      gain: 0.9,
+      sizeScale: 1,         // sprite size × galaxy radius
+      mobileFactor: 0.6,
     },
     neighbors: {
       sprites: 30000,       // × per-galaxy weight
