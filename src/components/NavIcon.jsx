@@ -1,5 +1,5 @@
 // Small hand-rolled outline icon set for FloatingNav — avoids pulling in an
-// icon library for six glyphs.
+// icon library for seven glyphs.
 const PATHS = {
   home: 'M3 10.5 12 3l9 7.5M5.5 9.5V20h4.5v-6h4v6h4.5V9.5',
   projects: 'M4 7.5a2 2 0 0 1 2-2h3l1.8 2H18a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-10Z',
@@ -7,6 +7,7 @@ const PATHS = {
   contact: 'M4 6h16v12H4V6Zm0 .5 8 6.5 8-6.5',
   chat: 'M5 5h14v10H9l-4 4V5Z',
   explore: 'M12 3l1.9 5.6L19.5 10.5 13.9 12.4 12 18 10.1 12.4 4.5 10.5 10.1 8.6 12 3Z',
+  tour: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM10 8.5v7l5.5-3.5L10 8.5Z', // play in a circle
 }
 
 export default function NavIcon({ name, className = 'h-5 w-5' }) {

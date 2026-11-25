@@ -8,6 +8,7 @@ import { NavLink } from 'react-router-dom'
 import { navLinks } from '../content/navLinks'
 import NavIcon from './NavIcon'
 import { getActiveChapter, scrollToChapter, subscribeActiveChapter } from '../utils/chapterScroll'
+import { requestTour } from '../utils/tourState'
 
 const ITEM_CLASS =
   'relative isolate flex flex-1 flex-col items-center gap-0.5 overflow-visible whitespace-nowrap rounded-xl px-1.5 py-1.5 text-center text-[0.58rem] font-medium uppercase tracking-[0.1em] transition sm:flex-none sm:flex-row sm:gap-1.5 sm:px-3 sm:py-2 sm:text-[0.62rem] sm:tracking-[0.16em]'
@@ -58,6 +59,17 @@ export default function FloatingNav() {
                 >
                   <ItemContent {...item} />
                 </NavLink>
+              ) : item.action === 'tour' ? (
+                <button
+                  key={item.action}
+                  type="button"
+                  onClick={requestTour}
+                  aria-label={item.ariaLabel}
+                  title={item.ariaLabel}
+                  className={`${ITEM_CLASS} ${itemStateClass(false, false)}`}
+                >
+                  <ItemContent {...item} />
+                </button>
               ) : (
                 <button
                   key={item.chapterKey}

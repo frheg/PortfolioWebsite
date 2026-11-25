@@ -13,6 +13,7 @@ import { blackHoles, galaxies, nebulae } from '../data/deepSpaceObjects'
 import { getCometWorld } from './comets'
 import { diskBasis } from './neighborGalaxies'
 import { setScrollVelocity } from './scrollVelocity'
+import { beginTour, endTour, getTourState, setTourStep } from '../utils/tourState'
 import {
   addExploreLook,
   consumeExploreLook,
@@ -33,7 +34,7 @@ import { nearestStar } from './starRuntime'
 import { setWormholeApproach, triggerWormhole } from './wormholeRuntime'
 import { AU_KM, GALAXY_AXES, GALAXY_CENTER_PC, PC_KM, SUN_RADIUS_KM, galaxyKpcToScene, raDecToScene } from './galaxyFrame'
 
-const { pageStops, scroll: scrollConfig, explore: exploreConfig, transitionLerp } = spaceConfig.camera
+const { pageStops, scroll: scrollConfig, explore: exploreConfig, tour: tourConfig, transitionLerp } = spaceConfig.camera
 const EXPLORE_PATH = '/explore'
 // Bergen = the surface stop: explore spawn, wormhole exit, time-of-day scrub, background terrain preload.
 const HOME_INDEX = pageStops.findIndex((stop) => stop.type === 'surface')
@@ -214,22 +215,46 @@ function galaxyPose(stop, out) {
   return true
 }
 
-// Nebula: from its sun-facing side, azimuth about galactic north, elevation above that plane.
-function nebulaPose(stop, out) {
-  const d = nebulaDefs[stop.key]
-  if (!d) return false
-  const c = _e1.set(...raDecToScene(d.ra, d.dec, d.dist)).multiplyScalar(PC_KM)
+// Deep-sky point c (world km), seen from distKm on its sun-facing side: azimuth about galactic north, elevation above that plane.
+function skyPoseAt(c, distKm, azimuthDeg, elevationDeg, out) {
   const up = _e2.set(...GALAXY_AXES.z)
   _toSun.copy(c).negate().normalize()
   _right.crossVectors(_toSun, up).normalize()
-  const az = stop.azimuth * DEG
-  const el = stop.elevation * DEG
+  const az = azimuthDeg * DEG
+  const el = elevationDeg * DEG
   _dir.copy(_toSun).multiplyScalar(Math.cos(az)).addScaledVector(_right, Math.sin(az)).multiplyScalar(Math.cos(el)).addScaledVector(up, Math.sin(el)).normalize()
-  out.scale = d.radius * stop.distanceRadii * PC_KM
-  out.pos.copy(c).addScaledVector(_dir, out.scale)
+  out.scale = distKm
+  out.pos.copy(c).addScaledVector(_dir, distKm)
   out.look.copy(c)
   out.up.copy(up)
   return true
+}
+
+function nebulaPose(stop, out) {
+  const d = nebulaDefs[stop.key]
+  if (!d) return false
+  return skyPoseAt(_e1.set(...raDecToScene(d.ra, d.dec, d.dist)).multiplyScalar(PC_KM), d.radius * stop.distanceRadii * PC_KM, stop.azimuth, stop.elevation, out)
+}
+
+function skyPose(stop, out) {
+  return skyPoseAt(_e1.set(...raDecToScene(stop.ra, stop.dec, stop.distPc)).multiplyScalar(PC_KM), stop.viewPc * PC_KM, stop.azimuth, stop.elevation, out)
+}
+
+// Comet: from its sunward side (tail streams away behind it).
+function cometPose(stop, out) {
+  const w = getCometWorld(stop.key)
+  if (!w) return false
+  return skyPoseAt(_e1.copy(w), stop.viewKm, stop.azimuth, stop.elevation, out)
+}
+
+// Local Group centre-ish: between the Milky Way and M31 (M31 a bit heavier).
+const LOCAL_GROUP_KM = new THREE.Vector3()
+function localGroupPose(stop, out) {
+  if (!LOCAL_GROUP_KM.lengthSq()) {
+    const m = galaxyDefs.m31
+    LOCAL_GROUP_KM.set(...raDecToScene(m.ra, m.dec, m.dist)).multiplyScalar(PC_KM).lerp(GALAXY_CENTER_KM, 0.45)
+  }
+  return skyPoseAt(_e1.copy(LOCAL_GROUP_KM), stop.viewMpc * 1e6 * PC_KM, stop.azimuth, stop.elevation, out)
 }
 
 // ─── Sightings (via) ──
@@ -277,8 +302,11 @@ function viaPose(via, from, to, out) {
   return true
 }
 const _viaPoses = Array.from({ length: 6 }, makePose)
+const _tourA = makePose()
+const _tourB = makePose()
+const _tourOut = makePose()
 
-const POSE_BY_TYPE = { surface: surfacePose, body: bodyPose, blackhole: blackHolePose, galactic: galacticPose, galaxy: galaxyPose, nebula: nebulaPose }
+const POSE_BY_TYPE = { surface: surfacePose, body: bodyPose, blackhole: blackHolePose, galactic: galacticPose, galaxy: galaxyPose, nebula: nebulaPose, sky: skyPose, localGroup: localGroupPose, comet: cometPose }
 
 const _orbitQ = new THREE.Quaternion()
 
@@ -1140,6 +1168,71 @@ export function useScrollCamera(cameraRef, routePath) {
     setScrollVelocity(scrollVelocityBlendRef.current)
   }
 
+  // ─── Guided tour ───────────────────────────────────────────────────────────
+  // Hands-off: leg (log-scale, look turns) → hold (slow orbit, caption) per stop → fly back to the page's pose.
+  const tourRef = useRef(null) // { clock, from, ret, retT0 } while running
+  const snapshotPose = (camera, out) => {
+    const scale = Math.max(nearestAltitude(origin), 1e-3)
+    camera.getWorldDirection(_dir)
+    out.pos.copy(origin)
+    out.look.copy(origin).addScaledVector(_dir, scale)
+    out.up.set(0, 1, 0).applyQuaternion(camera.quaternion)
+    out.scale = scale
+    out.quat.copy(camera.quaternion)
+    return out
+  }
+  const finishTour = () => {
+    tourRef.current = null
+    document.body.classList.remove('tour-active')
+    smoothScrollRef.current = null
+    lastScrollYRef.current = window.scrollY || 0
+    endTour()
+  }
+  const updateTour = (camera, deltaSeconds) => {
+    const { stops, legS, holdS, returnS } = tourConfig
+    let tour = tourRef.current
+    if (!tour) {
+      tour = tourRef.current = { clock: 0, from: snapshotPose(camera, makePose()), ret: null, retT0: 0 }
+      document.body.classList.add('tour-active')
+      beginTour(stops.length)
+    }
+    setMist(0)
+    tour.clock += Math.min(deltaSeconds, 0.1)
+    const seg = legS + holdS
+    const total = stops.length * seg
+    const out = _tourOut
+    if (!tour.ret && (getTourState().phase === 'stopping' || tour.clock >= total)) {
+      tour.ret = snapshotPose(camera, makePose())
+      tour.retT0 = tour.clock
+    }
+    if (tour.ret) {
+      const u = Math.min(1, (tour.clock - tour.retT0) / returnS)
+      setTourStep(stops.length, 'return', 1)
+      if (scrollPose(window.scrollY || 0, poseRef.current)) {
+        travelPose(tour.ret, poseRef.current, u, out)
+        origin.copy(out.pos)
+        aimScroll(camera, out.quat, false, deltaSeconds)
+      }
+      if (u >= 1) finishTour()
+      return
+    }
+    const i = Math.min(stops.length - 1, Math.floor(tour.clock / seg))
+    const local = tour.clock - i * seg
+    let ok
+    if (local < legS) {
+      const from = i === 0 ? tour.from : stopPose(stops[i - 1].pose, _tourA, 1) ? _tourA : null
+      ok = from && stopPose(stops[i].pose, _tourB, 0) && travelPose(from, _tourB, local / legS, out)
+      setTourStep(i, 'leg', tour.clock / total)
+    } else {
+      ok = stopPose(stops[i].pose, out, (local - legS) / holdS)
+      setTourStep(i, 'hold', tour.clock / total)
+    }
+    if (ok) {
+      origin.copy(out.pos)
+      aimScroll(camera, out.quat, false, deltaSeconds)
+    }
+  }
+
   // Far from Earth on scroll pages → terrain loads Bergen (virtual eye) in background → ready on arrival.
   // Near Earth → real camera drives tiles.
   const homePoseRef = useRef(makePose())
@@ -1157,6 +1250,7 @@ export function useScrollCamera(cameraRef, routePath) {
     preloadHome(isExploreRoute(routeRef.current))
 
     if (isExploreRoute(routeRef.current)) {
+      if (tourRef.current || getTourState().requested) finishTour() // left mid-tour → drop it
       setMist(0)
       if (updateExplore(camera, deltaSeconds)) applyBoostShake(camera, deltaSeconds)
       else boostTimeRef.current = 0
@@ -1166,7 +1260,9 @@ export function useScrollCamera(cameraRef, routePath) {
     boostTimeRef.current = 0
     setCameraSpeed(0)
     setCameraThrottle(0)
-    updateScrollRoute(camera, deltaSeconds)
+    // Tour: only once the page camera is settled (intro + explore→page transition done).
+    if (tourRef.current || (getTourState().requested && introRef.current.phase === 'done' && transTRef.current >= 1)) updateTour(camera, deltaSeconds)
+    else updateScrollRoute(camera, deltaSeconds)
     // Fast scroll → mild streaks toward view center.
     camera.getWorldDirection(forwardRef.current)
     setWarp(scrollVelocityBlendRef.current * 0.6, forwardRef.current.x, forwardRef.current.y, forwardRef.current.z)

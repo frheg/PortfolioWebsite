@@ -1,5 +1,6 @@
-// Planet textures: baked KTX2 (scripts/build-ktx2.mjs) → GPU-compressed, mips + tint pre-baked, transcoded in workers.
-// → no main-thread decode/tint loops, ~4–6× less VRAM, small uploads. No KTX2 support / load error → webp + live tint.
+// Planet textures: baked KTX2 (scripts/build-ktx2.mjs) → GPU-compressed, mips pre-built, transcoded in workers.
+// → no main-thread decode loops, ~4–6× less VRAM, small uploads. No KTX2 support / load error → webp fallback.
+// Up front ≤ 2k; <key>@4k.ktx2 on demand (camera close, loadHiRes).
 import * as THREE from 'three'
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
 import { tintPixels } from './textureTints'
@@ -42,12 +43,11 @@ function loadFallback(manager, key, url, done) {
 
 /**
  * fallbackUrls: key → webp/png url. onTexture(key, texture) per arrival (sRGB set).
- * Returns cancel(): stop handing out textures (late arrivals disposed).
+ * Returns { cancel() (late arrivals disposed), loadHiRes(key, onTexture) → false if none / already asked }.
  */
 export function loadPlanetTextures(renderer, manager, fallbackUrls, onTexture) {
   let live = true
   const keys = Object.keys(fallbackUrls)
-  let pending = keys.length
   const loader = new KTX2Loader(manager).setTranscoderPath(`${import.meta.env.BASE_URL}basis/`)
   let ktxOk = true
   try {
@@ -56,8 +56,6 @@ export function loadPlanetTextures(renderer, manager, fallbackUrls, onTexture) {
     ktxOk = false
   }
   const done = (key, tex) => {
-    pending -= 1
-    if (pending === 0) loader.dispose() // free transcoder workers
     if (!live) return tex.dispose()
     tex.colorSpace = THREE.SRGBColorSpace
     onTexture(key, tex)
@@ -68,7 +66,23 @@ export function loadPlanetTextures(renderer, manager, fallbackUrls, onTexture) {
     if (!ktxOk || !url) fallback()
     else loader.load(url, (tex) => done(key, tex), undefined, fallback)
   }
-  return () => {
-    live = false
+  // 4k: same loader (one transcoder pool), kept until cancel.
+  const asked = new Set()
+  const loadHiRes = (key, onHi) => {
+    const url = urlFor(ktx2Urls, key, '@4k.ktx2')
+    if (!ktxOk || !url || asked.has(key)) return false
+    asked.add(key)
+    loader.load(url, (tex) => {
+      if (!live) return tex.dispose()
+      tex.colorSpace = THREE.SRGBColorSpace
+      onHi(tex)
+    })
+    return true
   }
+
+  const cancel = () => {
+    live = false
+    loader.dispose()
+  }
+  return { cancel, loadHiRes }
 }

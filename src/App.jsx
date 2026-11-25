@@ -10,6 +10,7 @@ import { useExploreAudio } from './hooks/useExploreAudio'
 import { RouteProvider } from './context/RouteProvider'
 import ExploreMobileControls from './components/ExploreMobileControls'
 import FloatingNav from './components/FloatingNav'
+import TourOverlay from './components/TourOverlay'
 import LoadingScreen from './components/LoadingScreen'
 import { prefersReducedMotion } from './utils/motion'
 
@@ -105,6 +106,7 @@ export default function App() {
         </Suspense>
       ) : null}
       {isExploreRoute ? <ExploreMobileControls /> : <FloatingNav />}
+      {isExploreRoute ? null : <TourOverlay />}
     </main>
   )
 }

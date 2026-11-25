@@ -48,3 +48,6 @@ src/assets/Models/**/*.pdf
 # Local secrets (never commit)
 credentials.json
 *.credentials.json
+
+# Planet texture bake: downloaded 8k sources (scripts/build-ktx2.mjs), not committed
+.texture-cache/

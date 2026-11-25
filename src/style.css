@@ -479,9 +479,23 @@ summary {
 }
 
 body.intro-active .route-stage,
-body.intro-active [data-floating-nav] {
+body.intro-active [data-floating-nav],
+body.tour-active .route-stage,
+body.tour-active [data-floating-nav] {
   opacity: 0;
   pointer-events: none;
+}
+
+/* Tour captions: fade + rise in on arrival at a stop, fade out while flying on. */
+.tour-caption {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 600ms ease, transform 600ms ease;
+}
+
+.tour-caption--in {
+  opacity: 1;
+  transform: none;
 }
 
 .loading-screen--exit {

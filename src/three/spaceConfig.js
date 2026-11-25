@@ -68,6 +68,57 @@ export const spaceConfig = {
       velocityBoostThreshold: 2.2,
       velocityLerp: 0.08,
     },
+    // Guided tour ("Omvisning", navbar): hands-off flight through highlights, caption per stop, then back to the page.
+    // Each stop: pose (same types as pageStops + sky/localGroup/comet) → leg (legS) in, hold (holdS) with slow orbit.
+    //   sky:        ra/dec (deg), distPc, viewPc (camera distance), azimuth/elevation (deg, like nebula)
+    //   localGroup: viewMpc, azimuth/elevation (deg)
+    //   comet:      key, viewKm, azimuth/elevation (deg)
+    // Order: outside in (clusters → galaxies → Milky Way → solar system outer → inner), ends at Earth.
+    tour: {
+      legS: 3,
+      holdS: 6.5,           // reading time per caption
+      returnS: 3.5,
+      stops: [
+        { pose: { type: 'sky', ra: 187.706, dec: 12.391, distPc: 16_500_000, viewPc: 4_500_000, azimuth: 35, elevation: 20 },
+          title: 'Virgohopen', facts: ['1 300–2 000 galakser, 54 millioner lysår unna', 'Kjempen M87 i midten har et sort hull på 6,5 milliarder solmasser', 'Tyngdekraften herfra trekker også på oss'] },
+        { pose: { type: 'localGroup', viewMpc: 2.2, azimuth: 150, elevation: 25 },
+          title: 'Den lokale gruppen', facts: ['Vårt galaktiske nabolag: ~80 galakser', '~10 millioner lysår på tvers', 'Melkeveien og Andromeda er de to største'] },
+        { pose: { type: 'galaxy', key: 'm31', distanceKpc: 85, inclination: 45, azimuth: 30 },
+          title: 'Andromedagalaksen', facts: ['~1 billion stjerner, 2,5 millioner lysår unna', 'Lyset du ser nå dro før mennesket fantes', 'Kolliderer med Melkeveien om ~4,5 milliarder år'] },
+        { pose: { type: 'galaxy', key: 'lmc', distanceKpc: 16, inclination: 30, azimuth: 200 },
+          title: 'Den store magellanske sky', facts: ['Satellittgalakse i bane rundt Melkeveien', 'Taranteltåken her er den største stjernefabrikken i nabolaget', 'Supernova 1987A eksploderte her'] },
+        { pose: { type: 'galactic', pos: [24, -12, 16], look: [0, 0, 0] },
+          title: 'Melkeveien', facts: ['100–400 milliarder stjerner', 'Solen bruker ~230 millioner år på én runde', 'Vi bor i en sidearm, ~26 000 lysår fra sentrum'] },
+        { pose: { type: 'blackhole', key: 'sgra', distanceRs: 26, inclination: 75, azimuth: 120 },
+          title: 'Sagittarius A*', facts: ['Sort hull på 4,3 millioner solmasser', 'Lyset bøyes rundt det: du ser baksiden av skiven', 'Avbildet av Event Horizon Telescope i 2022'] },
+        { pose: { type: 'nebula', key: 'orion', distanceRadii: 3, azimuth: 20, elevation: 10 },
+          title: 'Oriontåken', facts: ['Nærmeste store stjernefødested, 1 344 lysår unna', 'Tusenvis av nyfødte stjerner', 'Synlig med blotte øye i Orions sverd'] },
+        { pose: { type: 'body', body: 'pluto', distance: 3.5, azimuth: 0.5, elevation: 0.2, lookShiftX: 0, lookShiftY: 0 },
+          title: 'Pluto', facts: ['Dvergplanet siden 2006', 'Ett år på Pluto = 248 jordår', 'Har en hjerteformet isslette: Tombaugh Regio'] },
+        { pose: { type: 'body', body: 'neptune', distance: 3.5, azimuth: 0.6, elevation: 0.2, lookShiftX: 0, lookShiftY: 0 },
+          title: 'Neptun', facts: ['Sterkeste vinder i solsystemet: ~2 100 km/t', 'Ett år = 165 jordår', 'Funnet med matematikk før noen så den (1846)'] },
+        { pose: { type: 'body', body: 'uranus', distance: 4, azimuth: 0.5, elevation: 0.3, lookShiftX: 0, lookShiftY: 0 },
+          title: 'Uranus', facts: ['Ruller rundt Solen på siden: 98° helning', 'Kaldeste atmosfære av alle planetene: −224 °C', 'Ett år = 84 jordår'] },
+        { pose: { type: 'body', body: 'saturn', distance: 4.2, azimuth: 0.6, elevation: 0.3, lookShiftX: 0, lookShiftY: 0 },
+          title: 'Saturn', facts: ['Ringene er 280 000 km brede, men stort sett bare ~10 m tykke', 'Laget av is og stein', 'Saturn ville flytt i et stort nok basseng'] },
+        { pose: { type: 'body', body: 'jupiter', distance: 3.5, azimuth: 0.5, elevation: 0.2, lookShiftX: 0, lookShiftY: 0 },
+          title: 'Jupiter', facts: ['Tyngre enn alle de andre planetene til sammen', 'Den store røde flekken er en storm større enn Jorden', '95 kjente måner'] },
+        { pose: { type: 'body', body: 'mars', distance: 3.2, azimuth: 0.5, elevation: 0.2, lookShiftX: 0, lookShiftY: 0 },
+          title: 'Mars', facts: ['Olympus Mons: vulkan 22 km høy, nesten 3 × Mount Everest', 'Rød av rust (jernoksid) i støvet', 'Et døgn varer 24 t 37 min'] },
+        { pose: { type: 'comet', key: 'encke', viewKm: 2.6e7, azimuth: 70, elevation: 15 },
+          title: 'Komet 2P/Encke', facts: ['Rundt Solen hvert 3,3 år, kortest av de lyse kometene', 'Kilden til Tauridene: stjerneskudd i november', 'Halen peker alltid bort fra Solen'] },
+        { pose: { type: 'body', body: 'sun', distance: 4.5, azimuth: 0.4, elevation: 0.15, lookShiftX: 0, lookShiftY: 0 },
+          title: 'Solen', facts: ['Inneholder 99,86 % av all masse i solsystemet', 'Lyset bruker 8 min 20 s hit til Jorden', 'Kjernen holder ~15 millioner °C'] },
+        { pose: { type: 'body', body: 'mercury', distance: 3.2, azimuth: 0.6, elevation: 0.2, lookShiftX: 0, lookShiftY: 0 },
+          title: 'Merkur', facts: ['Minste planet, nærmest Solen', 'Fra 430 °C om dagen til −180 °C om natten', 'Ett år = 88 dager'] },
+        { pose: { type: 'body', body: 'venus', distance: 3.2, azimuth: 0.6, elevation: 0.2, lookShiftX: 0, lookShiftY: 0 },
+          title: 'Venus', facts: ['Varmeste planet: ~465 °C', 'Roterer baklengs, og døgnet er lengre enn året', 'Skyer av svovelsyre'] },
+        { pose: { type: 'body', body: 'moon', distance: 3.2, azimuth: 0.5, elevation: 0.2, lookShiftX: 0, lookShiftY: 0 },
+          title: 'Månen', facts: ['Samme side vender alltid mot oss', 'Fjerner seg ~3,8 cm fra Jorden hvert år', '12 mennesker har gått her (1969–1972)'] },
+        { pose: { type: 'body', body: 'earth', distance: 3, azimuth: 0.4, elevation: 0.15, lookShiftX: 0, lookShiftY: 0 },
+          title: 'Jorden', facts: ['Det eneste stedet vi vet om med liv', 'Et lyspunkt i én av hundrevis av milliarder galakser', 'Velkommen hjem'] },
+      ],
+    },
     explore: {
       baseFov: 40,
       // Speed = altitude × speedPerAltitude (km/s per km). Log-feel travel:
@@ -164,6 +215,7 @@ export const spaceConfig = {
     // Scroll mode: positions at real time (1×), spin sped up ×this. Explore: ephemerisTime.
     scrollSpinScale: 600,
     textureAnisotropy: 8,
+    hiResRadii: 25,         // camera within this × radius → load the body's 4k map
     // LOD by projected radius px (see bodyLod.js).
     lod: {
       dotFade: [0.8, 2.5],  // dot → impostor crossfade
@@ -193,17 +245,17 @@ export const spaceConfig = {
     bodies: [
       { key: 'sun',     radius: 695_700, rotationSign: 1,  axialTilt: 0.12, texture: 'sun',     emissive: true, beaconPx: 0, beaconColor: 0xf9e2af },
       { key: 'mercury', radius: 2_439.7, rotationSign: 1,  axialTilt: 0.03, texture: 'mercury', beaconPx: 3,   beaconColor: 0x9399b2 },
-      { key: 'venus',   radius: 6_051.8, textureLonOffset: -60, rotationSign: -1, axialTilt: 3.09, texture: 'venus',   beaconPx: 3.5, beaconColor: 0xfab387, atmosphere: { height: 120, betaR: [12e-3, 9e-3, 4e-3], betaM: 8e-3, Hr: 15.9, Hm: 6, g: 0.7, sunIntensity: 6 } },
+      { key: 'venus',   radius: 6_051.8, rotationSign: -1, axialTilt: 3.09, texture: 'venus',   beaconPx: 3.5, beaconColor: 0xfab387, atmosphere: { height: 120, betaR: [12e-3, 9e-3, 4e-3], betaM: 8e-3, Hr: 15.9, Hm: 6, g: 0.7, sunIntensity: 6 } },
       { key: 'earth',   radius: 6_371,   rotationSign: 1,  axialTilt: 0, axialTiltX: -0.40910518, realSpin: true, nightTexture: 'earthLights', nightGain: 1.6, texture: 'earth',   beaconPx: 3.5, beaconColor: 0x94e2d5, atmosphere: { height: 100, betaR: [5.802e-3, 13.558e-3, 33.1e-3], betaM: 3.996e-3, Hr: 8, Hm: 1.2, g: 0.8, sunIntensity: 7 } },
       // Moon: circular orbit, real period, tidally locked.
       { key: 'moon',    radius: 1_737.4, rotationSign: 1,  axialTilt: 0.09, texture: 'moon',    parent: 'earth', orbitRadius: 384_400, orbitInclination: 0.0898, tidallyLocked: true, beaconPx: 2.5, beaconColor: 0xa6adc8, labelRange: 5e6 },
-      { key: 'mars',    radius: 3_389.5, textureLonOffset: 180, rotationSign: 1,  axialTilt: 0.44, texture: 'mars',    beaconPx: 3,   beaconColor: 0xeba0ac, atmosphere: { height: 90, betaR: [2e-3, 1.36e-3, 0.58e-3], betaM: 4e-3, Hr: 11.1, Hm: 3, g: 0.7, sunIntensity: 5 } },
+      { key: 'mars',    radius: 3_389.5, rotationSign: 1,  axialTilt: 0.44, texture: 'mars',    beaconPx: 3,   beaconColor: 0xeba0ac, atmosphere: { height: 90, betaR: [2e-3, 1.36e-3, 0.58e-3], betaM: 4e-3, Hr: 11.1, Hm: 3, g: 0.7, sunIntensity: 5 } },
       { key: 'jupiter', radius: 69_911,  rotationSign: 1,  axialTilt: 0.05, texture: 'jupiter', beaconPx: 4,   beaconColor: 0xf9e2af, atmosphere: { height: 800, betaR: [1.2e-4, 1.6e-4, 2.4e-4], betaM: 1.5e-4, Hr: 27, Hm: 20, g: 0.7, sunIntensity: 5 } },
       // Rings: C ring inner → A ring outer. ringUv 'radial' = 1D strip texture (u = radius); else planar top-down image.
       { key: 'saturn',  radius: 58_232,  rotationSign: 1,  axialTilt: 0.47, texture: 'saturn',  ringTexture: 'saturnRing', ringUv: 'radial', ringInner: 74_500, ringOuter: 136_800, ringOpacity: 0.72, beaconPx: 4, beaconColor: 0xf5e0dc, atmosphere: { height: 900, betaR: [1.4e-4, 1.4e-4, 1.6e-4], betaM: 1.2e-4, Hr: 60, Hm: 30, g: 0.7, sunIntensity: 5 } },
       { key: 'uranus',  radius: 25_362,  rotationSign: -1, axialTilt: 1.71, texture: 'uranus',  ringTexture: 'uranusRing', ringInner: 34_100, ringOuter: 46_400, ringOpacity: 0.48, beaconPx: 3.5, beaconColor: 0x89dceb, atmosphere: { height: 600, betaR: [0.6e-4, 1.4e-4, 1.8e-4], betaM: 0.4e-4, Hr: 28, Hm: 20, g: 0.7, sunIntensity: 5 } },
       { key: 'neptune', radius: 24_622,  rotationSign: 1,  axialTilt: 0.49, texture: 'neptune', beaconPx: 3.5, beaconColor: 0x74c7ec, atmosphere: { height: 600, betaR: [0.5e-4, 1.0e-4, 2.2e-4], betaM: 0.4e-4, Hr: 20, Hm: 15, g: 0.7, sunIntensity: 5 } },
-      { key: 'pluto',   radius: 1_188.3, rotationSign: -1, axialTilt: 2.13, texture: 'pluto',   beaconPx: 2.5, beaconColor: 0xf2cdcd },
+      { key: 'pluto',   radius: 1_188.3, textureLonOffset: 180, rotationSign: -1, axialTilt: 2.13, texture: 'pluto',   beaconPx: 2.5, beaconColor: 0xf2cdcd },
     ],
     // Real Earth surface tiles (explore only). URL templates: {z} {x} {y}.
     earthTerrain: {

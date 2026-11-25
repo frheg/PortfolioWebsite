@@ -382,6 +382,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
   const satellitesRef = useRef(null)
   const multiplayerRef = useRef(null)
   const cometsRef = useRef(null)
+  const hiResRef = useRef(null) // (textureKey) → request 4k map
   const earthSpinOffsetRef = useRef(0) // rad; scroll mode → Bergen at a fixed local hour (eased)
   const sunGlowRef = useRef(null)
   const timeRef = useRef(0)
@@ -401,12 +402,23 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
     const textures = {}
     const waiting = {}
     const whenTexture = (key, fn) => (textures[key] ? fn(textures[key]) : (waiting[key] ??= []).push(fn))
-    const cancelTextures = loadPlanetTextures(rendererRef.current, sceneLoadingManager, textureUrls, (key, tex) => {
+    const planetTextures = loadPlanetTextures(rendererRef.current, sceneLoadingManager, textureUrls, (key, tex) => {
       tex.anisotropy = cfg.textureAnisotropy
       textures[key] = tex
       waiting[key]?.forEach((fn) => fn(tex))
       delete waiting[key]
     })
+
+    const lodByTexture = {}
+    hiResRef.current = (key) =>
+      planetTextures.loadHiRes(key, (tex) => {
+        tex.anisotropy = cfg.textureAnisotropy
+        const lod = lodByTexture[key]
+        if (!lod) return tex.dispose()
+        textures[key]?.dispose()
+        textures[key] = tex
+        lod.map.value = tex
+      })
 
     const system = new THREE.Group()
     scene.add(system)
@@ -456,6 +468,9 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
 
       const lod = createBodyLod(def, null, anchor, tiltGroup, ring)
       whenTexture(def.texture, (tex) => (lod.map.value = tex))
+      // Close → swap in the 4k map (base disposed).
+      const key = def.texture
+      lodByTexture[key] = lod
       if (def.nightTexture) whenTexture(def.nightTexture, (tex) => (lod.nightMap.value = tex))
 
       system.add(anchor)
@@ -549,7 +564,8 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
         mats.forEach((m) => m?.dispose?.())
       })
       scene.remove(system)
-      cancelTextures()
+      hiResRef.current = null
+      planetTextures.cancel()
       Object.values(textures).forEach((t) => t.dispose())
       terrain.dispose()
       terrainRef.current = null
@@ -672,6 +688,11 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
     if (camera) {
       const focalPx = window.innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
       bodyMap.forEach(({ world, lod }) => lod.update(world, origin, focalPx))
+      // Close (≤ hiResRadii) → 4k map, once per body.
+      const hiR = spaceConfig.solarSystem.hiResRadii
+      bodyMap.forEach(({ def, world }) => {
+        if (def.texture && origin.distanceTo(world) < def.radius * hiR) hiResRef.current?.(def.texture)
+      })
       terrainRef.current?.update(focalPx, explore)
       satellitesRef.current?.update()
       multiplayerRef.current?.update(camera, focalPx, explore)

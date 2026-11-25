@@ -651,6 +651,13 @@ export default function ExploreHud() {
             Satellitter: CelesTrak
           </a>
         </p>
+        {/* Planet maps (CC BY 4.0): always credited. */}
+        <p className={`px-1 pt-1 text-[0.52rem] leading-snug text-cyan-100/45 ${showCredits ? '' : 'phone:hidden'}`}>
+          <a href="https://www.solarsystemscope.com/textures/" target="_blank" rel="noreferrer" data-explore-control className="pointer-events-auto hover:text-cyan-100/80">
+            Planetkart: Solar System Scope (CC BY 4.0), NASA
+          </a>
+          {' · Pluto: NASA/JHUAPL/SwRI'}
+        </p>
       </div>
 
       <div className="flex flex-col items-end gap-2 md:flex-row md:items-end phone:flex-col phone:items-end">
