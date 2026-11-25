@@ -1,5 +1,5 @@
 // Camera driver. Camera world pos = floating origin (km); camera object stays at render 0.
-// Scroll page: hold at pageStops (Bergen → Earth → Sgr A* → Milky Way → Andromeda), fly between them
+// Scroll page: hold at pageStops (Milky Way → Sgr A* → Lagoon → Earth → Bergen), fly between them
 // through the empty scroll gaps on a log-scale ("powers of ten") path.
 // /explore: free flight, speed ∝ altitude above nearest surface → log-feel travel.
 import { useEffect, useRef } from 'react'
@@ -35,6 +35,10 @@ import { AU_KM, GALAXY_AXES, GALAXY_CENTER_PC, PC_KM, SUN_RADIUS_KM, galaxyKpcTo
 
 const { pageStops, scroll: scrollConfig, explore: exploreConfig, transitionLerp } = spaceConfig.camera
 const EXPLORE_PATH = '/explore'
+// Bergen = the surface stop: explore spawn, wormhole exit, time-of-day scrub, background terrain preload.
+const HOME_INDEX = pageStops.findIndex((stop) => stop.type === 'surface')
+const HOME_STOP = pageStops[HOME_INDEX]
+const PRELOAD_FAR_RADII = spaceConfig.solarSystem.earthTerrain.activeRadii // camera farther from Earth → terrain loads Bergen instead
 const UP = new THREE.Vector3(0, 1, 0)
 const GALAXY_CENTER_KM = new THREE.Vector3(...GALAXY_CENTER_PC).multiplyScalar(PC_KM)
 const [STAR_NEAR_KM, STAR_FAR_KM] = exploreConfig.starInfluenceRangePc.map((pc) => pc * PC_KM)
@@ -210,6 +214,24 @@ function galaxyPose(stop, out) {
   return true
 }
 
+// Nebula: from its sun-facing side, azimuth about galactic north, elevation above that plane.
+function nebulaPose(stop, out) {
+  const d = nebulaDefs[stop.key]
+  if (!d) return false
+  const c = _e1.set(...raDecToScene(d.ra, d.dec, d.dist)).multiplyScalar(PC_KM)
+  const up = _e2.set(...GALAXY_AXES.z)
+  _toSun.copy(c).negate().normalize()
+  _right.crossVectors(_toSun, up).normalize()
+  const az = stop.azimuth * DEG
+  const el = stop.elevation * DEG
+  _dir.copy(_toSun).multiplyScalar(Math.cos(az)).addScaledVector(_right, Math.sin(az)).multiplyScalar(Math.cos(el)).addScaledVector(up, Math.sin(el)).normalize()
+  out.scale = d.radius * stop.distanceRadii * PC_KM
+  out.pos.copy(c).addScaledVector(_dir, out.scale)
+  out.look.copy(c)
+  out.up.copy(up)
+  return true
+}
+
 // ─── Sightings (via) ──
 // Center + view distance by type; camera sits beside the leg's line (offset sideways + a bit back) → glance, not collision.
 const nebulaDefs = Object.fromEntries(nebulae.map((d) => [d.key, d]))
@@ -256,7 +278,7 @@ function viaPose(via, from, to, out) {
 }
 const _viaPoses = Array.from({ length: 6 }, makePose)
 
-const POSE_BY_TYPE = { surface: surfacePose, body: bodyPose, blackhole: blackHolePose, galactic: galacticPose, galaxy: galaxyPose }
+const POSE_BY_TYPE = { surface: surfacePose, body: bodyPose, blackhole: blackHolePose, galactic: galacticPose, galaxy: galaxyPose, nebula: nebulaPose }
 
 const _orbitQ = new THREE.Quaternion()
 
@@ -359,10 +381,10 @@ function scrollPose(scrollY, out) {
       const end = Math.min(ranges[i][1], maxScroll)
       if (scrollY <= start) {
         const h = clamp01((scrollY - holdStart) / Math.max(start - holdStart, 1))
-        setHomeProgress(i === 0 ? h : 1)
+        setHomeProgress(i === HOME_INDEX ? h : i < HOME_INDEX ? 0 : 1)
         return stopPose(pageStops[i], out, h)
       }
-      setHomeProgress(1)
+      setHomeProgress(i < HOME_INDEX ? 0 : 1)
       if (scrollY < end) {
         if (!stopPose(pageStops[i], _poseA, 1) || !stopPose(pageStops[i + 1], _poseB, 0)) return false
         const t = clamp01((scrollY - start) / Math.max(end - start, 1))
@@ -378,7 +400,9 @@ function scrollPose(scrollY, out) {
       }
       holdStart = end
     }
-    return stopPose(pageStops[pageStops.length - 1], out, clamp01((scrollY - holdStart) / Math.max(maxScroll - holdStart, 1)))
+    const h = clamp01((scrollY - holdStart) / Math.max(maxScroll - holdStart, 1))
+    setHomeProgress(HOME_INDEX === pageStops.length - 1 ? h : 1)
+    return stopPose(pageStops[pageStops.length - 1], out, h)
   }
   // Fallback: chapter offsets only (before LongPage measured spacers).
   const raw = getChapterOffsets()
@@ -846,7 +870,7 @@ export function useScrollCamera(cameraRef, routePath) {
 
   const exitWormhole = (camera) => {
     const pose = poseRef.current
-    if (!stopPose(pageStops[0], pose)) return
+    if (!stopPose(HOME_STOP, pose)) return
     origin.copy(pose.pos)
     aimAt(camera, pose.look, true)
     camera.fov = baseFovRef.current + exploreConfig.wormholeFovKick
@@ -865,10 +889,10 @@ export function useScrollCamera(cameraRef, routePath) {
   const updateExplore = (camera, deltaSeconds) => {
     // Drain look even when paused → no stale deltas on resume.
     const look = consumeExploreLook()
-    // Fresh load on /explore: origin still 0 (inside sun) → place at first stop.
+    // Fresh load on /explore: origin still 0 (inside sun) → place at Bergen.
     if (!aimedRef.current) {
       const pose = poseRef.current
-      if (!stopPose(pageStops[0], pose)) return false
+      if (!stopPose(HOME_STOP, pose)) return false
       origin.copy(pose.pos)
       aimAt(camera, pose.look, true)
       aimedRef.current = true
@@ -963,7 +987,7 @@ export function useScrollCamera(cameraRef, routePath) {
     }
     origin.copy(next)
 
-    // Portal: darken toward horizon, cross → respawn at first stop out of a white-hole flash.
+    // Portal: darken toward horizon, cross → respawn at Bergen out of a white-hole flash.
     let approach = 0
     let crossed = false
     getDeepBodies().forEach((body) => {
@@ -993,7 +1017,7 @@ export function useScrollCamera(cameraRef, routePath) {
 
     const pose = poseRef.current
 
-    // Intro: hold on the Milky Way while loading (terrain preloads the stop via virtual eye), then glide in.
+    // Intro: hold on the Milky Way while loading, then glide in. (Bergen terrain preloads in background, see preloadHome.)
     const intro = introRef.current
     if (intro.phase !== 'done') {
       setMist(0)
@@ -1008,7 +1032,6 @@ export function useScrollCamera(cameraRef, routePath) {
         origin.copy(intro.from.pos)
         camera.quaternion.copy(intro.from.quat)
         setSceneVisible()
-        if (target) setTerrainFocus(pose.pos)
         if (target && isSceneLoadReady()) {
           intro.phase = 'glide'
           intro.glideT0 = now
@@ -1023,7 +1046,6 @@ export function useScrollCamera(cameraRef, routePath) {
       }
       if (t >= 1) {
         intro.phase = 'done'
-        setTerrainFocus(null)
         setIntroDone()
         aimedRef.current = true
         lastScrollYRef.current = window.scrollY || 0
@@ -1087,11 +1109,21 @@ export function useScrollCamera(cameraRef, routePath) {
     setScrollVelocity(scrollVelocityBlendRef.current)
   }
 
+  // Far from Earth on scroll pages → terrain loads Bergen (virtual eye) in background → ready on arrival.
+  // Near Earth → real camera drives tiles.
+  const homePoseRef = useRef(makePose())
+  const preloadHome = (explore) => {
+    const earth = findBody('earth')
+    const far = !explore && earth && origin.distanceTo(earth.position) > earth.radius * PRELOAD_FAR_RADII
+    setTerrainFocus(far && stopPose(HOME_STOP, homePoseRef.current, 0) ? homePoseRef.current.pos : null)
+  }
+
   const update = (deltaSeconds = 1 / 60) => {
     const camera = cameraRef.current
     if (!camera) return
 
     clearAppliedShake(camera)
+    preloadHome(isExploreRoute(routeRef.current))
 
     if (isExploreRoute(routeRef.current)) {
       setMist(0)

@@ -40,8 +40,8 @@ export const spaceConfig = {
       holdStart: 0.3,
       holdEnd: 0.95,
       // Empty scroll between chapters (LongPage spacers) = the journey, per gap (vh). Longer where more scales are crossed:
-      // Bergen→Earth ~4 decades, Earth→Sgr A* ~13 (3 sub-legs: 2 sightings), Sgr A*→Milky Way ~10, Milky Way→Andromeda ~1.
-      travelVh: [420, 840, 760, 600],
+      // Milky Way→Sgr A* ~10 decades, Sgr A*→Lagoon ~6, Lagoon→Earth ~12, Earth→Bergen ~4 (2 sub-legs: descent via).
+      travelVh: [760, 600, 560, 420],
       // While reading a page: scroll orbits the camera round the stop's subject (± deg, about stop up) → never static.
       orbitDeg: 12,
       // Camera follows a smoothed scroll position (1/s) → wheel steps glide instead of jump.
@@ -59,8 +59,8 @@ export const spaceConfig = {
       introSwayRate: 0.07,  // rad/s
       introGlideS: 9,
       introLookTurn: [0, 0.3],
-      // Earth spin offset in scroll mode → Bergen time follows the home-page scroll: real sunset → night → real sunrise
-      // (sun 2° above horizon, today's declination). Polar day/night → fallback hours. Later stops keep sunrise.
+      // Earth spin offset in scroll mode → Bergen time follows the Bergen-stop scroll: real sunset → night → real sunrise
+      // (sun 2° above horizon, today's declination). Polar day/night → fallback hours. Earlier stops keep sunset.
       homeTime: { lat: 60.39, lon: 5.32, sunAltDeg: 2, fallbackSet: 15, fallbackRise: 9 },
       // Scroll speed (fraction of page height / s) → full warp visual.
       velocityBoostThreshold: 2.2,
@@ -114,28 +114,24 @@ export const spaceConfig = {
     //   blackhole: deep body key, distanceRs, inclination (deg from disk normal), azimuth (deg in disk plane)
     //   galactic:  pos / look in galaxy kpc (gx → sun, gz = north galactic pole)
     //   galaxy:    neighbor key, distanceKpc, inclination (deg from disk normal), azimuth (deg)
+    //   nebula:    nebula key, distanceRadii, azimuth (deg from nebula→sun dir, about galactic north), elevation (deg)
     pageStops: [
-      // Bergen: spawn high over Byfjorden facing city + sunset side → while reading, glide west, turn toward city + sunrise side.
-      // Scroll also scrubs Bergen's time of day: sunset → night → sunrise (scroll.homeTime).
+      { path: '/',         type: 'galactic',  pos: [30, -14, 32], look: [0, 0, 0] }, // whole Milky Way, from outside
+      { path: '/projects', type: 'blackhole', key: 'sgra', distanceRs: 30, inclination: 80, azimuth: 25 },
+      { path: '/journey',  type: 'nebula',    key: 'lagoon', distanceRadii: 2.6, azimuth: 40, elevation: 15 }, // red emission nebula
+      {
+        path: '/contact', type: 'body', body: 'earth', distance: 3.4, azimuth: 0.75, elevation: 0.2, lookShiftX: 0.5, lookShiftY: 0,
+        // Descent: over the fjord mouth, city below to the south-east.
+        via: [{ type: 'surface', lat: 60.44, lon: 5.235, alt: 9, heading: 145, pitch: -30, lookKm: 20 }],
+      },
+      // Bergen (last): arrive high over Byfjorden facing south over the city → while reading, small drift toward it, still facing south.
+      // Scroll also scrubs Bergen's time of day: sunset → night → sunrise (scroll.homeTime). Preloaded in background (far from Earth).
       {
         // heading 'sunset' / 'sunrise' = today's sun azimuth at that event, clamped to headingClamp → city always in frame,
         // sun/glow in frame when the season allows. High over Byfjorden → whole city in view, fewer fine tiles.
-        path: '/', type: 'surface', lat: 60.44, lon: 5.29, alt: 3.6, heading: 'sunset', headingClamp: [172, 188], pitch: -18, lookKm: 9, // over Byfjorden, N of Sandviken
-        hold: { lat: 60.414, lon: 5.252, alt: 3.0, heading: 'sunrise', headingClamp: [100, 145], pitch: -17, lookKm: 9 }, // W over Byfjorden, off Laksevåg
-        // Leaving: climb over the fjord mouth, city below to the south-east.
-        via: [{ type: 'surface', lat: 60.44, lon: 5.235, alt: 9, heading: 145, pitch: -30, lookKm: 20 }],
+        path: '/chat', type: 'surface', lat: 60.44, lon: 5.29, alt: 3.6, heading: 'sunset', headingClamp: [172, 188], pitch: -18, lookKm: 9, // over Byfjorden, N of Sandviken
+        hold: { lat: 60.43, lon: 5.3, alt: 3.3, heading: 178, pitch: -20, lookKm: 9 }, // ~1 km closer, city centre ahead
       },
-      {
-        path: '/projects', type: 'body', body: 'earth', distance: 3.4, azimuth: 0.75, elevation: 0.2, lookShiftX: 0.5, lookShiftY: 0,
-        // Sightings on the way to Sgr A* (each = a slow-down + glance, passed from the side).
-        via: [
-          { type: 'comet', key: 'encke', viewKm: 2.6e7 },
-          { type: 'nebula', key: 'lagoon', viewRadii: 2.6 },
-        ],
-      },
-      { path: '/journey',  type: 'blackhole', key: 'sgra', distanceRs: 30, inclination: 80, azimuth: 25 },
-      { path: '/contact',  type: 'galactic',  pos: [30, -14, 32], look: [0, 0, 0] }, // whole Milky Way
-      { path: '/chat',     type: 'galaxy',    key: 'm31', distanceKpc: 95, inclination: 55, azimuth: 20 }, // Andromeda
     ],
   },
 

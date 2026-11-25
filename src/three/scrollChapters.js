@@ -24,7 +24,7 @@ export function getTravelRanges() {
   return _travel
 }
 
-// Home-stop progress 0..1 (Fløyen → Løvstakken hold; 1 once past it). Drives Bergen's scroll-mode time of day.
+// Bergen-stop progress 0..1 (0 before it, hold 0 → 1, 1 after). Drives Bergen's scroll-mode time of day.
 let _home = 0
 
 export function setHomeProgress(value) {

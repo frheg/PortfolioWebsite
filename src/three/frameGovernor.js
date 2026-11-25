@@ -15,6 +15,11 @@ export function queueUpload(fn, textures) {
   jobs.push({ fn, textures })
 }
 
+/** Upload textures to the GPU now (drawables that stay hidden for a while, e.g. preloaded terrain). */
+export function preuploadTextures(textures) {
+  textures.forEach((t) => t && rendererRef?.initTexture(t))
+}
+
 function flushJobs() {
   for (let n = 0; n < cfg.uploadsPerFrame && jobs.length; n += 1) {
     const job = jobs.shift()

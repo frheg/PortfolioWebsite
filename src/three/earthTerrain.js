@@ -4,6 +4,7 @@
 // Imagery: EOX Sentinel-2 cloudless (CC BY-NC-SA 4.0) ≤ z9, Esri World Imagery beyond (sub-meter).
 // Elevation: AWS Terrain Tiles (Terrarium) + per-pixel normal maps.
 import * as THREE from 'three'
+import { preuploadTextures } from './frameGovernor'
 import { spaceConfig } from './spaceConfig'
 import { createSurfaceMaterial } from './bodyLod'
 import { origin } from './floatingOrigin'
@@ -36,7 +37,7 @@ let focusEye = null
 export function setTerrainFocus(worldPos) {
   focusEye = worldPos
 }
-// Loading gate: tiles wanted but not ready (+ buildings in flight). Read by sceneLoadingManager.
+// Tile load counters (wanted-not-ready + buildings in flight). Debug: getTerrainLoadState().
 const loadState = { active: false, pending: 0, loaded: 0, fetched: 0 } // fetched: cumulative tiles ready (only grows)
 export function getTerrainLoadState() {
   return loadState
@@ -137,6 +138,7 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
       if (t.state !== 'loading') continue
       t.mesh.visible = false
       group.add(t.mesh)
+      preuploadTextures([t.texture, t.normalTexture]) // group may be hidden (preload) → no upload burst on arrival
       t.state = 'ready'
     }
   }
@@ -379,9 +381,11 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     const active = distWorld < R * cfg.activeRadii
     terrainActive = active
     if (!active) loadState.active = false
-    group.visible = active
-    // Sink base sphere under tiles while active.
-    earth.mesh.scale.setScalar(active ? R - cfg.baseSinkKm : R)
+    // Preload (virtual eye): tiles load but stay hidden → no draw cost from afar.
+    const shown = active && !focusEye
+    group.visible = shown
+    // Sink base sphere under tiles while shown.
+    earth.mesh.scale.setScalar(shown ? R - cfg.baseSinkKm : R)
     if (!active) {
       buildings.update(_camLocal, Infinity) // drops all
       return
