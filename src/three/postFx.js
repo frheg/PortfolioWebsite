@@ -1,6 +1,7 @@
 // HDR post chain. Scene → float target (+depth) → [atmospheres] → [lens] → bloom → composite → screen.
 // Composite: radial warp streaks (fast flight) + tone mapping + sRGB. Passes ping-pong two float targets.
 import * as THREE from 'three'
+import { getRenderScale } from './frameGovernor'
 import { spaceConfig } from './spaceConfig'
 
 const cfg = spaceConfig.postFx
@@ -148,8 +149,11 @@ export function createPostFx(quality) {
   const black = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1)
   black.needsUpdate = true
 
+  // Internal res = canvas × dynamic render scale. Canvas never resizes for it; composite upscales.
   const resize = (renderer) => {
     renderer.getDrawingBufferSize(size)
+    const scale = getRenderScale()
+    size.set(Math.max(1, Math.round(size.x * scale)), Math.max(1, Math.round(size.y * scale)))
     if (quality.msaa !== samples) {
       samples = quality.msaa
       sceneTarget.dispose()

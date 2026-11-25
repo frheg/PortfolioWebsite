@@ -27,6 +27,8 @@ export const spaceConfig = {
       maxUpHoldS: 60,
       uploadsPerFrame: 2, // queued drawables made live per frame
     },
+    // Scroll pages at rest → capped fps. Any scroll / camera turn → full rate.
+    idle: { fps: 30, afterS: 1.5, maxTurnRadS: 0.003 },
   },
 
   camera: {
@@ -38,8 +40,8 @@ export const spaceConfig = {
       holdStart: 0.3,
       holdEnd: 0.95,
       // Empty scroll between chapters (LongPage spacers) = the journey, per gap (vh). Longer where more scales are crossed:
-      // Bergen→Earth ~4 decades, Earth→Sgr A* ~13, Sgr A*→Milky Way ~10, Milky Way→Andromeda ~1.
-      travelVh: [420, 1400, 760, 600],
+      // Bergen→Earth ~4 decades, Earth→Sgr A* ~13 (3 sub-legs: 2 sightings), Sgr A*→Milky Way ~10, Milky Way→Andromeda ~1.
+      travelVh: [420, 840, 760, 600],
       // While reading a page: scroll orbits the camera round the stop's subject (± deg, about stop up) → never static.
       orbitDeg: 12,
       // Camera follows a smoothed scroll position (1/s) → wheel steps glide instead of jump.
@@ -113,22 +115,21 @@ export const spaceConfig = {
     //   galactic:  pos / look in galaxy kpc (gx → sun, gz = north galactic pole)
     //   galaxy:    neighbor key, distanceKpc, inclination (deg from disk normal), azimuth (deg)
     pageStops: [
-      // Bergen: spawn on Fløyen looking west (sunset) → while reading, glide to Løvstakken looking east (sunrise).
+      // Bergen: spawn high over Byfjorden facing city + sunset side → while reading, glide west, turn toward city + sunrise side.
       // Scroll also scrubs Bergen's time of day: sunset → night → sunrise (scroll.homeTime).
       {
-        // heading 'sunset' / 'sunrise' = today's sun azimuth at that event (+ headingOffset) → sun always in frame.
-        path: '/', type: 'surface', lat: 60.3962, lon: 5.3405, alt: 0.52, heading: 'sunset', headingOffset: -14, pitch: -3, lookKm: 8, // Fløyen
-        hold: { lat: 60.3668, lon: 5.3262, alt: 0.66, heading: 'sunrise', headingOffset: -14, pitch: -3, lookKm: 8 }, // Løvstakken
-        // Leaving: over Byfjorden looking south toward south Bergen.
-        via: [{ type: 'surface', lat: 60.432, lon: 5.268, alt: 1.9, heading: 162, pitch: -15, lookKm: 10 }],
+        // heading 'sunset' / 'sunrise' = today's sun azimuth at that event, clamped to headingClamp → city always in frame,
+        // sun/glow in frame when the season allows. High over Byfjorden → whole city in view, fewer fine tiles.
+        path: '/', type: 'surface', lat: 60.44, lon: 5.29, alt: 3.6, heading: 'sunset', headingClamp: [172, 188], pitch: -18, lookKm: 9, // over Byfjorden, N of Sandviken
+        hold: { lat: 60.414, lon: 5.252, alt: 3.0, heading: 'sunrise', headingClamp: [100, 145], pitch: -17, lookKm: 9 }, // W over Byfjorden, off Laksevåg
+        // Leaving: climb over the fjord mouth, city below to the south-east.
+        via: [{ type: 'surface', lat: 60.44, lon: 5.235, alt: 9, heading: 145, pitch: -30, lookKm: 20 }],
       },
       {
         path: '/projects', type: 'body', body: 'earth', distance: 3.4, azimuth: 0.75, elevation: 0.2, lookShiftX: 0.5, lookShiftY: 0,
         // Sightings on the way to Sgr A* (each = a slow-down + glance, passed from the side).
         via: [
           { type: 'comet', key: 'encke', viewKm: 2.6e7 },
-          { type: 'sun', viewRadii: 16 },
-          { type: 'point', ra: 219.8957, dec: -60.8383, distPc: 1.3246, viewAU: 120 }, // Alpha Centauri A + B (catalog coords)
           { type: 'nebula', key: 'lagoon', viewRadii: 2.6 },
         ],
       },
@@ -145,8 +146,8 @@ export const spaceConfig = {
     sun: { color: 0xf5e0dc, intensity: 6, decay: 0 }, // rosewater
   },
 
-  // Relay (worker/, Cloudflare free tier): live flights, cached satellites, multiplayer.
-  // Empty → planes + multiplayer off, satellites straight from CelesTrak. Set VITE_RELAY_URL in .env.local / .env.production.
+  // Relay (worker/, Cloudflare free tier): cached satellites, multiplayer.
+  // Empty → multiplayer off, satellites straight from CelesTrak. Set VITE_RELAY_URL in .env.local / .env.production.
   relay: {
     url: (import.meta.env.VITE_RELAY_URL ?? '').replace(/\/$/, ''),
   },
@@ -232,8 +233,16 @@ export const spaceConfig = {
       cancelAfterFrames: 30, // unwanted in-flight load → aborted
       maxInFlight: 12,
       maxInFlightMobile: 6,
-      lookaheadLevels: 2,   // prefetch under cam beyond next level
+      lookaheadLevels: 3,   // prefetch under cam beyond next level (when still)
+      lookaheadMaxKmS: 2,   // faster → no lookahead
       distanceFalloffKm: 40, // split threshold × (1 + dist / this)
+      grazingSplit: 0.8,    // × (1 + this·(1 − cos view angle to ground)) → horizon tiles coarser
+      offViewSplitScale: 4, // off-screen tiles: split threshold × this (kept coarse, ready for turning)
+      offViewMargin: 0.15,  // × half diagonal FOV
+      foveatedPriority: 1.5, // load order: dist × (1 + this · off-center)
+      offViewPriority: 6,   // load order: off-screen dist × this
+      moveCullS: 1.2,       // skip fetch if cam covers dist + tile size within this (passed before arriving)
+      moveCullMinZ: 7,      // coarser always fetched
       maxReliefKm: 3,       // horizon allowance for distant peaks
       workers: 3,
       workersMobile: 2,
@@ -247,23 +256,26 @@ export const spaceConfig = {
         radiusKmMobile: 2.5,
         imageryNearKm: 1.5,  // roof imagery z16 inside, z15 beyond
         maxInFlight: 4,
+        aheadPerAltKm: 1.3,  // ring center shifted toward view: alt × this ...
+        aheadMaxKm: 6,       // ... capped
+        moveCullS: 1.2,      // no new fetches if cam covers 2 tiles within this
       },
     },
     // Live satellites: CelesTrak GP groups → SGP4 (satellite.js) at simulated time.
     satellites: {
+      // Only the well-known (labeled) ones are drawn → clean sky. Groups = where CelesTrak lists them.
+      // Old full sets (visual, gps-ops, galileo, starlink lazy) dropped; relay still allows them.
       groups: [
         // opacity: far (whole globe in view) → near (≤ nearKm from Earth center) ramps to opacityNear.
-        { group: 'stations', color: 0xfab387, sizePx: 3.5, opacity: 0.7 },
-        { group: 'visual', color: 0xffffff, sizePx: 2, opacity: 0.35 },
-        { group: 'gps-ops', color: 0x89dceb, sizePx: 2, opacity: 0.4 },
-        { group: 'galileo', color: 0x94e2d5, sizePx: 2, opacity: 0.4 },
-        { group: 'starlink', color: 0xb4befe, sizePx: 1.5, opacity: 0.22, lazy: true, loadWithinKm: 60_000, mobileLimit: 2500 },
+        { group: 'stations', color: 0xfab387, sizePx: 3.5, opacity: 0.7, onlyLabeled: true },
+        { group: 'visual', color: 0xffffff, sizePx: 3, opacity: 0.6, onlyLabeled: true },
       ],
       opacityNearKm: 9000,  // from Earth center: closer → full opacity (in orbit, sats matter)
       labeled: [
         { key: 'iss', match: '^ISS \\(ZARYA\\)', name: 'ISS', facts: ['Den internasjonale romstasjonen', '~420 km høyde, ~7,66 km/s', 'Ett omløp ≈ 92 min', 'Bemannet siden 2000'] },
         { key: 'css', match: '^CSS \\(TIANHE\\)', name: 'Tiangong', facts: ['Kinas romstasjon', '~390 km høyde'] },
         { key: 'hst', match: '^HST$', name: 'Hubble', facts: ['Romteleskop, skutt opp 1990', '~530 km høyde'] },
+        { key: 'envisat', match: '^ENVISAT$', name: 'Envisat', facts: ['ESA-jordobservasjon, 8 tonn', 'Død siden 2012, ~770 km høyde'] },
       ],
       visibleKm: 400_000,   // from Earth center
       labelRangeKm: 60_000,
@@ -271,34 +283,6 @@ export const spaceConfig = {
       trackVisibleKm: 120_000,
       budget: 2500,         // SGP4 propagations per frame (rest extrapolated)
       budgetMobile: 900,
-    },
-    // Live ships: Fintraffic Digitraffic AIS (Finnish/Baltic waters), CC BY 4.0.
-    ships: {
-      baseUrl: 'https://meri.digitraffic.fi/api/ais/v1',
-      bbox: [53.5, 9, 66, 31], // lat0, lon0, lat1, lon1
-      maxAltKm: 1500,
-      pollMs: 60_000,
-      windowMs: 15 * 60_000, // positions newer than this
-      metaEveryMs: 10 * 60_000,
-      maxShips: 20_000,
-      sizePx: 4,
-      maxExtrapolateS: 900,
-      labelRangeKm: 25,
-      maxLabels: 20,
-      modelRangeKm: 80,     // instanced boats within this of camera
-      maxModels: 800,
-      modelMinPx: 14,       // boat length on screen ≥ this (icon-ish when far)
-    },
-    // Flights: OpenSky snapshot via relay (GitHub Actions, ~5 min) → dead-reckoned; else simulated routes.
-    flights: {
-      maxAltKm: 1500,
-      pollMs: 10_000,
-      maxExtrapolateS: 900, // snapshot age ≤ ~15 min (straight-line guess beyond the fix)
-      modelKm: 0.04,        // ~airliner length
-      modelMinPx: 16,
-      maxModels: 600,
-      labelRangeKm: 60,
-      maxLabels: 20,
     },
     // UFOs roam LEO-ish shell round Earth.
     ufo: {

@@ -4,14 +4,13 @@ import { useEffect, useRef, useSyncExternalStore } from 'react'
 import * as THREE from 'three'
 import { getPoiBodies, getSolarCollisionBodies, subscribePoiBodies } from '../three/solarSystemRuntime'
 import { origin } from '../three/floatingOrigin'
+import { getTravelRanges } from '../three/scrollChapters'
 import { planetFacts } from '../data/planetFacts'
 import { spaceConfig } from '../three/spaceConfig'
 import { collectEarthNames } from '../three/earthNames'
-import { collectShipLabels } from '../three/ships'
-import { collectFlightLabels } from '../three/flights'
 
 const NAME_POOL = 70
-const NAME_MARK = { city: '•', mountain: '▲', landmark: '◆', ship: '⛴', plane: '✈' }
+const NAME_MARK = { city: '•', mountain: '▲', landmark: '◆' }
 
 // One label per UFO instance.
 const ufoBase = planetFacts.find((p) => p.key === 'ufo')
@@ -29,6 +28,8 @@ const solarLabels = [
 const NAME_HIDE_START = 0.3 // × viewport height, disc radius
 const NAME_HIDE_END = 0.55
 const RANGE_FADE = 0.25     // last fraction of labelRange fades
+const SCROLL_CENTER = [0.3, 0.55] // scroll pages: label fades out from → to (× half screen) off center
+const SCROLL_CARD_VH = 0.6  // scroll pages: hidden while within this × vh of a chapter (card on screen)
 const FACTS_FULL_FACTOR = 5 // × radius (or factsRange × 0.4)
 const FACTS_SHOW_FACTOR = 12
 
@@ -122,8 +123,13 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
     else elementsRef.current.delete(key)
   }
 
+  // Scroll pages: only scrollLabel POIs (sightings, e.g. the comet). Explore: everything.
+  const scrollOnly = !isExplore
+  const shown = scrollOnly ? pois.filter((p) => p.scrollLabel) : pois
+  const hasLabels = !scrollOnly || shown.length > 0
+
   useEffect(() => {
-    if (!isExplore) return undefined
+    if (!hasLabels) return undefined
 
     const rel = new THREE.Vector3()
     const vec = new THREE.Vector3()
@@ -146,7 +152,7 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       })
     }
 
-    const place = (body, w, h, focalPx) => {
+    const place = (body, w, h, focalPx, gate = 1) => {
       const refs = elementsRef.current.get(body.key)
       if (!refs) return
       const { el, factsEl, nameEl } = refs
@@ -158,7 +164,7 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       const dist = rel.length()
       const range = body.labelRange ?? Infinity
       if (rel.dot(forward) <= 0 || dist > range) return hide()
-      let extra = body.labelVisibility ? body.labelVisibility(dist) : 1
+      let extra = (body.labelVisibility ? body.labelVisibility(dist) : 1) * gate
       if (!(body.bodyKey && body.bodyKey === focus.key)) extra *= 1 - focus.f
       if (extra <= 0.001) return hide()
 
@@ -167,6 +173,9 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       const sx = (vec.x * 0.5 + 0.5) * w
       const sy = (-vec.y * 0.5 + 0.5) * h - radiusPx - (body.kind === 'place' ? 1 : 6)
       if (sx < -120 || sx > w + 120 || sy < -120 || sy > h + 120) return hide()
+      // Scroll pages: only when looked right at (near screen center).
+      if (scrollOnly) extra *= 1 - smoothstep(SCROLL_CENTER[0], SCROLL_CENTER[1], Math.hypot(sx - w / 2, sy - h / 2) / (Math.min(w, h) / 2))
+      if (extra <= 0.001) return hide()
       const [nr, fr] = NEAR_RANGE[body.kind] ?? (body.radius > 0 ? [body.radius * 4, body.radius * 4000] : [1e6, 1e14])
       const n = nearness(dist, nr, fr)
       el.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -100%) scale(${(0.86 + 0.3 * n).toFixed(3)})`
@@ -200,13 +209,21 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
       const h = viewSize.y
       const focalPx = h / 2 / Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2)
       cam.getWorldDirection(forward)
+      if (scrollOnly) {
+        // Mid-travel only (no page card on screen): scroll well inside a gap, ≥ SCROLL_CARD_VH from either chapter.
+        const y = window.scrollY
+        const m = h * SCROLL_CARD_VH
+        const gate = getTravelRanges().some(([a, b]) => y > a + m && y < b - m) ? 1 : 0
+        getPoiBodies().forEach((body) => body.scrollLabel && place(body, w, h, focalPx, gate))
+        return
+      }
       updateFocus()
       getSolarCollisionBodies().forEach((body) => place(body, w, h, focalPx))
       getPoiBodies().forEach((body) => place(body, w, h, focalPx))
 
       // Dense names: only while Earth is (part of) the focus.
       const names =
-        focus.key === 'earth' || focus.f < 0.5 ? [...collectFlightLabels(cam, w, h), ...collectShipLabels(cam, w, h), ...collectEarthNames(cam, w, h)].slice(0, NAME_POOL) : []
+        focus.key === 'earth' || focus.f < 0.5 ? collectEarthNames(cam, w, h).slice(0, NAME_POOL) : []
       const earthWeight = focus.key === 'earth' ? 1 : 1 - focus.f
       poolRef.current.forEach((el, i) => {
         const item = names[i]
@@ -231,23 +248,23 @@ export default function PlanetLabels({ cameraRef, rendererRef, isExplore }) {
 
     frameId = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frameId)
-  }, [isExplore, cameraRef, rendererRef])
+  }, [hasLabels, scrollOnly, cameraRef, rendererRef])
 
-  if (!isExplore) return null
+  if (!hasLabels) return null
 
   return (
     <div className="pointer-events-none fixed inset-0 z-20 overflow-hidden" aria-hidden="true">
-      {solarLabels.map((item) => (
+      {!scrollOnly && solarLabels.map((item) => (
         <Label key={item.key} item={item} register={register} />
       ))}
-      {pois.map((item) => (
+      {shown.map((item) => (
         <Label key={item.key} item={item} register={register} />
       ))}
-      {Array.from({ length: NAME_POOL }, (_, i) => (
+      {!scrollOnly && Array.from({ length: NAME_POOL }, (_, i) => (
         <p
           key={`name_${i}`}
           ref={(el) => (poolRef.current[i] = el)}
-          className="absolute left-0 top-0 select-none whitespace-nowrap text-[0.62rem] font-medium tracking-[0.03em] text-white/85 data-[kind=water]:italic data-[kind=water]:text-sky-200/75 data-[kind=region]:uppercase data-[kind=region]:tracking-[0.3em] data-[kind=region]:text-white/65 data-[kind=ship]:text-cyan-100 data-[kind=plane]:text-amber-100"
+          className="absolute left-0 top-0 select-none whitespace-nowrap text-[0.62rem] font-medium tracking-[0.03em] text-white/85 data-[kind=water]:italic data-[kind=water]:text-sky-200/75 data-[kind=region]:uppercase data-[kind=region]:tracking-[0.3em] data-[kind=region]:text-white/65"
           style={{ opacity: 0, textShadow: '0 1px 3px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.6)' }}
         />
       ))}

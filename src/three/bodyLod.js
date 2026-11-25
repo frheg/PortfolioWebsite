@@ -2,6 +2,7 @@
 // Impostor + mesh share shadeBody() → swap pixel-identical, hysteresis only.
 // Dot ↔ impostor crossfade over a few px. Dot dims with phase (crescent = darker).
 import * as THREE from 'three'
+import { scaledPoints } from './frameGovernor'
 import { spaceConfig } from './spaceConfig'
 
 const lodCfg = spaceConfig.solarSystem.lod
@@ -367,15 +368,17 @@ function buildDot(def) {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3))
   const points = new THREE.Points(
     geometry,
-    new THREE.PointsMaterial({
-      size: def.beaconPx,
-      sizeAttenuation: false,
-      color: def.beaconColor,
-      map: getDotTexture(),
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-    })
+    scaledPoints(
+      new THREE.PointsMaterial({
+        size: def.beaconPx,
+        sizeAttenuation: false,
+        color: def.beaconColor,
+        map: getDotTexture(),
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      })
+    )
   )
   points.frustumCulled = false
   return points
@@ -399,7 +402,7 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
   const tint = { value: new THREE.Color(...(def.tint ?? [1, 1, 1])) }
   const tintMix = { value: def.tint ? 1 : 0 }
   const nightMap = { value: def.nightMap ?? null }
-  const nightGain = { value: def.nightMap ? (def.nightGain ?? 1) : 0 }
+  const nightGain = { value: def.nightMap || def.nightTexture ? (def.nightGain ?? 1) : 0 } // nightTexture: map arrives later (async)
   const sunDir = { value: new THREE.Vector3(1, 0, 0) }
   const mapUniform = { value: map }
   const time = { value: 0 }
@@ -522,5 +525,5 @@ export function createBodyLod(def, map, anchor, tiltGroup, ring = null) {
     }
   }
 
-  return { mesh, update, dispose, sunDir, nightMap, nightGain, sunGain }
+  return { mesh, update, dispose, sunDir, map: mapUniform, nightMap, nightGain, sunGain }
 }

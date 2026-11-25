@@ -1,4 +1,4 @@
-// Low-poly vehicle models (boats, planes). Unit length 1 along +x (bow / nose), +y up, +z starboard.
+// Low-poly vehicle models (multiplayer plane). Unit length 1 along +x (bow / nose), +y up, +z starboard.
 // Flat-shaded, non-indexed, vertex colors (grey levels → × per-instance color). Built once, shared.
 import * as THREE from 'three'
 
@@ -56,30 +56,6 @@ const HULL = [0.32, 0.32, 0.34]
 const DECK = [0.62, 0.6, 0.56]
 const WHITE = [0.95, 0.95, 0.95]
 const WINDOW = [0.12, 0.14, 0.18]
-
-let boat = null
-/** Ship: pointed bow hull, deck, aft bridge + funnel. ~90 tris. */
-export function getBoatGeometry() {
-  if (boat) return boat
-  const out = { pos: [], nor: [], col: [] }
-  const B = 0.085
-  // Hull: keel loop (narrow, low) → deck loop (wide).
-  const keel = [[-0.47, -0.05, -B * 0.6], [0.22, -0.05, -B * 0.6], [0.44, -0.04, 0], [0.22, -0.05, B * 0.6], [-0.47, -0.05, B * 0.6]]
-  const deck = [[-0.5, 0.03, -B], [0.24, 0.03, -B], [0.5, 0.035, 0], [0.24, 0.03, B], [-0.5, 0.03, B]]
-  prism(out, keel, deck, HULL)
-  // Deck plate (slightly above hull top → lighter).
-  const plate = deck.map(([x, , z]) => [x * 0.97, 0.031, z * 0.92])
-  prism(out, plate, plate.map(([x, , z]) => [x, 0.036, z]), DECK)
-  // Bridge (aft), window band, funnel.
-  box(out, -0.44, -0.27, 0.036, 0.11, -B * 0.85, B * 0.85, WHITE)
-  box(out, -0.275, -0.265, 0.085, 0.105, -B * 0.8, B * 0.8, WINDOW)
-  box(out, -0.47, -0.41, 0.11, 0.16, -0.022, 0.022, HULL)
-  // Cargo blocks.
-  box(out, -0.2, 0.0, 0.036, 0.07, -B * 0.7, B * 0.7, DECK)
-  box(out, 0.03, 0.2, 0.036, 0.07, -B * 0.65, B * 0.65, DECK)
-  boat = toGeometry(out)
-  return boat
-}
 
 let plane = null
 /** Airliner: fuselage, swept wings, tailplane, fin, 2 engines. Unit length (span ≈ 0.95). */

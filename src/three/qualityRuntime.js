@@ -1,9 +1,9 @@
 // Render quality presets. Auto-picked per device, user override persisted (localStorage), live-applied.
 // Three-free → pause menu (main bundle) can import it. Consumers read `quality` (mutated in place).
 const PRESETS = {
-  low: { pixelRatio: 1, msaa: 0, bloom: false, atmoSteps: 10, atmoLightSteps: 4, terrainSplitScale: 1.6 },
-  medium: { pixelRatio: 1.5, msaa: 0, bloom: true, atmoSteps: 14, atmoLightSteps: 5, terrainSplitScale: 1.2 },
-  high: { pixelRatio: 2, msaa: 4, bloom: true, atmoSteps: 20, atmoLightSteps: 6, terrainSplitScale: 1 },
+  low: { pixelRatio: 1, msaa: 0, bloom: false, atmoSteps: 10, terrainSplitScale: 1.6 },
+  medium: { pixelRatio: 1.5, msaa: 0, bloom: true, atmoSteps: 14, terrainSplitScale: 1.2 },
+  high: { pixelRatio: 2, msaa: 4, bloom: true, atmoSteps: 20, terrainSplitScale: 1 },
 }
 
 export const QUALITY_LEVELS = [

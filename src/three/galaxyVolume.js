@@ -4,6 +4,7 @@
 // - live: screen-space low-res march, only while flying fast at galactic scale.
 // Composite: dst = dst·T + E (premult emission, transmittance in alpha). Drawn in sky pass.
 import * as THREE from 'three'
+import { getRenderScale } from './frameGovernor'
 import { spaceConfig } from './spaceConfig'
 import { GALAXY, GALAXY_GLSL, stellarDensity } from './galaxyModel'
 import { GALAXY_AXES, PC_KM, sceneToGalaxyKpc } from './galaxyFrame'
@@ -255,7 +256,7 @@ export function createGalaxyVolume(isMobile) {
     _basis.multiplyMatrices(_camRot, _lens)
 
     if (compositeMat.uniforms.uMix.value > 0.002) {
-      const scale = isMobile ? cfg.liveScaleMobile : cfg.liveScale
+      const scale = (isMobile ? cfg.liveScaleMobile : cfg.liveScale) * getRenderScale()
       const size = renderer.getDrawingBufferSize(_bufSize)
       const w = Math.max(2, Math.round(size.x * scale))
       const h = Math.max(2, Math.round(size.y * scale))

@@ -11,10 +11,6 @@ ALLOWED_ORIGINS = "https://fredrichegland.no,https://www.fredrichegland.no,http:
 name = "ROOM"
 class_name = "Room"
 
-[[durable_objects.bindings]]
-name = "FLIGHTS"
-class_name = "Flights"
-
 # Free plan: SQLite-backed Durable Objects only.
 [[migrations]]
 tag = "v1"
@@ -23,3 +19,8 @@ new_sqlite_classes = ["Room"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Flights"]
+
+# Flights relay removed → delete the DO class + its stored snapshot.
+[[migrations]]
+tag = "v3"
+deleted_classes = ["Flights"]

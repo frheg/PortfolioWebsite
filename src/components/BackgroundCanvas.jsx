@@ -9,6 +9,9 @@ import { origin, syncAnchors } from '../three/floatingOrigin'
 import { frameTick } from '../three/frameGovernor'
 import { useRoutePath } from '../context/RouteContext'
 import PlanetLabels from './PlanetLabels'
+import { spaceConfig } from '../three/spaceConfig'
+
+const idleCfg = spaceConfig.renderer.idle
 
 export default function BackgroundCanvas() {
   const canvasRef = useRef(null)
@@ -27,6 +30,8 @@ export default function BackgroundCanvas() {
   solarSystemRef.current = solarSystem
   const galaxyRef = useRef(galaxy)
   galaxyRef.current = galaxy
+  const exploreRef = useRef(false)
+  exploreRef.current = routePath === '/explore'
 
   // Dev only: console/test handle → jump cam anywhere (explore, paused): __space.origin.set(...)
   useEffect(() => {
@@ -40,9 +45,20 @@ export default function BackgroundCanvas() {
   useEffect(() => {
     let animationId
     let lastTime = performance.now()
+    // Idle cap (scroll pages): no scroll + camera barely turning for a while → render at idle fps (fans, battery).
+    let lastScrollMs = 0
+    let stillS = 0
+    let prevQ = null
+    const onScroll = () => {
+      lastScrollMs = performance.now()
+      stillS = 0
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
     const animate = () => {
       animationId = requestAnimationFrame(animate)
       const now = performance.now()
+      const idle = !exploreRef.current && stillS > idleCfg.afterS && now - lastScrollMs > idleCfg.afterS * 1000
+      if (idle && now - lastTime < 1000 / idleCfg.fps - 3) return
       const rawDt = (now - lastTime) / 1000
       const deltaSeconds = Math.min(rawDt, 0.05)
       lastTime = now
@@ -51,7 +67,7 @@ export default function BackgroundCanvas() {
       const camera = cameraRef.current
       const renderer = rendererRef.current
       if (!scene || !camera || !renderer) return
-      frameTick(rawDt, renderer) // upload queue + dynamic resolution
+      frameTick(rawDt, renderer, idle) // upload queue + dynamic resolution (idle-capped frames aren't a perf signal)
 
       solarSystemRef.current.update?.(deltaSeconds, camera)
       scrollCamRef.current.update?.(deltaSeconds)
@@ -60,9 +76,21 @@ export default function BackgroundCanvas() {
       galaxyRef.current.update?.(deltaSeconds, camera, renderer)
 
       galaxyRef.current.render?.(renderer, scene, camera, deltaSeconds)
+
+      // Turn rate (rad/s) → still?
+      if (prevQ) {
+        const turn = prevQ.angleTo(camera.quaternion) / Math.max(rawDt, 1e-3)
+        stillS = turn < idleCfg.maxTurnRadS ? stillS + rawDt : 0
+        prevQ.copy(camera.quaternion)
+      } else {
+        prevQ = camera.quaternion.clone()
+      }
     }
     animate()
-    return () => cancelAnimationFrame(animationId)
+    return () => {
+      cancelAnimationFrame(animationId)
+      window.removeEventListener('scroll', onScroll)
+    }
   }, [sceneRef, cameraRef, rendererRef]) // stable deps only
 
   return (

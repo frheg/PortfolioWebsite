@@ -11,6 +11,7 @@ const cfg = spaceConfig.solarSystem.earthTerrain.buildings
 const terrainCfg = spaceConfig.solarSystem.earthTerrain
 const Z = 14
 const _dir = new THREE.Vector3()
+const _fwd = new THREE.Vector3()
 
 let buildingsActive = false
 /** HUD: OSM attribution while buildings render. */
@@ -98,8 +99,8 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
     tiles.delete(key)
   }
 
-  /** camLocal: Earth-local km. camAlt: km above sea level. */
-  const update = (camLocal, camAlt) => {
+  /** camLocal: Earth-local km. camAlt: km above sea level. speed: km/s. viewDir: Earth-local unit (or null). */
+  const update = (camLocal, camAlt, speed = 0, viewDir = null) => {
     const on = Boolean(urlTemplate) && camAlt < cfg.maxAltKm
     buildingsActive = false
     if (on) for (const t of tiles.values()) if (t.state === 'ready') buildingsActive = true
@@ -107,7 +108,13 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
       tiles.forEach((t, k) => drop(k, t))
       return
     }
+    // Ring center: ground point the cam looks toward (high + oblique → city ahead, not below).
     const d = _dir.copy(camLocal).normalize()
+    if (viewDir) {
+      _fwd.copy(viewDir).addScaledVector(d, -viewDir.dot(d))
+      const len = _fwd.length()
+      if (len > 1e-3) d.multiplyScalar(R).addScaledVector(_fwd, Math.min(camAlt * cfg.aheadPerAltKm, cfg.aheadMaxKm) / len).normalize()
+    }
     const lat = Math.asin(d.y)
     const lon = Math.atan2(-d.z, d.x)
     const n = 1 << Z
@@ -131,7 +138,10 @@ export function createBuildings(group, sunDir, planetCenter, R, isMobile) {
     }
     wanted.sort((a, b) => a.distKm - b.distKm)
     const keep = new Set(wanted.map((w) => w.key))
+    // Fast → tiles passed before they arrive → no new fetches.
+    const fetching = speed * cfg.moveCullS < tileKm * 2
     for (const w of wanted) {
+      if (!fetching) break
       if (tiles.has(w.key) || inFlight >= cfg.maxInFlight) continue
       const id = nextId++
       const t = { state: 'loading', mesh: null }

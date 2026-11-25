@@ -126,7 +126,8 @@ function surfacePose(stop, out) {
   const up = _e1.set(Math.cos(la) * Math.cos(lo), Math.sin(la), -Math.cos(la) * Math.sin(lo)).applyQuaternion(earth.frameQ)
   const east = _e2.set(-Math.sin(lo), 0, -Math.cos(lo)).applyQuaternion(earth.frameQ)
   const north = _e3.crossVectors(up, east)
-  const headingDeg = typeof stop.heading === 'string' ? sunEventAzimuth(stop.heading, stop.lat) + (stop.headingOffset ?? 0) : stop.heading
+  let headingDeg = typeof stop.heading === 'string' ? sunEventAzimuth(stop.heading, stop.lat) + (stop.headingOffset ?? 0) : stop.heading
+  if (stop.headingClamp) headingDeg = Math.min(stop.headingClamp[1], Math.max(stop.headingClamp[0], headingDeg))
   const h = headingDeg * DEG
   const pt = stop.pitch * DEG
   _dir.copy(north).multiplyScalar(Math.cos(h)).addScaledVector(east, Math.sin(h)).multiplyScalar(Math.cos(pt)).addScaledVector(up, Math.sin(pt))

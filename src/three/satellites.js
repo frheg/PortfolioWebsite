@@ -9,6 +9,7 @@ import { spaceConfig } from './spaceConfig'
 import { origin } from './floatingOrigin'
 import { getSimulatedDateMs } from './ephemerisTime'
 import { setPoiGroup } from './solarSystemRuntime'
+import { scaledPoints } from './frameGovernor'
 
 const cfg = spaceConfig.solarSystem.satellites
 const CACHE_MS = 6 * 3600 * 1000
@@ -68,10 +69,17 @@ export function createSatellites(earth, isMobile) {
   earth.tiltGroup.add(root)
   const sets = []
   const named = [] // { rec, poi, local: Vector3 }
+  const seen = new Set() // NORAD ids drawn
   let disposed = false
 
   const addSet = (def, omms) => {
-    const list = isMobile && def.mobileLimit ? omms.slice(0, def.mobileLimit) : omms
+    // Groups overlap (ISS in stations + visual) → each sat once.
+    const wanted = omms.filter(
+      (o) => !seen.has(o.NORAD_CAT_ID) && (!def.onlyLabeled || cfg.labeled.some((spec) => new RegExp(spec.match).test(o.OBJECT_NAME)))
+    )
+    wanted.forEach((o) => seen.add(o.NORAD_CAT_ID))
+    const list = isMobile && def.mobileLimit ? wanted.slice(0, def.mobileLimit) : wanted
+    if (!list.length) return
     const recs = []
     const names = []
     for (const omm of list) {
@@ -94,17 +102,19 @@ export function createSatellites(earth, isMobile) {
     geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6)
     const points = new THREE.Points(
       geometry,
-      new THREE.PointsMaterial({
-        color: def.color,
-        size: def.sizePx,
-        opacity: def.opacity ?? 1,
-        sizeAttenuation: false,
-        map: getDot(),
-        vertexColors: true,
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-      })
+      scaledPoints(
+        new THREE.PointsMaterial({
+          color: def.color,
+          size: def.sizePx,
+          opacity: def.opacity ?? 1,
+          sizeAttenuation: false,
+          map: getDot(),
+          vertexColors: true,
+          transparent: true,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        })
+      )
     )
     points.frustumCulled = false
     root.add(points)

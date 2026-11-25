@@ -1,10 +1,15 @@
 // Planet atmosphere = post pass (needs scene depth → haze stops at mountains, not sea level).
 // Single scattering, Rayleigh + Mie, sun shadowed by planet. out = scene·T(rgb) + inscatter.
 // Math in planet-radius units relative to planet center (float32-safe near & far).
+// Sun-ray optical depth from a lookup table (precomputed once per planet, CPU) → no inner march per sample.
 import * as THREE from 'three'
 import { FULLSCREEN_VERT } from './postFx'
 import { origin } from './floatingOrigin'
 import { spaceConfig } from './spaceConfig'
+
+const LUT_W = 128 // cos sun zenith
+const LUT_H = 64 // altitude
+const LUT_STEPS = 64
 
 const FRAG = /* glsl */ `
 uniform sampler2D uSrc;
@@ -23,8 +28,15 @@ uniform mat3 uViewBasis;   // dir = basis · (ndc, 1)
 uniform vec2 uTan;
 uniform float uLogFar;     // log2(far + 1)
 uniform int uSteps;
-uniform int uLightSteps;
+uniform sampler2D uTransLut; // rg = Rayleigh / Mie optical depth (km) to top of atmosphere
 varying vec2 vUv;
+
+// LUT coords: x = cos(sun zenith) (sqrt-warped → fine near horizon), y = sqrt(altitude / top). Texel centers.
+vec2 lutUv(float hKm, float mu) {
+  float x = 0.5 + 0.5 * sign(mu) * sqrt(abs(mu));
+  float y = sqrt(clamp(hKm / ((uTop - 1.0) * uR), 0.0, 1.0));
+  return (vec2(x, y) * vec2(${LUT_W - 1}.0, ${LUT_H - 1}.0) + 0.5) / vec2(${LUT_W}.0, ${LUT_H}.0);
+}
 
 vec2 sphere(vec3 ro, vec3 rd, float r) {
   float b = dot(ro, rd);
@@ -72,18 +84,8 @@ void main() {
     odM += dM;
     // Light ray to sun. Blocked by planet → no direct light.
     if (sphere(p, uSunDir, 1.0).x > 0.0) continue;
-    float tl = sphere(p, uSunDir, uTop).y;
-    float dl = tl / float(uLightSteps);
-    float lR = 0.0;
-    float lM = 0.0;
-    for (int j = 0; j < 12; j++) {
-      if (j >= uLightSteps) break;
-      vec3 q = p + uSunDir * ((float(j) + 0.5) * dl);
-      float hq = (length(q) - 1.0) * uR;
-      lR += exp(-hq / uHr) * dl * uR;
-      lM += exp(-hq / uHm) * dl * uR;
-    }
-    vec3 tau = uBetaR * (odR + lR) + uBetaM * 1.1 * (odM + lM);
+    vec2 l = texture2D(uTransLut, lutUv(max(h, 0.0), dot(p, uSunDir) / length(p))).rg;
+    vec3 tau = uBetaR * (odR + l.x) + uBetaM * 1.1 * (odM + l.y);
     vec3 att = exp(-tau);
     sumR += att * dR;
     sumM += att * dM;
@@ -100,12 +102,48 @@ void main() {
 }
 `
 
+// Transmittance LUT: optical depth (Rayleigh, Mie; km) from altitude h toward cos-zenith mu, to atmosphere top.
+// Exact march, once per planet (few ms). Half float RG → linear filtering everywhere (WebGL2 core).
+function buildTransLut(R, atmo) {
+  const top = R + atmo.height
+  const data = new Uint16Array(LUT_W * LUT_H * 2)
+  for (let j = 0; j < LUT_H; j += 1) {
+    const y = j / (LUT_H - 1)
+    const r = R + y * y * atmo.height
+    for (let i = 0; i < LUT_W; i += 1) {
+      const m = (i / (LUT_W - 1) - 0.5) * 2
+      const mu = Math.sign(m) * m * m
+      // Distance to top along ray from (0, r), direction (√(1−mu²), mu).
+      const b = r * mu
+      const len = -b + Math.sqrt(Math.max(0, b * b - (r * r - top * top)))
+      const ds = len / LUT_STEPS
+      let odR = 0
+      let odM = 0
+      for (let k = 0; k < LUT_STEPS; k += 1) {
+        const t = (k + 0.5) * ds
+        // Through the planet (shadowed anyway) → clamp h ≥ 0, stays finite.
+        const hk = Math.max(0, Math.hypot(Math.sqrt(1 - mu * mu) * t, r + mu * t) - R)
+        odR += Math.exp(-hk / atmo.Hr) * ds
+        odM += Math.exp(-hk / atmo.Hm) * ds
+      }
+      const o = (j * LUT_W + i) * 2
+      data[o] = THREE.DataUtils.toHalfFloat(Math.min(odR, 6e4))
+      data[o + 1] = THREE.DataUtils.toHalfFloat(Math.min(odM, 6e4))
+    }
+  }
+  const tex = new THREE.DataTexture(data, LUT_W, LUT_H, THREE.RGFormat, THREE.HalfFloatType)
+  tex.minFilter = THREE.LinearFilter
+  tex.magFilter = THREE.LinearFilter
+  tex.needsUpdate = true
+  return tex
+}
+
 const _rel = new THREE.Vector3()
 const _fwd = new THREE.Vector3()
 const _camRot = new THREE.Matrix3()
 const _lens = new THREE.Matrix3()
 
-function createPass(atmo) {
+function createPass(atmo, R) {
   return new THREE.ShaderMaterial({
     vertexShader: FULLSCREEN_VERT,
     fragmentShader: FRAG,
@@ -128,14 +166,14 @@ function createPass(atmo) {
       uTan: { value: new THREE.Vector2() },
       uLogFar: { value: 1 },
       uSteps: { value: 16 },
-      uLightSteps: { value: 6 },
+      uTransLut: { value: buildTransLut(R, atmo) },
     },
   })
 }
 
 /**
  * Bodies: solar collision entries with .atmosphere. Returns passes for visible ones (≤ max).
- * quality: { atmoSteps, atmoLightSteps }.
+ * quality: { atmoSteps }.
  */
 export function createAtmospheres() {
   const cache = new Map() // key → material
@@ -161,7 +199,7 @@ export function createAtmospheres() {
 
     return active.slice(0, spaceConfig.postFx.maxAtmospheres).map(({ body }) => {
       let material = cache.get(body.key)
-      if (!material) cache.set(body.key, (material = createPass(body.atmosphere)))
+      if (!material) cache.set(body.key, (material = createPass(body.atmosphere, body.radius)))
       const u = material.uniforms
       u.uCenter.value.subVectors(body.position, origin)
       u.uR.value = body.radius
@@ -171,7 +209,6 @@ export function createAtmospheres() {
       u.uTan.value.set(tanY * camera.aspect, tanY)
       u.uLogFar.value = Math.log2(camera.far + 1)
       u.uSteps.value = quality.atmoSteps
-      u.uLightSteps.value = quality.atmoLightSteps
       return {
         material,
         prepare(src, depth) {
@@ -182,7 +219,11 @@ export function createAtmospheres() {
     })
   }
 
-  const dispose = () => cache.forEach((m) => m.dispose())
+  const dispose = () =>
+    cache.forEach((m) => {
+      m.uniforms.uTransLut.value.dispose()
+      m.dispose()
+    })
 
   return { collect, dispose }
 }

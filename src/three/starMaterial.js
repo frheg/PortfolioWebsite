@@ -2,6 +2,7 @@
 // Relative-to-eye: cam pos split hi/lo per chunk → subtraction exact near cam, no jitter at any range.
 // Brightness from apparent magnitude. Fades out once own disc ≥ few px (body LOD takes over).
 import * as THREE from 'three'
+import { getRenderScale } from './frameGovernor'
 import { spaceConfig } from './spaceConfig'
 import { PC_KM } from './galaxyFrame'
 import { origin } from './floatingOrigin'
@@ -126,5 +127,5 @@ export function createStarPoints(geometry, chunkOriginPc) {
 // Per-frame shared lens params. Call once per frame before render.
 export function updateStarUniforms(camera, renderer) {
   starUniforms.uFocalPx.value = window.innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)
-  starUniforms.uPixelRatio.value = renderer.getPixelRatio()
+  starUniforms.uPixelRatio.value = renderer.getPixelRatio() * getRenderScale() // scene target px
 }

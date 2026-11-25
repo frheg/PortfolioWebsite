@@ -9,9 +9,8 @@ import { createSurfaceMaterial } from './bodyLod'
 import { origin } from './floatingOrigin'
 import { quality } from './qualityRuntime'
 import { createBuildings } from './buildings'
-import { createShips } from './ships'
-import { createFlights } from './flights'
 import { tileFetch } from './tileStore'
+import { getActiveCamera } from './cameraRuntime'
 
 const cfg = spaceConfig.solarSystem.earthTerrain
 
@@ -27,6 +26,9 @@ const _m4 = new THREE.Matrix4()
 const _qi = new THREE.Quaternion()
 const _v = new THREE.Vector3()
 const _camLocal = new THREE.Vector3()
+const _prevLocal = new THREE.Vector3()
+const _viewDir = new THREE.Vector3()
+const _toTile = new THREE.Vector3()
 
 let terrainActive = false
 // Virtual eye (world km) for tile selection, e.g. intro preloading the home stop while the camera is far away.
@@ -80,8 +82,6 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
   group.visible = false
   earth.tiltGroup.add(group)
   const buildings = createBuildings(group, earth.lod.sunDir, earth.anchor.position, R, isMobile)
-  const ships = createShips(group, R, earth.lod.sunDir, earth.anchor.position)
-  const flights = createFlights(group, R, earth.lod.sunDir, earth.anchor.position)
 
   // Pool: decode + normal maps are CPU-heavy → spread over cores. Same-parent tiles → same worker (cache hits).
   const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 4
@@ -294,11 +294,34 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
 
   const surfaceDist = (t) => Math.max(t.center.distanceTo(_camLocal) - t.radius, 0.05)
 
-  // Texel > split px → refine. Far tiles (hazed, grazing) need less: threshold grows with distance.
+  // ─── view + motion (Cesium-style tricks) ───
+  let camSpeed = 0 // Earth-local km/s, smoothed
+  let lastSpeedMs = 0
+  let viewValid = false
+  let halfDiag = Math.PI / 2
+
+  // Angle off view center / half diagonal: < 1 on screen, > 1 off screen. No view (virtual eye) → 0.
+  const offCenter = (t) => {
+    if (!viewValid) return 0
+    _toTile.subVectors(t.center, _camLocal)
+    const d = _toTile.length()
+    if (d <= t.radius) return 0
+    const ang = Math.acos(Math.min(1, Math.max(-1, _toTile.dot(_viewDir) / d))) - Math.asin(Math.min(1, t.radius / d))
+    return Math.max(0, ang) / halfDiag
+  }
+
+  // Fast cam: this tile is passed before it arrives → don't fetch (coarse levels always fetched).
+  const passedBeforeLoad = (t) => t.z > cfg.moveCullMinZ && camSpeed * cfg.moveCullS > surfaceDist(t) + t.groundKm
+
+  // Texel > split px → refine. Less detail where it can't be seen well:
+  // far (haze), grazing (foreshortened), off screen (only there for turning).
   const wantsSplit = (t) => {
     if (t.z >= maxZ) return false
     const d = surfaceDist(t)
-    const threshold = splitPx * quality.terrainSplitScale * (1 + d / cfg.distanceFalloffKm)
+    const cosG = Math.max(0, _toTile.subVectors(_camLocal, t.center).normalize().dot(_v.copy(t.center).normalize()))
+    const off = offCenter(t) > 1 + cfg.offViewMargin
+    const threshold =
+      splitPx * quality.terrainSplitScale * (1 + d / cfg.distanceFalloffKm) * (1 + cfg.grazingSplit * (1 - cosG)) * (off ? cfg.offViewSplitScale : 1)
     return ((t.groundKm / 256) / d) * focal > threshold
   }
 
@@ -318,7 +341,9 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
       })
       // Lookahead: kid nearest cam → queue its kids too (+ next level) → sharp tiles start early.
       let near = kids.reduce((a, c) => (c.center.distanceTo(_camLocal) < a.center.distanceTo(_camLocal) ? c : a))
-      for (let depth = 0; depth < cfg.lookaheadLevels && wantsSplit(near); depth += 1) {
+      // Still → look deeper (target detail loads in parallel, not level by level). Fast → none (wasted).
+      const ahead = camSpeed > cfg.lookaheadMaxKmS ? 0 : cfg.lookaheadLevels
+      for (let depth = 0; depth < ahead && wantsSplit(near); depth += 1) {
         const grand = children(near)
         grand.forEach((g) => {
           g.lastUsed = frame
@@ -367,12 +392,21 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     normalRot.value.setFromMatrix4(_m4.makeRotationFromQuaternion(_q))
     _camLocal.subVectors(eye, earth.world).applyQuaternion(_qi)
     camDist = _camLocal.length()
+    const dtS = Math.min(0.25, Math.max(1e-3, (nowMs - lastSpeedMs) / 1000))
+    camSpeed += (_prevLocal.distanceTo(_camLocal) / dtS - camSpeed) * (lastSpeedMs ? 0.25 : 1)
+    if (!lastSpeedMs || dtS >= 0.25) camSpeed = 0 // first frame / stall → no fake speed
+    lastSpeedMs = nowMs
+    _prevLocal.copy(_camLocal)
+    // View dir in Earth-local. Virtual eye (preload) has none → all directions equal.
+    const cam = focusEye ? null : getActiveCamera()
+    viewValid = Boolean(cam)
+    if (cam) {
+      cam.getWorldDirection(_viewDir).applyQuaternion(_qi)
+      const tanY = Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2)
+      halfDiag = Math.atan(tanY * Math.hypot(1, cam.aspect))
+    }
     horizonCos = R / camDist
-    buildings.update(_camLocal, camDist - R)
-    // Live traffic only for the real camera (virtual-eye preload would draw them from light-years away).
-    const far = focusEye !== null
-    ships.update(_camLocal, far ? Infinity : camDist - R, focalPx)
-    flights.update(_camLocal, far ? Infinity : camDist - R, focalPx)
+    buildings.update(_camLocal, camDist - R, camSpeed, viewValid ? _viewDir : null)
     focal = focalPx * pixelRatio() // SSE in device px (HiDPI → finer tiles)
 
     visible.length = 0
@@ -395,10 +429,17 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     })
 
     // Load: nearest surface first (big ancestors count as near → still load early), then coarse.
-    const ordered = [...queue].sort((a, b) => surfaceDist(a) - surfaceDist(b) || a.z - b.z)
+    // Foveated: screen center first, off-screen last.
+    const ordered = [...queue]
+    ordered.forEach((t) => {
+      const c = offCenter(t)
+      t.prio = surfaceDist(t) * (c > 1 ? cfg.offViewPriority : 1 + cfg.foveatedPriority * c)
+    })
+    ordered.sort((a, b) => a.prio - b.prio || a.z - b.z)
     let rank = 0
     for (const t of ordered) {
       if (inFlight >= maxInFlight) break
+      if (passedBeforeLoad(t)) continue
       request(t, rank < cfg.highPriorityLoads)
       rank += 1
     }
@@ -483,8 +524,6 @@ export function createEarthTerrain(earth, isMobile, maxAnisotropy = 8, pixelRati
     if (import.meta.env.DEV) delete window.__earth
     workers.forEach((w) => w.terminate())
     buildings.dispose()
-    ships.dispose()
-    flights.dispose()
     ;[...tiles.values()].forEach(disposeTile)
     earth.tiltGroup.remove(group)
     earth.mesh.scale.setScalar(R)

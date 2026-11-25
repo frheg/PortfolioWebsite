@@ -6,6 +6,8 @@ import { spaceConfig, AU_KM } from './spaceConfig'
 import { setPoiGroup, setSolarCollisionBodies } from './solarSystemRuntime'
 import { surfacePlaces } from '../data/surfacePlaces'
 import { sceneLoadingManager } from './sceneLoadingManager'
+import { loadPlanetTextures, planetMapImage } from './planetTextures'
+import { getRenderScale } from './frameGovernor'
 import { origin, trackAnchor, untrackAnchor } from './floatingOrigin'
 import { createBodyLod } from './bodyLod'
 import { createEarthTerrain, getEarthHeightAt as earthHeightAt } from './earthTerrain'
@@ -39,6 +41,7 @@ import uranusRingTexUrl from '../assets/Models/solar/uranus/uranus_rings.webp'
 import neptuneTexUrl from '../assets/Models/solar/neptune/neptune.webp'
 import plutoTexUrl from '../assets/Models/solar/pluto/pluto.webp'
 
+// webp/png = fallback only (KTX2 bakes in src/assets/ktx2).
 const textureUrls = {
   sun: sunTexUrl,
   mercury: mercuryTexUrl,
@@ -54,114 +57,6 @@ const textureUrls = {
   uranusRing: uranusRingTexUrl,
   neptune: neptuneTexUrl,
   pluto: plutoTexUrl,
-}
-
-// Ring-texture tints, keyed by the same textureUrls key used below — chosen
-// to pair with each planet's own hue-shift target rather than repeating the
-// UI's lavender/mauve accents everywhere.
-const RING_TINTS = {
-  saturnRing: 0xfab387, // peach
-  uranusRing: 0x89dceb, // sky
-}
-
-// The source ring photos paint the gaps between rings (e.g. the Cassini
-// division) as a flat dark color rather than as actual transparency, so at
-// any uniform material opacity those gaps render as a hard, opaque-looking
-// band instead of a see-through gap — that's the "harsh" line you get across
-// the ring. This redraws each ring as a flat tint whose alpha comes from the
-// source pixel's own luminance, so dark bands become genuinely transparent
-// (letting space show through) while bright bands stay solid, and recolors
-// the whole thing to match the site's palette instead of the source photo's
-// warm grey-brown.
-function processRingTexture(image, tintHex) {
-  const canvas = document.createElement('canvas')
-  canvas.width = image.width
-  canvas.height = image.height
-  const ctx = canvas.getContext('2d')
-  ctx.drawImage(image, 0, 0)
-
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  const data = imageData.data
-  const tint = new THREE.Color(tintHex)
-  const tintR = Math.round(tint.r * 255)
-  const tintG = Math.round(tint.g * 255)
-  const tintB = Math.round(tint.b * 255)
-
-  for (let i = 0; i < data.length; i += 4) {
-    const luminance = (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255
-    data[i] = tintR
-    data[i + 1] = tintG
-    data[i + 2] = tintB
-    data[i + 3] = Math.round(Math.pow(Math.min(1, Math.max(0, luminance)), 1.4) * 255)
-  }
-
-  ctx.putImageData(imageData, 0, 0)
-  return canvas
-}
-
-// Per-planet hue-shift target, keyed by textureUrls key. The source photos
-// are realistic NASA imagery, which reads as an odd mismatch against a
-// stylized, hand-tinted scene — this recolors each one toward a distinct
-// Catppuccin color deliberately spread across the palette (not just
-// lavender/mauve, which the UI chrome already leans on heavily) so each
-// planet reads as its own color rather than a variation on the same hue.
-const PLANET_HUE_TARGETS = {
-  sun: { hex: 0xfab387, strength: 0.6 }, // peach — matches its own glow sprites, pushed harder since the source photo's natural color was already close to the old gentle target
-  mercury: { hex: 0x9399b2, strength: 0.55 }, // overlay2
-  venus: { hex: 0xfab387, strength: 0.55 }, // peach
-  moon: { hex: 0xa6adc8, strength: 0.5 }, // subtext0
-  mars: { hex: 0xeba0ac, strength: 0.55 }, // maroon
-  jupiter: { hex: 0xf9e2af, strength: 0.5 }, // yellow
-  saturn: { hex: 0xf5e0dc, strength: 0.5 }, // rosewater
-  uranus: { hex: 0x89dceb, strength: 0.55 }, // sky
-  neptune: { hex: 0x74c7ec, strength: 0.55 }, // sapphire
-  pluto: { hex: 0xf2cdcd, strength: 0.5 }, // flamingo
-}
-
-// Shortest-path lerp around the hue circle (0..1), so e.g. going from 0.95
-// to 0.05 shifts +0.1 through the wrap point rather than the long way round
-// through 0.5.
-function lerpHue(a, b, t) {
-  let diff = b - a
-  if (diff > 0.5) diff -= 1
-  if (diff < -0.5) diff += 1
-  let result = a + diff * t
-  if (result < 0) result += 1
-  if (result >= 1) result -= 1
-  return result
-}
-
-// Recolors a texture toward targetHex while keeping each pixel's original
-// lightness — that's where all the photographic detail (craters, cloud
-// bands, terrain shading) actually lives, so preserving it keeps the planet
-// recognizable while the hue/saturation shift makes it match the palette.
-function applyHueShift(image, targetHex, strength) {
-  const canvas = document.createElement('canvas')
-  canvas.width = image.width
-  canvas.height = image.height
-  const ctx = canvas.getContext('2d')
-  ctx.drawImage(image, 0, 0)
-
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  const data = imageData.data
-  const target = new THREE.Color(targetHex)
-  const targetHsl = target.getHSL({})
-  const pixel = new THREE.Color()
-  const hsl = {}
-
-  for (let i = 0; i < data.length; i += 4) {
-    pixel.setRGB(data[i] / 255, data[i + 1] / 255, data[i + 2] / 255)
-    pixel.getHSL(hsl)
-    const h = lerpHue(hsl.h, targetHsl.h, strength)
-    const s = hsl.s + (targetHsl.s - hsl.s) * strength
-    pixel.setHSL(h, s, hsl.l)
-    data[i] = Math.round(pixel.r * 255)
-    data[i + 1] = Math.round(pixel.g * 255)
-    data[i + 2] = Math.round(pixel.b * 255)
-  }
-
-  ctx.putImageData(imageData, 0, 0)
-  return canvas
 }
 
 // ─── Singleton glow texture cache ────────────────────────────────────────────
@@ -502,28 +397,16 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
     if (!scene) return undefined
 
     const cfg = spaceConfig.solarSystem
-    const textureLoader = new THREE.TextureLoader(sceneLoadingManager)
-    const textures = Object.fromEntries(
-      Object.entries(textureUrls).map(([key, url]) => {
-        const ringTint = RING_TINTS[key]
-        const hueTarget = PLANET_HUE_TARGETS[key]
-        const onLoad = ringTint
-          ? (loaded) => {
-              loaded.image = processRingTexture(loaded.image, ringTint)
-              loaded.needsUpdate = true
-            }
-          : hueTarget
-          ? (loaded) => {
-              loaded.image = applyHueShift(loaded.image, hueTarget.hex, hueTarget.strength)
-              loaded.needsUpdate = true
-            }
-          : undefined
-        const texture = textureLoader.load(url, onLoad)
-        texture.anisotropy = cfg.textureAnisotropy
-        texture.colorSpace = THREE.SRGBColorSpace
-        return [key, texture]
-      })
-    )
+    // Textures arrive async (KTX2) → consumers wait via whenTexture(key, fn).
+    const textures = {}
+    const waiting = {}
+    const whenTexture = (key, fn) => (textures[key] ? fn(textures[key]) : (waiting[key] ??= []).push(fn))
+    const cancelTextures = loadPlanetTextures(rendererRef.current, sceneLoadingManager, textureUrls, (key, tex) => {
+      tex.anisotropy = cfg.textureAnisotropy
+      textures[key] = tex
+      waiting[key]?.forEach((fn) => fn(tex))
+      delete waiting[key]
+    })
 
     const system = new THREE.Group()
     scene.add(system)
@@ -549,7 +432,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
         ring = new THREE.Mesh(
           ringGeo,
           new THREE.MeshBasicMaterial({
-            map: textures[def.ringTexture],
+            map: null,
             transparent: true,
             opacity: def.ringOpacity,
             side: THREE.DoubleSide,
@@ -557,6 +440,11 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
           })
         )
         ring.rotation.x = Math.PI / 2
+        const ringMat = ring.material
+        whenTexture(def.ringTexture, (tex) => {
+          ringMat.map = tex
+          ringMat.needsUpdate = true
+        })
         tiltGroup.add(ring)
       }
 
@@ -566,13 +454,9 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
         anchor.add(new THREE.PointLight(color, intensity, 0, decay))
       }
 
-      const lod = createBodyLod(
-        def.nightTexture ? { ...def, nightMap: textures[def.nightTexture] } : def,
-        textures[def.texture],
-        anchor,
-        tiltGroup,
-        ring
-      )
+      const lod = createBodyLod(def, null, anchor, tiltGroup, ring)
+      whenTexture(def.texture, (tex) => (lod.map.value = tex))
+      if (def.nightTexture) whenTexture(def.nightTexture, (tex) => (lod.nightMap.value = tex))
 
       system.add(anchor)
       const entry = {
@@ -588,7 +472,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
         spinDelta: 0,
         // HUD minimap: body-fixed frame (tilt · spin), equirect texture (lon 0 = u 0.5), texture lon shift (deg).
         frameQ: new THREE.Quaternion(),
-        mapImage: () => textures[def.texture]?.image ?? null,
+        mapImage: () => planetMapImage(def.texture),
         lonOffset: def.textureLonOffset ?? 0,
       }
       collisions.push(entry)
@@ -639,7 +523,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
       bodyMap.get('earth'),
       isMobileDevice(),
       rendererRef?.current?.capabilities.getMaxAnisotropy() ?? 8,
-      () => rendererRef?.current?.getPixelRatio() ?? 1
+      () => (rendererRef?.current?.getPixelRatio() ?? 1) * getRenderScale() // scene target px
     )
     terrainRef.current = terrain
     const satellites = createSatellites(bodyMap.get('earth'), isMobileDevice())
@@ -665,6 +549,7 @@ export function useSolarSystem(sceneRef, isExplore = false, rendererRef = null) 
         mats.forEach((m) => m?.dispose?.())
       })
       scene.remove(system)
+      cancelTextures()
       Object.values(textures).forEach((t) => t.dispose())
       terrain.dispose()
       terrainRef.current = null

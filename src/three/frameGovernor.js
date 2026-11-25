@@ -1,7 +1,7 @@
 // Frame smoothness. Two tricks:
 // 1. Upload queue: new drawables (star cells, building tiles) go live ≤ N per frame → GPU buffer/texture uploads spread out, no hitch bursts.
 // 2. Dynamic resolution: sustained slow frames → step render scale down; fast again for a while → step back up.
-//    Discrete steps + hysteresis + backoff → rare target reallocs, no flicker.
+//    Discrete steps + hysteresis + backoff → rare target reallocs, no flicker. Scales post targets only (canvas fixed).
 import { spaceConfig } from './spaceConfig'
 
 const cfg = spaceConfig.renderer.dynamicRes
@@ -45,18 +45,30 @@ export function subscribeRenderScale(listener) {
   return () => listeners.delete(listener)
 }
 
+// three's PointsMaterial sizes px via renderer pixel ratio (canvas) → × scale to keep size on screen.
+const points = new Map() // material → base size
+
+/** Register a PointsMaterial; returns it. Unregisters on dispose. */
+export function scaledPoints(material) {
+  points.set(material, material.size)
+  material.size *= cfg.steps[step]
+  material.addEventListener('dispose', () => points.delete(material))
+  return material
+}
+
 const setStep = (next) => {
   step = next
+  points.forEach((base, m) => (m.size = base * cfg.steps[step]))
   slowS = 0
   fastS = 0
   listeners.forEach((l) => l())
 }
 
-/** Once per frame. rawDt: real seconds since last frame (unclamped). */
-export function frameTick(rawDt, renderer) {
+/** Once per frame. rawDt: real seconds since last frame (unclamped). capped: fps deliberately limited → skip res logic. */
+export function frameTick(rawDt, renderer, capped = false) {
   rendererRef = renderer
   flushJobs()
-  if (!cfg.enabled || rawDt > 0.25 || document.hidden) return // tab switch / stall → not a perf signal
+  if (!cfg.enabled || capped || rawDt > 0.25 || document.hidden) return // tab switch / stall → not a perf signal
   clock += rawDt
   emaMs += (rawDt * 1000 - emaMs) * 0.1
   if (emaMs > cfg.downMs) {

@@ -2,6 +2,7 @@
 // Look: nucleus beacon + coma glow + ion tail (straight, anti-sunward, blue) + dust tail (curved, lagging, warm).
 // Activity ∝ (3 AU / r)² → tails grow toward perihelion. Tails exaggerated in width (readability), real direction.
 import * as THREE from 'three'
+import { getRenderScale, scaledPoints } from './frameGovernor'
 import { trackAnchor, untrackAnchor } from './floatingOrigin'
 import { setPoiGroup } from './solarSystemRuntime'
 import { AU_KM } from './galaxyFrame'
@@ -80,7 +81,7 @@ function buildComet(c, scene) {
   // Beacon: few px from anywhere in the inner system.
   const beaconGeo = new THREE.BufferGeometry()
   beaconGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3))
-  const beacon = new THREE.Points(beaconGeo, new THREE.PointsMaterial({ size: 3, sizeAttenuation: false, map: getGlow(), color: 0xdff2ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }))
+  const beacon = new THREE.Points(beaconGeo, scaledPoints(new THREE.PointsMaterial({ size: 3, sizeAttenuation: false, map: getGlow(), color: 0xdff2ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })))
   anchor.add(beacon)
 
   // Tails: particle strips (anchor-local, rebuilt as the sun direction changes).
@@ -106,7 +107,7 @@ function buildComet(c, scene) {
   const ion = mkTail(0x7fb4ff, 3.2, 1.6)
   const dust = mkTail(0xffe2b8, 2.8, 1.3)
 
-  const poi = { key: `comet_${c.key}`, kind: 'comet', name: c.name, position: world, radius: 5, labelRange: 4 * AU_KM, factsRange: 8e6, facts: c.facts }
+  const poi = { key: `comet_${c.key}`, kind: 'comet', name: c.name, position: world, radius: 5, labelRange: 4 * AU_KM, factsRange: 8e6, facts: c.facts, scrollLabel: true } // scrollLabel: named at the scroll sighting too
 
   let lastDays = NaN
   const update = (days) => {
@@ -149,8 +150,9 @@ function buildComet(c, scene) {
     }
     ion.geometry.attributes.position.needsUpdate = true
     dust.geometry.attributes.position.needsUpdate = true
-    ion.material.size = comaKm * 0.6
-    dust.material.size = comaKm * 1.1
+    // × render scale: three sizes points via canvas pixel ratio, scene target is scaled (dynamic res).
+    ion.material.size = comaKm * 0.6 * getRenderScale()
+    dust.material.size = comaKm * 1.1 * getRenderScale()
     ion.material.opacity = Math.min(1, 0.3 * act)
     dust.material.opacity = Math.min(1, 0.25 * act)
   }
