@@ -3,12 +3,13 @@
 // React's special `key` prop when spread into JSX). "Explore" is the only
 // real route left in the app, so it alone carries a `route` for react-router.
 // `action` items run something instead (tour: hands-off flight through the galaxies).
+// `short`: label below md (7 items share one row there).
 export const navLinks = [
   { chapterKey: '/', label: 'Hjem', icon: 'home' },
-  { chapterKey: '/projects', label: 'Prosjekter', icon: 'projects' },
+  { chapterKey: '/projects', label: 'Prosjekter', short: 'Prosj.', icon: 'projects' },
   { chapterKey: '/journey', label: 'Reise', icon: 'journey' },
   { chapterKey: '/contact', label: 'Kontakt', icon: 'contact' },
   { chapterKey: '/chat', label: 'Chat', icon: 'chat' },
-  { action: 'tour', label: 'Omvisning', ariaLabel: 'Omvisning i galaksene', icon: 'tour' },
+  { action: 'tour', label: 'Omvisning', short: 'Tur', ariaLabel: 'Omvisning i galaksene', icon: 'tour' },
   { route: '/explore', label: 'Utforsk', icon: 'explore', featured: true, sticker: 'Utforsk galaksen' },
 ]
